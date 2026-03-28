@@ -119,79 +119,76 @@
       </div>
     </section>
 
-    <div class="row g-3 align-items-start">
-      <div class="col-xl-6">
-        <div class="cl-card consult-notes-card border-0 mb-0">
-          <div class="cl-card-header consult-notes-header py-3">
-            <div>
-              <h2 class="cl-card-title mb-1 fs-5"><i class="bi bi-journal-medical me-2"></i>Doctor's Notes</h2>
-              <p class="consult-section-subtitle mb-0">Assessment on the left, plan and follow-up on the right.</p>
+    <div class="consult-main-stack">
+      <div class="cl-card consult-notes-card border-0 mb-0">
+        <div class="cl-card-header consult-notes-header py-3">
+          <div>
+            <h2 class="cl-card-title mb-1 fs-5"><i class="bi bi-journal-medical me-2"></i>Doctor's Notes</h2>
+            <p class="consult-section-subtitle mb-0">Assessment on the left, plan and follow-up on the right.</p>
+          </div>
+        </div>
+        <div class="cl-card-body p-4">
+          <form method="post" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="panel" value="{{ selected_panel }}">
+            {% if form.non_field_errors %}<div class="alert alert-danger py-2">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>{% endif %}
+
+            <div class="row g-4 consult-notes-grid">
+              <div class="col-md-6 consult-notes-column consult-notes-column-primary">
+                <div class="consult-field-group mb-3">
+                  <p class="consult-field-group-label">Assessment</p>
+                  <label for="{{ form.consultation_room.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.consultation_room.label }}</label>
+                  {{ form.consultation_room }}
+                  {% for error in form.consultation_room.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="consult-field-group mb-3">
+                  <label for="{{ form.symptoms.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.symptoms.label }}</label>
+                  {{ form.symptoms }}
+                  {% for error in form.symptoms.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="consult-field-group mb-0">
+                  <label for="{{ form.diagnosis.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.diagnosis.label }}</label>
+                  {{ form.diagnosis }}
+                  {% for error in form.diagnosis.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+              </div>
+
+              <div class="col-md-6 consult-notes-column consult-notes-column-secondary">
+                <div class="consult-field-group mb-3">
+                  <p class="consult-field-group-label">Plan & Follow-up</p>
+                  <label for="{{ form.treatment_plan.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.treatment_plan.label }}</label>
+                  {{ form.treatment_plan }}
+                  {% for error in form.treatment_plan.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="consult-field-group mb-3">
+                  <label for="{{ form.prescription.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.prescription.label }}</label>
+                  {{ form.prescription }}
+                  {% for error in form.prescription.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="row g-2 mb-3">
+                  <div class="col-lg-6">
+                    <label for="{{ form.lab_tests_requested.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.lab_tests_requested.label }}</label>
+                    {{ form.lab_tests_requested }}
+                    {% for error in form.lab_tests_requested.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                  </div>
+                  <div class="col-lg-6">
+                    <label for="{{ form.follow_up_date.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.follow_up_date.label }}</label>
+                    {{ form.follow_up_date }}
+                    {% for error in form.follow_up_date.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-          <div class="cl-card-body p-4">
-            <form method="post" novalidate>
-              {% csrf_token %}
-              <input type="hidden" name="panel" value="{{ selected_panel }}">
-              {% if form.non_field_errors %}<div class="alert alert-danger py-2">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>{% endif %}
 
-              <div class="row g-4 consult-notes-grid">
-                <div class="col-md-6 consult-notes-column consult-notes-column-primary">
-                  <div class="consult-field-group mb-3">
-                    <p class="consult-field-group-label">Assessment</p>
-                    <label for="{{ form.consultation_room.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.consultation_room.label }}</label>
-                    {{ form.consultation_room }}
-                    {% for error in form.consultation_room.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-                  </div>
-                  <div class="consult-field-group mb-3">
-                    <label for="{{ form.symptoms.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.symptoms.label }}</label>
-                    {{ form.symptoms }}
-                    {% for error in form.symptoms.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-                  </div>
-                  <div class="consult-field-group mb-0">
-                    <label for="{{ form.diagnosis.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.diagnosis.label }}</label>
-                    {{ form.diagnosis }}
-                    {% for error in form.diagnosis.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-                  </div>
-                </div>
-
-                <div class="col-md-6 consult-notes-column consult-notes-column-secondary">
-                  <div class="consult-field-group mb-3">
-                    <p class="consult-field-group-label">Plan & Follow-up</p>
-                    <label for="{{ form.treatment_plan.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.treatment_plan.label }}</label>
-                    {{ form.treatment_plan }}
-                    {% for error in form.treatment_plan.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-                  </div>
-                  <div class="consult-field-group mb-3">
-                    <label for="{{ form.prescription.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.prescription.label }}</label>
-                    {{ form.prescription }}
-                    {% for error in form.prescription.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-                  </div>
-                  <div class="row g-2 mb-3">
-                    <div class="col-lg-6">
-                      <label for="{{ form.lab_tests_requested.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.lab_tests_requested.label }}</label>
-                      {{ form.lab_tests_requested }}
-                      {% for error in form.lab_tests_requested.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-                    </div>
-                    <div class="col-lg-6">
-                      <label for="{{ form.follow_up_date.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.follow_up_date.label }}</label>
-                      {{ form.follow_up_date }}
-                      {% for error in form.follow_up_date.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="mt-4 pt-3 border-top">
-                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold fs-6"><i class="bi bi-check-circle me-1"></i> Save Consultation</button>
-              </div>
-            </form>
-          </div>
+            <div class="mt-4 pt-3 border-top">
+              <button type="submit" class="btn btn-primary w-100 py-2 fw-bold fs-6"><i class="bi bi-check-circle me-1"></i> Save Consultation</button>
+            </div>
+          </form>
         </div>
       </div>
 
-      <div class="col-xl-6">
-        <div class="consult-actions-rail">
-          <div class="cl-card consult-actions-card border-0 mb-0">
+      <div class="consult-actions-rail">
+        <div class="cl-card consult-actions-card border-0 mb-0">
             <div class="cl-card-header py-3">
               <div>
                 <h2 class="cl-card-title mb-1 fs-5"><i class="bi bi-lightning-charge me-2"></i>Clinical Actions</h2>
@@ -383,7 +380,6 @@
                 </div>
               </div>
             </div>
-          </div>
         </div>
       </div>
     </div>
