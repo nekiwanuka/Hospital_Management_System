@@ -1,12 +1,61 @@
-.venv/
-.venv-*/
+# ── Python ──
 __pycache__/
 *.py[cod]
-*.log
+*$py.class
+*.so
+
+# ── Virtual environments ──
+.venv/
+.venv-*/
+venv/
+env/
+
+# ── Environment / secrets ──
 .env
 .env.*
+
+# ── Dev database ──
 db.sqlite3
-media/
+db.sqlite3-journal
+
+# ── Logs ──
+*.log
+
+# ── Django collected static ──
 staticfiles/
-*.txt
+
+# ── Media uploads ──
+media/
+
+# ── OS junk ──
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE ──
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Packaging ──
+dist/
+build/
+*.egg-info/
+
+# ── Testing / coverage ──
+htmlcov/
+.coverage
+.coverage.*
+.pytest_cache/
+
+# ── Temp outputs ──
+check_output.txt
+
+# ── Passenger restart ──
+tmp/
+
+# ── Exceptions (keep tracked) ──
 !Hospital_Management_System/requirements.txt
+!Hospital_Management_System/.env.example

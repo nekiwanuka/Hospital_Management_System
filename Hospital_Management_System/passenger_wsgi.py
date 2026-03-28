@@ -1,35 +1,24 @@
 import os
 import sys
 from pathlib import Path
-from dotenv import load_dotenv
 
-# -------------------------------
-# 1. Add your project to sys.path
-# -------------------------------
+# ── 1. Project root & virtualenv ──
 project_root = Path(__file__).resolve().parent
 sys.path.insert(0, str(project_root))
 
-# -------------------------------
-# 2. Load environment variables from .env
-# -------------------------------
-env_path = project_root / ".env"
-load_dotenv(dotenv_path=env_path)
+VENV_BASE = "/home/jbeiqmqv/virtualenv/home/jbeiqmqv/Hospital_Management_System/3.13"
+activate_this = os.path.join(VENV_BASE, "bin", "activate_this.py")
+if os.path.isfile(activate_this):
+    exec(open(activate_this).read(), {"__file__": activate_this})
 
-# -------------------------------
-# 3. Set the DJANGO_SETTINGS_MODULE
-# -------------------------------
+# ── 2. Load .env (production secrets) ──
+from dotenv import load_dotenv  # noqa: E402
+
+load_dotenv(dotenv_path=project_root / ".env")
+
+# ── 3. Django WSGI ──
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
-# -------------------------------
-# 4. Activate your virtualenv (if needed)
-# -------------------------------
-# Optional: Only if Passenger does not use your virtualenv by default
-# activate_this = "/home/jbeiqmqv/virtualenv/home/jbeiqmqv/repositories/Hospital_Management_System/3.13/bin/activate_this.py"
-# exec(open(activate_this).read(), dict(__file__=activate_this))
-
-# -------------------------------
-# 5. Import Django WSGI application
-# -------------------------------
-from django.core.wsgi import get_wsgi_application
+from django.core.wsgi import get_wsgi_application  # noqa: E402
 
 application = get_wsgi_application()
