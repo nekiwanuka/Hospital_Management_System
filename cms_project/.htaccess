@@ -1,12 +1,6 @@
-# Force Passenger to restart when this file is touched
-# (create/touch tmp/restart.txt to restart the app)
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION BEGIN
 PassengerEnabled On
-PassengerAppRoot /home/YOUR_CPANEL_USER/HMS/cms_project
-
-# ── Serve static & media files directly via Apache ──
-RewriteEngine On
-
-# Let Apache serve /static/ and /media/ directly (no Python overhead)
-RewriteCond %{REQUEST_URI} ^/static/ [OR]
-RewriteCond %{REQUEST_URI} ^/media/
-RewriteRule ^(.*)$ - [L]
+PassengerAppRoot "/home/jbeiqmqv/home/jbeiqmqv/repositories/Hospital_Management_System/cms_project"
+PassengerBaseURI "/"
+PassengerPython "/home/jbeiqmqv/virtualenv/home/jbeiqmqv/repositories/Hospital_Management_System/3.13/bin/python"
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION END
