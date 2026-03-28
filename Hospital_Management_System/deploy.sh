@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-VENV="/home/jbeiqmqv/virtualenv/Hospital_Management_System/3.13"
+VENV="/home/jbeiqmqv/virtualenv/hms/Hospital_Management_System/3.13"
 PYTHON="$VENV/bin/python"
 PIP="$VENV/bin/pip"
 
