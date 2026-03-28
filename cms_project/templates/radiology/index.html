@@ -1,0 +1,399 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ dashboard_title }} | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}{{ dashboard_title }}{% endblock %}
+
+{% block content %}
+<!-- ── Page header ── -->
+<div class="cl-page-header">
+    <div>
+        <h1>
+            {% if imaging_type_filter == 'xray' %}
+            <i class="bi bi-lightning me-2" style="opacity:.55"></i>X-Ray Unit
+            {% elif imaging_type_filter == 'ultrasound' %}
+            <i class="bi bi-soundwave me-2" style="opacity:.55"></i>Ultrasound Unit
+            {% else %}
+            <i class="bi bi-radioactive me-2" style="opacity:.55"></i>Radiology
+            {% endif %}
+        </h1>
+        <p class="text-muted mb-0">
+            {% if imaging_type_filter == 'xray' or imaging_type_filter == 'ultrasound' %}
+            Dedicated {{ unit_config.unit_name|lower }} queue &mdash; paid patients, scan execution, and findings capture.
+            {% else %}
+            Professional radiology worklist for X-Ray and ultrasound requests, workflow, and reporting.
+            {% endif %}
+        </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        {% if imaging_type_filter == 'xray' %}
+        <a class="btn btn-primary btn-sm" href="{% url 'radiology:request_xray_stock' %}"><i class="bi bi-box-seam me-1"></i>Request X-Ray Stock</a>
+        {% elif imaging_type_filter == 'ultrasound' %}
+        <a class="btn btn-primary btn-sm" href="{% url 'radiology:request_ultrasound_stock' %}"><i class="bi bi-box-seam me-1"></i>Request Ultrasound Stock</a>
+        {% else %}
+        <a class="btn btn-primary btn-sm" href="{% url 'radiology:request_xray_stock' %}"><i class="bi bi-box-seam me-1"></i>Request X-Ray Stock</a>
+        <a class="btn btn-primary btn-sm" href="{% url 'radiology:request_ultrasound_stock' %}"><i class="bi bi-box-seam me-1"></i>Request U/S Stock</a>
+        {% endif %}
+        <a class="btn btn-outline-primary btn-sm" href="{% url 'radiology:result_feed_queue' %}"><i class="bi bi-pencil-square me-1"></i>Feed Results</a>
+    </div>
+</div>
+
+<!-- ── Tab navigation ── -->
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <a class="nav-link{% if imaging_type_filter == 'all' %} active{% endif %}" href="{% url 'radiology:index' %}">
+            <i class="bi bi-grid-3x3-gap me-1"></i>All Requests
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link{% if imaging_type_filter == 'xray' %} active{% endif %}" href="{% url 'radiology:xray' %}">
+            <i class="bi bi-lightning me-1"></i>X-Ray
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link{% if imaging_type_filter == 'ultrasound' %} active{% endif %}" href="{% url 'radiology:ultrasound' %}">
+            <i class="bi bi-soundwave me-1"></i>Ultrasound
+        </a>
+    </li>
+</ul>
+
+<!-- ── Stat cards ── -->
+<div class="row g-2 mb-3">
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="cl-stat">
+            <div class="cl-stat-icon warning"><i class="bi bi-hourglass-split"></i></div>
+            <div>
+                <div class="cl-stat-label">Pending</div>
+                <div class="cl-stat-value">{{ summary.pending_requests }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="cl-stat">
+            <div class="cl-stat-icon primary"><i class="bi bi-camera"></i></div>
+            <div>
+                <div class="cl-stat-label">{{ unit_config.waiting_scan_label }}</div>
+                <div class="cl-stat-value">{{ summary.waiting_scan }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="cl-stat">
+            <div class="cl-stat-icon info"><i class="bi bi-file-earmark-text"></i></div>
+            <div>
+                <div class="cl-stat-label">{{ unit_config.waiting_report_label }}</div>
+                <div class="cl-stat-value">{{ summary.waiting_report }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="cl-stat">
+            <div class="cl-stat-icon primary"><i class="bi bi-play-circle"></i></div>
+            <div>
+                <div class="cl-stat-label">In Progress</div>
+                <div class="cl-stat-value">{{ summary.scans_in_progress }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="cl-stat">
+            <div class="cl-stat-icon success"><i class="bi bi-check-circle"></i></div>
+            <div>
+                <div class="cl-stat-label">Completed</div>
+                <div class="cl-stat-value">{{ summary.completed_scans }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="cl-stat">
+            <div class="cl-stat-icon danger"><i class="bi bi-exclamation-triangle"></i></div>
+            <div>
+                <div class="cl-stat-label">Urgent</div>
+                <div class="cl-stat-value">{{ summary.urgent_scans }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if imaging_type_filter == 'xray' or imaging_type_filter == 'ultrasound' %}
+<div class="alert alert-primary d-flex align-items-start gap-3 mb-3 py-2">
+    <i class="bi bi-info-circle-fill fs-5 mt-1"></i>
+    <div>
+        <strong>{{ unit_config.unit_name }} queue</strong> &mdash;
+        paid patients are ready to work on immediately.
+        Use <em>{{ unit_config.capture_findings_label }}</em> once the scan is done.
+    </div>
+</div>
+{% endif %}
+
+<!-- ── Search & filter bar ── -->
+<div class="cl-card mb-3">
+    <div class="cl-card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label mb-1 small text-muted">Search</label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" name="q" value="{{ search_query }}" class="form-control" placeholder="Patient ID, name, or request ID&hellip;">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label mb-1 small text-muted">Status</label>
+                <select class="form-select form-select-sm" name="status">
+                    <option value="">All statuses</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel me-1"></i>Filter</button>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-outline-secondary btn-sm"
+                   href="{% if imaging_type_filter == 'xray' %}{% url 'radiology:xray' %}{% elif imaging_type_filter == 'ultrasound' %}{% url 'radiology:ultrasound' %}{% else %}{% url 'radiology:index' %}{% endif %}">
+                    <i class="bi bi-x-lg me-1"></i>Reset
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── Worklist table ── -->
+<div class="cl-card mb-3">
+    <div class="cl-card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-list-ul me-2"></i>Worklist</span>
+        {% if page_obj %}
+        <span class="text-muted small">{{ page_obj.paginator.count }} request{{ page_obj.paginator.count|pluralize }}</span>
+        {% endif %}
+    </div>
+    <div class="cl-card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="min-width:120px">Request&nbsp;ID</th>
+                        <th>Patient</th>
+                        {% if imaging_type_filter == 'all' %}<th>Type</th>{% endif %}
+                        <th>Examination</th>
+                        <th>Priority</th>
+                        <th>Doctor</th>
+                        <th>Status</th>
+                        <th>Workflow</th>
+                        <th>Date</th>
+                        <th class="text-end" style="min-width:160px">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in requests %}
+                    <tr{% if req.priority == 'urgent' %} class="table-danger"{% endif %}>
+                        <!-- Request ID -->
+                        <td>
+                            <a href="{% url 'radiology:detail' req.pk %}" class="fw-semibold text-decoration-none">
+                                {{ req.request_identifier }}
+                            </a>
+                        </td>
+
+                        <!-- Patient -->
+                        <td>
+                            <div class="fw-medium">{{ req.patient.first_name }} {{ req.patient.last_name }}</div>
+                            <div class="text-muted small">{{ req.patient.patient_id }}</div>
+                        </td>
+
+                        <!-- Type (only in "all" view) -->
+                        {% if imaging_type_filter == 'all' %}
+                        <td>
+                            {% if req.imaging_type == 'xray' %}
+                            <span class="badge bg-primary bg-opacity-10 text-primary"><i class="bi bi-lightning me-1"></i>X-Ray</span>
+                            {% else %}
+                            <span class="badge bg-info bg-opacity-10 text-info"><i class="bi bi-soundwave me-1"></i>Ultrasound</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+
+                        <!-- Examination -->
+                        <td>{{ req.specific_examination|default:"-" }}</td>
+
+                        <!-- Priority badge -->
+                        <td>
+                            {% if req.priority == 'urgent' %}
+                            <span class="badge bg-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>Urgent</span>
+                            {% else %}
+                            <span class="badge bg-secondary bg-opacity-25 text-secondary">Normal</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Doctor -->
+                        <td class="small">{% if req.requested_by %}{{ req.requested_by.get_full_name|default:req.requested_by.username }}{% else %}&mdash;{% endif %}</td>
+
+                        <!-- Status badge -->
+                        <td>
+                            {% if req.status == 'requested' %}
+                            <span class="badge cl-badge-requested">Requested</span>
+                            {% elif req.status == 'scheduled' %}
+                            <span class="badge cl-badge-pending">Scheduled</span>
+                            {% elif req.status == 'patient_arrived' %}
+                            <span class="badge cl-badge-active">Arrived</span>
+                            {% elif req.status == 'scanning' %}
+                            <span class="badge cl-badge-active">Scanning</span>
+                            {% elif req.status == 'reporting' %}
+                            <span class="badge bg-info bg-opacity-10 text-info">Reporting</span>
+                            {% elif req.status == 'completed' %}
+                            <span class="badge cl-badge-completed"><i class="bi bi-check-circle me-1"></i>Completed</span>
+                            {% else %}
+                            <span class="badge bg-light text-dark">{{ req.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Workflow progress dots -->
+                        <td>
+                            <div class="d-flex gap-1 align-items-center" title="{{ req.get_status_display }}">
+                                {% with steps="requested,scheduled,patient_arrived,scanning,reporting,completed" %}
+                                {% for step in steps|make_list %}{% endfor %}
+                                {# manual progress dots #}
+                                <span class="rounded-circle d-inline-block" style="width:8px;height:8px;{% if req.status == 'requested' or req.status == 'scheduled' or req.status == 'patient_arrived' or req.status == 'scanning' or req.status == 'reporting' or req.status == 'completed' %}background:var(--cl-primary){% else %}background:#dee2e6{% endif %}"></span>
+                                <span class="rounded-circle d-inline-block" style="width:8px;height:8px;{% if req.status == 'scheduled' or req.status == 'patient_arrived' or req.status == 'scanning' or req.status == 'reporting' or req.status == 'completed' %}background:var(--cl-primary){% else %}background:#dee2e6{% endif %}"></span>
+                                <span class="rounded-circle d-inline-block" style="width:8px;height:8px;{% if req.status == 'patient_arrived' or req.status == 'scanning' or req.status == 'reporting' or req.status == 'completed' %}background:var(--cl-primary){% else %}background:#dee2e6{% endif %}"></span>
+                                <span class="rounded-circle d-inline-block" style="width:8px;height:8px;{% if req.status == 'scanning' or req.status == 'reporting' or req.status == 'completed' %}background:var(--cl-primary){% else %}background:#dee2e6{% endif %}"></span>
+                                <span class="rounded-circle d-inline-block" style="width:8px;height:8px;{% if req.status == 'reporting' or req.status == 'completed' %}background:var(--cl-primary){% else %}background:#dee2e6{% endif %}"></span>
+                                <span class="rounded-circle d-inline-block" style="width:8px;height:8px;{% if req.status == 'completed' %}background:var(--cl-success, #059669){% else %}background:#dee2e6{% endif %}"></span>
+                                {% endwith %}
+                            </div>
+                        </td>
+
+                        <!-- Date -->
+                        <td class="small text-muted text-nowrap">{{ req.date_requested|date:"d M Y" }}</td>
+
+                        <!-- Actions (contextual) -->
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1">
+                                <a class="btn btn-sm btn-outline-secondary" href="{% url 'radiology:detail' req.pk %}" title="View details"><i class="bi bi-eye"></i></a>
+
+                                {% if request.user.role == 'radiology_technician' or request.user.role == 'radiologist' or request.user.role == 'system_admin' or request.user.role == 'director' %}
+
+                                {% if req.status == 'requested' %}
+                                <form method="post" action="{% url 'radiology:update_workflow' req.pk 'schedule' %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button class="btn btn-sm btn-outline-primary" type="submit" title="Schedule scan"><i class="bi bi-calendar-plus"></i></button>
+                                </form>
+                                {% endif %}
+
+                                {% if req.status == 'scheduled' %}
+                                <form method="post" action="{% url 'radiology:update_workflow' req.pk 'patient_arrived' %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button class="btn btn-sm btn-outline-primary" type="submit" title="Patient arrived"><i class="bi bi-person-check"></i></button>
+                                </form>
+                                {% endif %}
+
+                                {% if req.status == 'patient_arrived' or req.status == 'scheduled' %}
+                                <form method="post" action="{% url 'radiology:update_workflow' req.pk 'start_scan' %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button class="btn btn-sm btn-outline-primary" type="submit" title="Start scan"><i class="bi bi-play-fill"></i></button>
+                                </form>
+                                {% endif %}
+
+                                {% if req.status == 'scanning' or req.status == 'reporting' %}
+                                <a class="btn btn-sm btn-outline-primary" href="{% url 'radiology:upload_images' req.pk %}" title="Upload images"><i class="bi bi-upload"></i></a>
+                                <a class="btn btn-sm btn-primary" href="{% url 'radiology:upload_result' req.pk %}" title="{{ unit_config.capture_findings_label }}"><i class="bi bi-pencil-square me-1"></i><span class="d-none d-xl-inline">{{ unit_config.capture_findings_label }}</span></a>
+                                {% endif %}
+
+                                {% if req.status != 'completed' and req.status != 'requested' and req.status != 'scheduled' %}
+                                <form method="post" action="{% url 'radiology:update_workflow' req.pk 'mark_completed' %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button class="btn btn-sm btn-success" type="submit" title="Mark completed"><i class="bi bi-check-lg"></i></button>
+                                </form>
+                                {% endif %}
+
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="{% if imaging_type_filter == 'all' %}10{% else %}9{% endif %}" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox fs-3 d-block mb-2" style="opacity:.3"></i>
+                            No radiology requests found for the selected filters.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if page_obj and page_obj.paginator.num_pages > 1 %}
+    <div class="cl-card-footer d-flex justify-content-between align-items-center">
+        <span class="small text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search_query|urlencode }}&status={{ status_filter }}"><i class="bi bi-chevron-left"></i> Prev</a></li>
+                {% endif %}
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search_query|urlencode }}&status={{ status_filter }}">Next <i class="bi bi-chevron-right"></i></a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ── Store requests (collapsible) ── -->
+<div class="cl-card">
+    <div class="cl-card-header d-flex justify-content-between align-items-center" role="button"
+         data-bs-toggle="collapse" data-bs-target="#store-requests-panel" aria-expanded="false">
+        <span><i class="bi bi-box-seam me-2"></i>Recent Store Requests</span>
+        <i class="bi bi-chevron-down small"></i>
+    </div>
+    <div class="collapse" id="store-requests-panel">
+        <div class="cl-card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Unit</th>
+                            <th>Item</th>
+                            <th>Qty</th>
+                            <th>Requested By</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for req in recent_store_requests %}
+                        <tr>
+                            <td>
+                                {% if req.requested_unit == 'xray' %}
+                                <span class="badge bg-primary bg-opacity-10 text-primary">X-Ray</span>
+                                {% elif req.requested_unit == 'ultrasound' %}
+                                <span class="badge bg-info bg-opacity-10 text-info">U/S</span>
+                                {% else %}
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary">Radiology</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ req.medicine_name }}</td>
+                            <td>{{ req.quantity_requested }}</td>
+                            <td class="small">{{ req.requested_by.get_full_name|default:req.requested_by.username }}</td>
+                            <td>
+                                {% if req.status == 'pending' %}
+                                <span class="badge cl-badge-pending">Pending</span>
+                                {% elif req.status == 'approved' %}
+                                <span class="badge cl-badge-completed">Approved</span>
+                                {% elif req.status == 'rejected' %}
+                                <span class="badge bg-danger bg-opacity-10 text-danger">Rejected</span>
+                                {% elif req.status == 'fulfilled' %}
+                                <span class="badge cl-badge-completed">Fulfilled</span>
+                                {% else %}
+                                <span class="badge bg-light text-dark">{{ req.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="small text-muted text-nowrap">{{ req.created_at|date:"d M Y" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center text-muted py-3">No stock requests submitted yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block title %}Upload Imaging Result | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}Imaging Result{% endblock %}
+
+{% block content %}
+<nav class="cl-breadcrumb"><a href="{% url 'radiology:index' %}">Radiology</a> / <a href="{% url 'radiology:detail' imaging_request.pk %}">{{ imaging_request.request_identifier }}</a> / Result</nav>
+<div class="cl-card">
+    <div class="cl-card-header"><i class="bi bi-file-medical me-2"></i>{{ page_title }}</div>
+    <div class="cl-card-body">
+        <p class="text-muted mb-4">
+            {{ imaging_request.patient.first_name }} {{ imaging_request.patient.last_name }} - {{ imaging_request.examination_label|default:imaging_request.get_imaging_type_display }}
+        </p>
+
+        <div class="row g-3 mb-4">
+            <div class="col-lg-6">
+                <div class="border border-primary-subtle bg-primary-subtle rounded p-3 h-100">
+                    <div class="small text-primary-emphasis text-uppercase fw-semibold mb-2">{{ unit_config.technician_role_label }}</div>
+                    <p class="mb-0 small">{{ unit_config.technician_help_text }}</p>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="border border-success-subtle bg-success-subtle rounded p-3 h-100">
+                    <div class="small text-success-emphasis text-uppercase fw-semibold mb-2">{{ unit_config.radiologist_role_label }}</div>
+                    <p class="mb-0 small">{{ unit_config.radiologist_help_text }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-light border mb-4">
+            <div class="fw-semibold mb-1">Recommended handoff inside {{ unit_config.unit_name|lower }}</div>
+            <div class="small mb-0">First record scan performance details and attachments, then complete findings, impression, and recommendation before notifying the requesting doctor or marking the case completed.</div>
+        </div>
+
+        <div class="alert alert-light border mb-4">
+            <div class="fw-semibold mb-2">Consumables Already Captured</div>
+            {% if consumption_rows %}
+            <ul class="mb-2 ps-3">
+                {% for row in consumption_rows %}
+                <li>{{ row.item__item_name }} - {{ row.quantity }} {{ row.item__unit_of_measure }} - {{ row.total_cost }}</li>
+                {% endfor %}
+            </ul>
+            <div class="small mb-0">Total consumable cost for this scan: {{ consumption_total_cost }}</div>
+            {% else %}
+            <div class="small mb-0">No consumables captured.</div>
+            {% endif %}
+        </div>
+
+        <form method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                <div>{{ error }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" for="id_technician">{{ unit_config.technician_role_label }}</label>
+                    {{ form.technician }}
+                    <div class="form-text">Assign the staff member who performed or supervised the scan acquisition.</div>
+                    {% for error in form.technician.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="id_radiologist">{{ unit_config.radiologist_role_label }}</label>
+                    {{ form.radiologist }}
+                    <div class="form-text">Assign the staff member responsible for interpretation and final reporting.</div>
+                    {% for error in form.radiologist.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="id_machine_used">Machine Used</label>
+                    {{ form.machine_used }}
+                    {% for error in form.machine_used.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="id_date_performed">Scan Date and Time</label>
+                    {{ form.date_performed }}
+                    {% for error in form.date_performed.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="id_examination">Examination</label>
+                    {{ form.examination }}
+                    {% for error in form.examination.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="id_clinical_information">Clinical Information</label>
+                    {{ form.clinical_information }}
+                    {% for error in form.clinical_information.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="id_image_file">Primary Scan File</label>
+                    {{ form.image_file }}
+                    {% for error in form.image_file.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="id_date_reported">Date Reported</label>
+                    {{ form.date_reported }}
+                    {% for error in form.date_reported.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="id_report_file">Report File</label>
+                    {{ form.report_file }}
+                    {% for error in form.report_file.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="id_findings">Findings</label>
+                    {{ form.findings }}
+                    {% for error in form.findings.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="id_impression">Impression</label>
+                    {{ form.impression }}
+                    {% for error in form.impression.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="id_recommendation">Recommendation</label>
+                    {{ form.recommendation }}
+                    {% for error in form.recommendation.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="id_report">Report</label>
+                    {{ form.report }}
+                    {% for error in form.report.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex gap-2 flex-wrap">
+                <button type="submit" name="action" value="save_report" class="btn btn-primary">{{ submit_label }}</button>
+                <button type="submit" name="action" value="mark_completed" class="btn btn-success">Complete {{ unit_config.capture_findings_short_label }}</button>
+                <button type="submit" name="action" value="notify_doctor" class="btn btn-outline-primary">Notify Requesting Doctor</button>
+                <a class="btn btn-outline-secondary" href="{% url 'radiology:detail' imaging_request.pk %}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

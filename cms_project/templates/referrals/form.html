@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}New Referral | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}New Referral{% endblock %}
+
+{% block content %}
+<nav class="cl-breadcrumb"><a href="{% url 'referrals:index' %}">Referrals</a> / New</nav>
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="cl-card">
+            <div class="cl-card-header"><i class="bi bi-send me-2"></i>{{ page_title }}</div>
+            <div class="cl-card-body">
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="id_visit">Visit</label>
+                            {{ form.visit }}
+                            {% for error in form.visit.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="id_patient">Patient</label>
+                            {{ form.patient }}
+                            {% for error in form.patient.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="id_referring_doctor">Referring Doctor</label>
+                            {{ form.referring_doctor }}
+                            {% for error in form.referring_doctor.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="id_facility_name">Facility Name</label>
+                            {{ form.facility_name }}
+                            {% for error in form.facility_name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="id_reason">Reason</label>
+                            {{ form.reason }}
+                            {% for error in form.reason.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="mt-4 d-flex gap-2">
+                        <button class="btn btn-primary" type="submit">{{ submit_label }}</button>
+                        <a class="btn btn-outline-secondary" href="{% url 'referrals:index' %}">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

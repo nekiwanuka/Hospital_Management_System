@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}Branches | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}Branches{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+    <div>
+        <h1><i class="bi bi-building me-2" style="opacity:.5"></i>Branches</h1>
+        <p>Configured branches in the system.</p>
+    </div>
+</div>
+
+<div class="cl-card">
+    <div class="cl-card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-buildings me-2"></i>Branches</span>
+        <span class="text-muted small">{{ page_obj.paginator.count }} total</span>
+    </div>
+    <div class="cl-card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>City</th>
+                        <th>Shift Variance Threshold</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for branch in branches %}
+                    <tr>
+                        <td><span class="fw-semibold">{{ branch.branch_code }}</span></td>
+                        <td><i class="bi bi-building me-1 text-muted"></i>{{ branch.branch_name }}</td>
+                        <td>{{ branch.city }}</td>
+                        <td>{{ branch.shift_variance_threshold }}</td>
+                        <td><span class="badge rounded-pill {% if branch.status == 'active' %}text-bg-success{% else %}text-bg-secondary{% endif %}">{{ branch.get_status_display }}</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center text-muted py-4"><i class="bi bi-inbox me-1"></i>No branches configured.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if page_obj and page_obj.paginator.num_pages > 1 %}
+    <div class="cl-card-body border-top d-flex justify-content-between align-items-center">
+        <span class="small text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        <nav aria-label="Branches pagination">
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}"><i class="bi bi-chevron-left"></i> Prev</a></li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i> Prev</span></li>
+                {% endif %}
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next <i class="bi bi-chevron-right"></i></a></li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">Next <i class="bi bi-chevron-right"></i></span></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

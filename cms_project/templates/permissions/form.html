@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<nav class="cl-breadcrumb">
+    <a href="{% url 'settingsapp:index' %}?tab=permissions">Administration</a>
+    <span>{{ page_title }}</span>
+</nav>
+<div class="cl-card">
+    <div class="cl-card-header"><h5><i class="bi bi-shield-lock me-2"></i>{{ page_title }}</h5></div>
+    <div class="cl-card-body">
+        <form method="post" class="row g-3">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+            <div class="col-12">
+                <div class="alert alert-danger mb-0">{{ form.non_field_errors }}</div>
+            </div>
+            {% endif %}
+
+            <div class="col-md-6">
+                <label class="form-label" for="{{ form.user.id_for_label }}">User</label>
+                {{ form.user }}
+                {% for error in form.user.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="{{ form.module_name.id_for_label }}">Module</label>
+                {{ form.module_name }}
+                {% for error in form.module_name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+            </div>
+
+            <div class="col-md-4">
+                <div class="form-check mt-2">
+                    {{ form.can_view }}
+                    <label class="form-check-label" for="{{ form.can_view.id_for_label }}">Allow View</label>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-check mt-2">
+                    {{ form.can_create }}
+                    <label class="form-check-label" for="{{ form.can_create.id_for_label }}">Allow Create</label>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-check mt-2">
+                    {{ form.can_update }}
+                    <label class="form-check-label" for="{{ form.can_update.id_for_label }}">Allow Update</label>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="form-check mt-2">
+                    {{ form.can_soft_delete }}
+                    <label class="form-check-label" for="{{ form.can_soft_delete.id_for_label }}">Allow Soft Delete</label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-check mt-2">
+                    {{ form.can_hard_delete }}
+                    <label class="form-check-label" for="{{ form.can_hard_delete.id_for_label }}">Allow Hard Delete</label>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="form-check mt-2">
+                    {{ form.is_active }}
+                    <label class="form-check-label" for="{{ form.is_active.id_for_label }}">Permission Active</label>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label" for="{{ form.notes.id_for_label }}">Notes</label>
+                {{ form.notes }}
+                {% for error in form.notes.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+            </div>
+
+            <div class="col-12 d-flex gap-2">
+                <button class="btn btn-primary" type="submit">{{ submit_label }}</button>
+                <a class="btn btn-outline-secondary" href="{% url 'settingsapp:index' %}?tab=permissions">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

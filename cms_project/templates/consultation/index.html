@@ -1,0 +1,1043 @@
+{% extends 'base.html' %}
+
+{% block title %}Consultation | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}Consultation{% endblock %}
+
+{% block extra_css %}
+<style>
+    .consultation-dashboard {
+        --consultation-hero-bg: linear-gradient(135deg, color-mix(in srgb, var(--cl-primary) 14%, #ffffff), color-mix(in srgb, var(--cl-secondary) 18%, #ffffff));
+        --consultation-chip-bg: rgba(255, 255, 255, 0.72);
+        --consultation-soft-border: color-mix(in srgb, var(--cl-primary) 12%, var(--cl-border));
+    }
+
+    .consultation-hero {
+        position: relative;
+        overflow: hidden;
+        padding: 1.75rem;
+        border: 1px solid var(--consultation-soft-border);
+        border-radius: 1.25rem;
+        background: var(--consultation-hero-bg);
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+        margin-bottom: 1.25rem;
+    }
+
+    .consultation-hero::after {
+        content: "";
+        position: absolute;
+        top: -30%;
+        right: -6%;
+        width: 240px;
+        height: 240px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 72%);
+        pointer-events: none;
+    }
+
+    .consultation-hero-grid {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: minmax(0, 2.3fr) minmax(280px, 1fr);
+        gap: 1.25rem;
+        align-items: start;
+    }
+
+    .consultation-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.7);
+        color: var(--cl-primary-dark);
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.9rem;
+    }
+
+    .consultation-title {
+        margin: 0;
+        font-size: clamp(1.8rem, 3vw, 2.4rem);
+        font-weight: 800;
+        line-height: 1.08;
+        letter-spacing: -0.03em;
+        color: #10233d;
+    }
+
+    .consultation-subtitle {
+        max-width: 62ch;
+        margin: 0.85rem 0 1.1rem;
+        color: #35506f;
+        font-size: 0.95rem;
+    }
+
+    .consultation-highlights {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .consultation-highlight {
+        min-width: 180px;
+        padding: 0.85rem 1rem;
+        border-radius: 1rem;
+        background: var(--consultation-chip-bg);
+        border: 1px solid rgba(255, 255, 255, 0.55);
+        backdrop-filter: blur(8px);
+    }
+
+    .consultation-highlight-label {
+        display: block;
+        margin-bottom: 0.25rem;
+        color: var(--cl-muted);
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    .consultation-highlight-value {
+        display: block;
+        color: #10233d;
+        font-size: 1rem;
+        font-weight: 700;
+    }
+
+    .consultation-action-card {
+        position: relative;
+        z-index: 1;
+        padding: 1.2rem;
+        border-radius: 1.1rem;
+        background: rgba(15, 23, 42, 0.9);
+        color: #e2e8f0;
+        box-shadow: 0 16px 30px rgba(15, 23, 42, 0.16);
+    }
+
+    .consultation-action-card h2 {
+        margin: 0 0 0.45rem;
+        color: #ffffff;
+        font-size: 1rem;
+        font-weight: 700;
+    }
+
+    .consultation-action-card p {
+        margin: 0 0 1rem;
+        color: rgba(226, 232, 240, 0.8);
+        font-size: 0.84rem;
+    }
+
+    .consultation-action-card .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .consultation-panel-card {
+        padding: 0.95rem;
+        border-radius: 1rem;
+        border: 1px solid var(--cl-border);
+        background: rgba(255, 255, 255, 0.88);
+        box-shadow: var(--cl-shadow-sm);
+        margin-bottom: 1.25rem;
+    }
+
+    .consultation-panel-nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .consultation-panel-link {
+        flex: 1 1 180px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.9rem 1rem;
+        border-radius: 1rem;
+        border: 1px solid var(--cl-border);
+        background: #ffffff;
+        color: var(--cl-ink);
+        text-decoration: none;
+        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    }
+
+    .consultation-panel-link:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--cl-shadow-md);
+        border-color: color-mix(in srgb, var(--cl-primary) 24%, var(--cl-border));
+    }
+
+    .consultation-panel-link.is-active {
+        border-color: transparent;
+        background: linear-gradient(135deg, var(--cl-primary), var(--cl-secondary));
+        color: #ffffff;
+        box-shadow: 0 14px 28px rgba(13, 110, 253, 0.22);
+    }
+
+    .consultation-panel-link small {
+        display: block;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        opacity: 0.7;
+        margin-bottom: 0.25rem;
+        font-weight: 700;
+    }
+
+    .consultation-panel-link strong {
+        display: block;
+        font-size: 0.95rem;
+    }
+
+    .consultation-panel-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 2.2rem;
+        height: 2.2rem;
+        padding: 0 0.75rem;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.08);
+        color: inherit;
+        font-size: 0.82rem;
+        font-weight: 800;
+    }
+
+    .consultation-panel-link.is-active .consultation-panel-count {
+        background: rgba(255, 255, 255, 0.16);
+    }
+
+    .consultation-stat-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .consultation-stat-card {
+        position: relative;
+        overflow: hidden;
+        min-height: 170px;
+        padding: 1.1rem 1.15rem;
+        border-radius: 1.2rem;
+        border: 1px solid var(--cl-border);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.98));
+        box-shadow: var(--cl-shadow-sm);
+    }
+
+    .consultation-stat-card::after {
+        content: "";
+        position: absolute;
+        right: -22px;
+        bottom: -22px;
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: var(--stat-glow, rgba(13, 110, 253, 0.1));
+    }
+
+    .consultation-stat-card.primary { --stat-glow: rgba(13, 110, 253, 0.14); }
+    .consultation-stat-card.success { --stat-glow: rgba(5, 150, 105, 0.14); }
+    .consultation-stat-card.warning { --stat-glow: rgba(217, 119, 6, 0.15); }
+    .consultation-stat-card.dark { --stat-glow: rgba(30, 41, 59, 0.13); }
+
+    .consultation-stat-top {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 1.1rem;
+    }
+
+    .consultation-stat-icon {
+        width: 2.75rem;
+        height: 2.75rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.9rem;
+        background: rgba(255, 255, 255, 0.92);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+        color: var(--cl-primary);
+        font-size: 1.2rem;
+    }
+
+    .consultation-stat-card.success .consultation-stat-icon { color: var(--cl-success); }
+    .consultation-stat-card.warning .consultation-stat-icon { color: var(--cl-warning); }
+    .consultation-stat-card.dark .consultation-stat-icon { color: var(--cl-ink); }
+
+    .consultation-stat-label {
+        position: relative;
+        z-index: 1;
+        margin: 0;
+        color: var(--cl-muted);
+        font-size: 0.74rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+    }
+
+    .consultation-stat-value {
+        position: relative;
+        z-index: 1;
+        margin: 0.35rem 0 0.45rem;
+        color: var(--cl-ink);
+        font-size: clamp(1.8rem, 3vw, 2.4rem);
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        line-height: 1;
+    }
+
+    .consultation-stat-note {
+        position: relative;
+        z-index: 1;
+        margin: 0;
+        color: var(--cl-muted);
+        font-size: 0.82rem;
+    }
+
+    .consultation-section {
+        margin-bottom: 1.25rem;
+        border: 1px solid var(--cl-border);
+        border-radius: 1.2rem;
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: var(--cl-shadow-sm);
+        overflow: hidden;
+    }
+
+    .consultation-section-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.85rem;
+        padding: 1.2rem 1.3rem 1rem;
+        border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+        background: linear-gradient(180deg, rgba(248, 250, 252, 0.95), rgba(255, 255, 255, 0.98));
+    }
+
+    .consultation-section-title {
+        margin: 0;
+        font-size: 1.03rem;
+        font-weight: 700;
+        color: var(--cl-ink);
+    }
+
+    .consultation-section-subtitle {
+        margin: 0.28rem 0 0;
+        color: var(--cl-muted);
+        font-size: 0.83rem;
+    }
+
+    .consultation-section-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.38rem 0.72rem;
+        border-radius: 999px;
+        background: rgba(13, 110, 253, 0.08);
+        color: var(--cl-primary-dark);
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    .consultation-section-body {
+        padding: 0.55rem;
+    }
+
+    .consultation-table-wrap {
+        overflow-x: auto;
+        border-radius: 1rem;
+    }
+
+    .consultation-table {
+        min-width: 740px;
+        margin: 0;
+    }
+
+    .consultation-table thead th {
+        background: transparent;
+        border-bottom: 1px solid #e2e8f0;
+        padding-top: 0.7rem;
+    }
+
+    .consultation-table tbody td {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+
+    .consultation-table tbody tr {
+        transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+    }
+
+    .consultation-table tbody tr:hover {
+        background: #f8fbff;
+        transform: scale(0.998);
+    }
+
+    .consultation-visit-id {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 700;
+        color: var(--cl-ink);
+    }
+
+    .consultation-visit-id i {
+        color: var(--cl-primary);
+    }
+
+    .consultation-patient {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+    }
+
+    .consultation-patient-avatar {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, rgba(13, 110, 253, 0.14), rgba(22, 160, 133, 0.16));
+        color: #0f3f73;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+        flex-shrink: 0;
+    }
+
+    .consultation-patient-name {
+        display: block;
+        font-weight: 700;
+        color: var(--cl-ink);
+    }
+
+    .consultation-patient-meta {
+        display: block;
+        color: var(--cl-muted);
+        font-size: 0.76rem;
+        margin-top: 0.14rem;
+    }
+
+    .consultation-status-stack {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+    }
+
+    .consultation-status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.32rem 0.6rem;
+        border-radius: 999px;
+        background: #eef4ff;
+        color: #27548a;
+        font-size: 0.74rem;
+        font-weight: 700;
+    }
+
+    .consultation-status-pill.warning {
+        background: #fff5e8;
+        color: #9a5b00;
+    }
+
+    .consultation-status-pill.info {
+        background: #eaf8fc;
+        color: #0b7285;
+    }
+
+    .consultation-status-pill.dark {
+        background: #eef2f7;
+        color: #465569;
+    }
+
+    .consultation-time {
+        display: inline-flex;
+        flex-direction: column;
+        gap: 0.15rem;
+    }
+
+    .consultation-time strong {
+        color: var(--cl-ink);
+        font-size: 0.82rem;
+    }
+
+    .consultation-time span {
+        color: var(--cl-muted);
+        font-size: 0.74rem;
+    }
+
+    .consultation-empty {
+        display: grid;
+        place-items: center;
+        gap: 0.7rem;
+        min-height: 210px;
+        padding: 1.75rem;
+        text-align: center;
+        color: var(--cl-muted);
+    }
+
+    .consultation-empty i {
+        width: 3.25rem;
+        height: 3.25rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 1rem;
+        background: #f8fafc;
+        color: var(--cl-primary);
+        font-size: 1.4rem;
+    }
+
+    .consultation-empty strong {
+        display: block;
+        color: var(--cl-ink);
+        font-size: 0.95rem;
+        margin-bottom: 0.2rem;
+    }
+
+    .consultation-notes-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1rem;
+        padding: 1.1rem;
+    }
+
+    .consultation-note-card {
+        height: 100%;
+        padding: 1rem;
+        border-radius: 1rem;
+        border: 1px solid #e8eef5;
+        background: linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+
+    .consultation-note-head {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 0.85rem;
+    }
+
+    .consultation-note-title {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--cl-ink);
+    }
+
+    .consultation-note-label {
+        display: block;
+        color: var(--cl-muted);
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 0.18rem;
+        font-weight: 700;
+    }
+
+    .consultation-note-text {
+        margin: 0;
+        color: var(--cl-muted);
+        font-size: 0.83rem;
+        line-height: 1.6;
+    }
+
+    @media (max-width: 1199.98px) {
+        .consultation-stat-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 991.98px) {
+        .consultation-hero-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 767.98px) {
+        .consultation-hero {
+            padding: 1.25rem;
+        }
+
+        .consultation-stat-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .consultation-panel-link {
+            flex-basis: 100%;
+        }
+
+        .consultation-section-header {
+            padding: 1rem;
+        }
+
+        .consultation-section-body,
+        .consultation-notes-grid {
+            padding: 0.75rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="consultation-dashboard">
+    {% with waiting_count=waiting_queue|length active_count=active_cases|length admitted_count=admitted_patients|length archive_count=cleared_archive|length consultation_count=consultations|length %}
+    <section class="consultation-hero">
+        <div class="consultation-hero-grid">
+            <div>
+                <span class="consultation-kicker"><i class="bi bi-journal-medical"></i>Clinician workspace</span>
+                <h1 class="consultation-title">Consultation command center</h1>
+                <p class="consultation-subtitle">Track the FCFS queue, pick up the next patient quickly, and keep active, admitted, and cleared cases visible from one screen without losing workflow context.</p>
+                <div class="consultation-highlights">
+                    <div class="consultation-highlight">
+                        <span class="consultation-highlight-label">Current panel</span>
+                        <span class="consultation-highlight-value">{{ selected_panel|title }} view</span>
+                    </div>
+                    <div class="consultation-highlight">
+                        <span class="consultation-highlight-label">Live queue</span>
+                        <span class="consultation-highlight-value">{{ waiting_count }} patient{{ waiting_count|pluralize }} waiting</span>
+                    </div>
+                    <div class="consultation-highlight">
+                        <span class="consultation-highlight-label">Recent notes</span>
+                        <span class="consultation-highlight-value">{{ consultation_count }} consultation{{ consultation_count|pluralize }} shown</span>
+                    </div>
+                </div>
+            </div>
+            <aside class="consultation-action-card">
+                <h2>Fastest next step</h2>
+                <p>Jump directly into the next available consultation and keep the queue moving.</p>
+                {% if request.user.role != 'nurse' %}<a class="btn btn-primary" href="{% url 'consultation:start_next' %}?panel={{ selected_panel }}"><i class="bi bi-play-fill me-1"></i>Start Next Patient</a>{% endif %}
+            </aside>
+        </div>
+    </section>
+
+    <section class="consultation-panel-card" aria-label="Consultation panels">
+        <div class="consultation-panel-nav">
+            <a class="consultation-panel-link {% if selected_panel == 'all' %}is-active{% endif %}" href="{% url 'consultation:index' %}?panel=all">
+                <span>
+                    <small>Overview</small>
+                    <strong>All panels</strong>
+                </span>
+                <span class="consultation-panel-count">{{ waiting_count|add:active_count|add:admitted_count|add:archive_count }}</span>
+            </a>
+            <a class="consultation-panel-link {% if selected_panel == 'active' %}is-active{% endif %}" href="{% url 'consultation:index' %}?panel=active">
+                <span>
+                    <small>In progress</small>
+                    <strong>Active</strong>
+                </span>
+                <span class="consultation-panel-count">{{ active_count }}</span>
+            </a>
+            <a class="consultation-panel-link {% if selected_panel == 'admitted' %}is-active{% endif %}" href="{% url 'consultation:index' %}?panel=admitted">
+                <span>
+                    <small>Ward access</small>
+                    <strong>Admitted</strong>
+                </span>
+                <span class="consultation-panel-count">{{ admitted_count }}</span>
+            </a>
+            <a class="consultation-panel-link {% if selected_panel == 'archive' %}is-active{% endif %}" href="{% url 'consultation:index' %}?panel=archive">
+                <span>
+                    <small>Completed</small>
+                    <strong>Archive</strong>
+                </span>
+                <span class="consultation-panel-count">{{ archive_count }}</span>
+            </a>
+        </div>
+    </section>
+
+    <section class="consultation-stat-grid">
+        <article class="consultation-stat-card primary">
+            <div class="consultation-stat-top">
+                <span class="consultation-stat-icon"><i class="bi bi-people"></i></span>
+            </div>
+            <p class="consultation-stat-label">Waiting queue</p>
+            <p class="consultation-stat-value">{{ waiting_count }}</p>
+            <p class="consultation-stat-note">Patients ready for clinician pickup in FCFS order.</p>
+        </article>
+        <article class="consultation-stat-card success">
+            <div class="consultation-stat-top">
+                <span class="consultation-stat-icon"><i class="bi bi-activity"></i></span>
+            </div>
+            <p class="consultation-stat-label">Active cases</p>
+            <p class="consultation-stat-value">{{ active_count }}</p>
+            <p class="consultation-stat-note">Cases still under your workflow or awaiting department feedback.</p>
+        </article>
+        <article class="consultation-stat-card warning">
+            <div class="consultation-stat-top">
+                <span class="consultation-stat-icon"><i class="bi bi-hospital"></i></span>
+            </div>
+            <p class="consultation-stat-label">Admitted access</p>
+            <p class="consultation-stat-value">{{ admitted_count }}</p>
+            <p class="consultation-stat-note">Admitted patients still visible to the consultation team.</p>
+        </article>
+        <article class="consultation-stat-card dark">
+            <div class="consultation-stat-top">
+                <span class="consultation-stat-icon"><i class="bi bi-journal-text"></i></span>
+            </div>
+            <p class="consultation-stat-label">Recent notes</p>
+            <p class="consultation-stat-value">{{ consultation_count }}</p>
+            <p class="consultation-stat-note">Latest consultation records surfaced for quick recall.</p>
+        </article>
+    </section>
+
+    {% if selected_panel == 'all' or selected_panel == 'active' %}
+    <section class="consultation-section">
+        <div class="consultation-section-header">
+            <div>
+                <h2 class="consultation-section-title"><i class="bi bi-people me-2"></i>Waiting clinician queue</h2>
+                <p class="consultation-section-subtitle">Patients are listed in first-come, first-served order and ready to start consultation.</p>
+            </div>
+            <span class="consultation-section-badge"><i class="bi bi-hourglass-split"></i>{{ waiting_count }} waiting</span>
+        </div>
+        <div class="consultation-section-body">
+            {% if waiting_queue %}
+            <div class="consultation-table-wrap">
+                <table class="table consultation-table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Visit</th>
+                            <th>Patient</th>
+                            <th>Check in</th>
+                            <th>Status</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for visit in waiting_queue %}
+                        <tr>
+                            <td>
+                                <span class="consultation-visit-id"><i class="bi bi-hash"></i>{{ visit.visit_number }}</span>
+                            </td>
+                            <td>
+                                <div class="consultation-patient">
+                                    <span class="consultation-patient-avatar">{{ visit.patient.first_name|first }}{{ visit.patient.last_name|first }}</span>
+                                    <span>
+                                        <span class="consultation-patient-name">{{ visit.patient.first_name }} {{ visit.patient.last_name }}</span>
+                                        <span class="consultation-patient-meta">Ready for first clinician contact</span>
+                                    </span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="consultation-time">
+                                    <strong>{{ visit.check_in_time|date:"H:i" }}</strong>
+                                    <span>{{ visit.check_in_time|date:"d M Y" }}</span>
+                                </span>
+                            </td>
+                            <td>
+                                <span class="consultation-status-stack">
+                                    <span class="consultation-status-pill"><i class="bi bi-dot"></i>{{ visit.get_status_display }}</span>
+                                </span>
+                            </td>
+                            <td class="text-end">{% if request.user.role == 'nurse' %}<a class="btn btn-sm btn-outline-info" href="{% url 'consultation:nurse_review' visit.pk %}"><i class="bi bi-eye me-1"></i>Review</a>{% else %}<a class="btn btn-sm btn-outline-primary" href="{% url 'consultation:start' visit.pk %}?panel={{ selected_panel }}">Start Consultation</a>{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="consultation-empty">
+                <i class="bi bi-person-check"></i>
+                <div>
+                    <strong>No patients currently waiting</strong>
+                    Queue activity will appear here as soon as a patient reaches the clinician stage.
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if selected_panel == 'all' or selected_panel == 'active' %}
+    <section class="consultation-section">
+        <div class="consultation-section-header">
+            <div>
+                <h2 class="consultation-section-title"><i class="bi bi-activity me-2"></i>My active patients</h2>
+                <p class="consultation-section-subtitle">Patients still in motion across consultation, diagnostics, pharmacy, or follow-up actions.</p>
+            </div>
+            <span class="consultation-section-badge"><i class="bi bi-lightning-charge"></i>{{ active_count }} active</span>
+        </div>
+        <div class="consultation-section-body">
+            {% if active_cases %}
+            <div class="consultation-table-wrap">
+                <table class="table consultation-table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Visit</th>
+                            <th>Patient</th>
+                            <th>Status</th>
+                            <th>Check in</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for visit in active_cases %}
+                        <tr>
+                            <td>
+                                <span class="consultation-visit-id"><i class="bi bi-clipboard2-pulse"></i>{{ visit.visit_number }}</span>
+                            </td>
+                            <td>
+                                <div class="consultation-patient">
+                                    <span class="consultation-patient-avatar">{{ visit.patient.first_name|first }}{{ visit.patient.last_name|first }}</span>
+                                    <span>
+                                        <span class="consultation-patient-name">{{ visit.patient.first_name }} {{ visit.patient.last_name }}</span>
+                                        <span class="consultation-patient-meta">Workbench available for updates and orders</span>
+                                    </span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="consultation-status-stack">
+                                    <span class="consultation-status-pill"><i class="bi bi-dot"></i>{{ visit.get_status_display }}</span>
+                                    {% if visit.waiting_lab_results %}
+                                    <span class="consultation-status-pill warning">Lab pending</span>
+                                    {% endif %}
+                                    {% if visit.waiting_radiology_results %}
+                                    <span class="consultation-status-pill info">Radiology pending</span>
+                                    {% endif %}
+                                    {% if visit.waiting_pharmacy_results %}
+                                    <span class="consultation-status-pill dark">Pharmacy pending</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="consultation-time">
+                                    <strong>{{ visit.check_in_time|date:"H:i" }}</strong>
+                                    <span>{{ visit.check_in_time|date:"d M Y" }}</span>
+                                </span>
+                            </td>
+                            <td class="text-end">{% if request.user.role == 'nurse' %}<a class="btn btn-sm btn-outline-info" href="{% url 'consultation:nurse_review' visit.pk %}"><i class="bi bi-eye me-1"></i>Review</a>{% else %}<a class="btn btn-sm btn-outline-primary" href="{% url 'consultation:start' visit.pk %}?panel={{ selected_panel }}">Open Workbench</a>{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="consultation-empty">
+                <i class="bi bi-clipboard-check"></i>
+                <div>
+                    <strong>No active patients in your workflow</strong>
+                    Once you start or retain a patient in consultation, the active workbench list appears here.
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if selected_panel == 'all' or selected_panel == 'admitted' %}
+    <section class="consultation-section">
+        <div class="consultation-section-header">
+            <div>
+                <h2 class="consultation-section-title"><i class="bi bi-hospital me-2"></i>Admitted patients</h2>
+                <p class="consultation-section-subtitle">Ongoing admitted cases remain visible for clinical review and continuity of care.</p>
+            </div>
+            <span class="consultation-section-badge"><i class="bi bi-building"></i>{{ admitted_count }} admitted</span>
+        </div>
+        <div class="consultation-section-body">
+            {% if admitted_patients %}
+            <div class="consultation-table-wrap">
+                <table class="table consultation-table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Visit</th>
+                            <th>Patient</th>
+                            <th>Status</th>
+                            <th>Check in</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for visit in admitted_patients %}
+                        <tr>
+                            <td>
+                                <span class="consultation-visit-id"><i class="bi bi-door-open"></i>{{ visit.visit_number }}</span>
+                            </td>
+                            <td>
+                                <div class="consultation-patient">
+                                    <span class="consultation-patient-avatar">{{ visit.patient.first_name|first }}{{ visit.patient.last_name|first }}</span>
+                                    <span>
+                                        <span class="consultation-patient-name">{{ visit.patient.first_name }} {{ visit.patient.last_name }}</span>
+                                        <span class="consultation-patient-meta">Still accessible from consultation</span>
+                                    </span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="consultation-status-stack">
+                                    <span class="consultation-status-pill">{{ visit.get_status_display }}</span>
+                                </span>
+                            </td>
+                            <td>
+                                <span class="consultation-time">
+                                    <strong>{{ visit.check_in_time|date:"H:i" }}</strong>
+                                    <span>{{ visit.check_in_time|date:"d M Y" }}</span>
+                                </span>
+                            </td>
+                            <td class="text-end">{% if request.user.role == 'nurse' %}<a class="btn btn-sm btn-outline-info" href="{% url 'consultation:nurse_review' visit.pk %}"><i class="bi bi-eye me-1"></i>Review</a>{% else %}<a class="btn btn-sm btn-outline-primary" href="{% url 'consultation:start' visit.pk %}?panel={{ selected_panel }}">Open Workbench</a>{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="consultation-empty">
+                <i class="bi bi-hospital"></i>
+                <div>
+                    <strong>No admitted patients right now</strong>
+                    When admitted visits remain under consultation visibility, they will be listed here.
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if selected_panel == 'all' or selected_panel == 'archive' %}
+    <section class="consultation-section">
+        <div class="consultation-section-header">
+            <div>
+                <h2 class="consultation-section-title"><i class="bi bi-archive me-2"></i>Cleared patients archive</h2>
+                <p class="consultation-section-subtitle">A quick view of visits you have already completed and sent out of the consultation workflow.</p>
+            </div>
+            <span class="consultation-section-badge"><i class="bi bi-check2-circle"></i>{{ archive_count }} archived</span>
+        </div>
+        <div class="consultation-section-body">
+            {% if cleared_archive %}
+            <div class="consultation-table-wrap">
+                <table class="table consultation-table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Visit</th>
+                            <th>Patient</th>
+                            <th>Cleared on</th>
+                            <th>Status</th>
+                            <th class="text-end">History</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for visit in cleared_archive %}
+                        <tr>
+                            <td>
+                                <span class="consultation-visit-id"><i class="bi bi-archive"></i>{{ visit.visit_number }}</span>
+                            </td>
+                            <td>
+                                <div class="consultation-patient">
+                                    <span class="consultation-patient-avatar">{{ visit.patient.first_name|first }}{{ visit.patient.last_name|first }}</span>
+                                    <span>
+                                        <span class="consultation-patient-name">{{ visit.patient.first_name }} {{ visit.patient.last_name }}</span>
+                                        <span class="consultation-patient-meta">Completed consultation trail available</span>
+                                    </span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="consultation-time">
+                                    <strong>{{ visit.check_out_time|date:"H:i" }}</strong>
+                                    <span>{{ visit.check_out_time|date:"d M Y" }}</span>
+                                </span>
+                            </td>
+                            <td>
+                                <span class="consultation-status-stack">
+                                    <span class="consultation-status-pill dark">{{ visit.get_status_display }}</span>
+                                </span>
+                            </td>
+                            <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{% url 'patients:detail' visit.patient.pk %}?history_only=1&return_to={{ request.get_full_path|urlencode }}">Open Patient History</a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if cleared_archive.has_other_pages %}
+            <nav class="consultation-pagination" aria-label="Archive pagination">
+                <ul class="pagination justify-content-center mb-0 mt-3">
+                    {% if cleared_archive.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?panel=archive&archive_page={{ cleared_archive.previous_page_number }}"><i class="bi bi-chevron-left"></i> Previous</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i> Previous</span></li>
+                    {% endif %}
+
+                    {% for num in cleared_archive.paginator.page_range %}
+                        {% if cleared_archive.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > cleared_archive.number|add:"-3" and num < cleared_archive.number|add:"3" %}
+                        <li class="page-item"><a class="page-link" href="?panel=archive&archive_page={{ num }}">{{ num }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if cleared_archive.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?panel=archive&archive_page={{ cleared_archive.next_page_number }}">Next <i class="bi bi-chevron-right"></i></a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">Next <i class="bi bi-chevron-right"></i></span></li>
+                    {% endif %}
+                </ul>
+                <p class="text-center text-muted mt-2 mb-0" style="font-size:.82rem;">Page {{ cleared_archive.number }} of {{ cleared_archive.paginator.num_pages }}</p>
+            </nav>
+            {% endif %}
+            {% else %}
+            <div class="consultation-empty">
+                <i class="bi bi-clock-history"></i>
+                <div>
+                    <strong>No cleared patients in your archive yet</strong>
+                    Completed visits will be collected here so you can reopen history without searching elsewhere.
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="consultation-section">
+        <div class="consultation-section-header">
+            <div>
+                <h2 class="consultation-section-title"><i class="bi bi-journal-text me-2"></i>Recent consultations and notes</h2>
+                <p class="consultation-section-subtitle">Latest documented encounters for fast recall of diagnosis, room, and attending doctor.</p>
+            </div>
+            <span class="consultation-section-badge"><i class="bi bi-card-text"></i>{{ consultation_count }} notes</span>
+        </div>
+        {% if consultations %}
+        <div class="consultation-notes-grid">
+            {% for consultation in consultations %}
+            <article class="consultation-note-card">
+                <div class="consultation-note-head">
+                    <div>
+                        <span class="consultation-note-label">Patient</span>
+                        <h3 class="consultation-note-title">{{ consultation.patient.first_name }} {{ consultation.patient.last_name }}</h3>
+                    </div>
+                    <span class="consultation-status-pill dark">{{ consultation.created_at|date:"d M Y" }}</span>
+                </div>
+                <div class="mb-3">
+                    <span class="consultation-note-label">Doctor</span>
+                    <p class="consultation-note-text">{% if consultation.doctor %}{{ consultation.doctor.get_full_name|default:consultation.doctor.username }}{% else %}-{% endif %}</p>
+                </div>
+                <div class="mb-3">
+                    <span class="consultation-note-label">Room</span>
+                    <p class="consultation-note-text">{{ consultation.consultation_room|default:'Not recorded' }}</p>
+                </div>
+                <div>
+                    <span class="consultation-note-label">Diagnosis</span>
+                    <p class="consultation-note-text">{{ consultation.diagnosis|default:'No diagnosis recorded.'|truncatechars:135 }}</p>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="consultation-empty">
+            <i class="bi bi-journal-x"></i>
+            <div>
+                <strong>No consultations recorded yet</strong>
+                Once clinicians submit consultation notes, the latest records will appear here.
+            </div>
+        </div>
+        {% endif %}
+    </section>
+    {% endwith %}
+</div>
+{% endblock %}

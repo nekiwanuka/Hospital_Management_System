@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}Review Approval | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}Review Approval{% endblock %}
+
+{% block content %}
+<div class="cl-breadcrumb"><a href="{% url 'billing:approval_requests' %}">Approval Requests</a> / Review</div>
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="cl-card">
+            <div class="cl-card-header"><i class="bi bi-shield-check me-2"></i>Approval Review</div>
+            <div class="cl-card-body">
+                <div class="mb-3"><strong>Type:</strong> {{ approval_request.get_approval_type_display }}</div>
+                <div class="mb-3"><strong>Invoice:</strong> {% if approval_request.invoice %}<a href="{% url 'billing:detail' approval_request.invoice.pk %}">{{ approval_request.invoice.invoice_number }}</a>{% else %}-{% endif %}</div>
+                {% if approval_request.cashier_shift %}
+                <div class="mb-3"><strong>Shift:</strong> #{{ approval_request.cashier_shift.pk }} opened by {{ approval_request.cashier_shift.opened_by.get_full_name|default:approval_request.cashier_shift.opened_by.username }}</div>
+                <div class="mb-3"><strong>Declared:</strong> {{ approval_request.cashier_shift.declared_cash_total }} | <strong>Expected:</strong> {{ approval_request.cashier_shift.expected_cash_total }} | <strong>Variance:</strong> {{ approval_request.cashier_shift.variance_amount }}</div>
+                {% endif %}
+                <div class="mb-3"><strong>Requested By:</strong> {{ approval_request.requested_by.get_full_name|default:approval_request.requested_by.username }}</div>
+                <div class="mb-3"><strong>Requested Change:</strong> {{ approval_request.from_status|default:'-' }} &rarr; {{ approval_request.to_status|default:'-' }}</div>
+                <div class="mb-3"><strong>Reason:</strong><br>{{ approval_request.reason|linebreaksbr }}</div>
+
+                <form method="post" class="row g-3">
+                    {% csrf_token %}
+                    <div class="col-12">
+                        <label class="form-label">Reviewer Notes</label>
+                        <textarea class="form-control" name="reviewer_notes" rows="3" placeholder="Optional review notes"></textarea>
+                    </div>
+                    <div class="col-12 d-flex gap-2">
+                        <button class="btn btn-success" type="submit" name="action" value="approve">Approve</button>
+                        <button class="btn btn-danger" type="submit" name="action" value="reject">Reject</button>
+                        <a class="btn btn-outline-secondary" href="{% url 'billing:approval_requests' %}">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

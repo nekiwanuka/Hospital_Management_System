@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<nav class="cl-breadcrumb"><a href="{% url 'visits:index' %}">Visits</a> / Register</nav>
+<div class="cl-card">
+    <div class="cl-card-header"><i class="bi bi-arrow-left-right me-2"></i>{{ page_title }}</div>
+    <div class="cl-card-body">
+        <form method="post" class="row g-3">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+            <div class="col-12">
+                <div class="alert alert-danger mb-0">{{ form.non_field_errors }}</div>
+            </div>
+            {% endif %}
+            <div class="col-md-8">
+                <label class="form-label" for="{{ form.patient.id_for_label }}">Patient</label>
+                {{ form.patient }}
+                {% for error in form.patient.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="{{ form.visit_type.id_for_label }}">Visit Type</label>
+                {{ form.visit_type }}
+                {% for error in form.visit_type.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-12 d-flex gap-2">
+                <button class="btn btn-primary" type="submit">{{ submit_label }}</button>
+                <a class="btn btn-outline-secondary" href="{% url 'visits:index' %}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,227 @@
+{% extends 'base.html' %}
+{% load currency %}
+
+{% block title %}Invoice {{ invoice.invoice_number }} | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}Invoice Detail{% endblock %}
+
+{% block content %}
+<div class="cl-breadcrumb">
+    {% if return_to %}
+    <a href="{{ return_to }}">Back</a>
+    {% else %}
+    <a href="{% url 'billing:index' %}">Billing</a>
+    {% endif %}
+    <span class="separator">/</span> {{ invoice.invoice_number }}
+</div>
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card card-soft">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h1 class="h4 mb-0">Invoice {{ invoice.invoice_number }}</h1>
+                    <div class="d-flex gap-2">
+                        <a class="btn btn-outline-primary btn-sm" href="{% url 'billing:invoice_document' invoice.pk %}{% if return_to %}?return_to={{ return_to|urlencode }}{% endif %}"><i class="bi bi-file-text"></i> View Invoice</a>
+                        <a class="btn btn-outline-secondary btn-sm" href="{% url 'billing:quotation_document' invoice.pk %}{% if return_to %}?return_to={{ return_to|urlencode }}{% endif %}"><i class="bi bi-file-earmark-ruled"></i> View Quotation</a>
+                        {% if invoice.payment_status == "paid" or invoice.payment_status == "partial" %}
+                        <a class="btn btn-success btn-sm" href="{% url 'billing:receipt' invoice.pk %}{% if return_to %}?return_to={{ return_to|urlencode }}{% endif %}"><i class="bi bi-receipt"></i> View Receipts</a>
+                        {% endif %}
+                        {% include 'core/includes/delete_request_modal.html' %}
+                        {% if return_to %}
+                        <a class="btn btn-outline-secondary btn-sm" href="{{ return_to }}">Back</a>
+                        {% else %}
+                        <a class="btn btn-outline-secondary btn-sm" href="{% url 'billing:index' %}">Back</a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6"><strong>Patient:</strong> {{ invoice.patient.first_name }} {{ invoice.patient.last_name }}</div>
+                    <div class="col-md-6"><strong>Cashier:</strong> {% if invoice.cashier %}{{ invoice.cashier.get_full_name|default:invoice.cashier.username }}{% else %}-{% endif %}</div>
+                    <div class="col-md-6"><strong>Branch:</strong> {{ invoice.branch.branch_name }}</div>
+                    <div class="col-md-6"><strong>Date:</strong> {{ invoice.date }}</div>
+                    <div class="col-md-6"><strong>Payment Method:</strong> {{ invoice.get_payment_method_display }}</div>
+                    <div class="col-md-6"><strong>Status:</strong> {{ invoice.get_payment_status_display }}</div>
+                    <div class="col-md-6"><strong>Total Amount:</strong> {{ invoice.total_amount|ugx }}</div>
+                    <div class="col-12"><strong>Services:</strong><br>{{ invoice.services|linebreaksbr }}</div>
+                </div>
+
+                <hr>
+                <h2 class="h5">Payment Options</h2>
+                {% if invoice.visit %}
+                <div class="alert alert-light border">
+                    <div class="fw-semibold">Visit Flow</div>
+                    <div class="small mb-0">After you mark this visit invoice as paid, the patient is forwarded to triage first. The doctor sees the patient only after triage is completed.</div>
+                </div>
+                {% endif %}
+
+                {% if invoice.payment_status == "paid" %}
+                <div class="alert alert-success"><i class="bi bi-check-circle"></i> This invoice has been fully paid.</div>
+                {% else %}
+
+                {% if partial_approval_pending %}
+                <div class="alert alert-warning"><i class="bi bi-hourglass-split"></i> A partial payment approval request is pending director review.</div>
+                {% endif %}
+                {% if partial_approval_approved %}
+                <div class="alert alert-info"><i class="bi bi-check2-circle"></i> Partial payment has been approved by director. You can now post individual line payments below.</div>
+                {% endif %}
+
+                <div class="row g-3 mb-3">
+                    <!-- Pay Full (Cash) -->
+                    <div class="col-md-4">
+                        <div class="card border-success h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-cash-stack text-success" style="font-size:2rem;"></i>
+                                <h6 class="mt-2 mb-1">Pay Full</h6>
+                                <p class="small text-muted mb-2">Patient pays the full outstanding amount now.</p>
+                                <form method="post" action="{% url 'billing:update_payment' invoice.pk %}">
+                                    {% csrf_token %}
+                                    {% if return_to %}<input type="hidden" name="return_to" value="{{ return_to }}">{% endif %}
+                                    <input type="hidden" name="payment_status" value="paid">
+                                    <select class="form-select form-select-sm mb-2" name="payment_method">
+                                        {% for method, label in invoice.PAYMENT_METHODS %}
+                                        <option value="{{ method }}" {% if invoice.payment_method == method %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="btn btn-success btn-sm w-100"><i class="bi bi-check-lg"></i> Pay Full &amp; Get Receipt</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Pay Partial (Requires Director Approval) -->
+                    <div class="col-md-4">
+                        <div class="card border-warning h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-pie-chart text-warning" style="font-size:2rem;"></i>
+                                <h6 class="mt-2 mb-1">Pay Partially</h6>
+                                <p class="small text-muted mb-2">Requires director approval. Then post line payments below.</p>
+                                {% if partial_approval_approved %}
+                                <span class="badge bg-success mb-2">Approved</span>
+                                {% elif partial_approval_pending %}
+                                <span class="badge bg-warning text-dark mb-2">Pending Approval</span>
+                                {% else %}
+                                <form method="post" action="{% url 'billing:update_payment' invoice.pk %}">
+                                    {% csrf_token %}
+                                    {% if return_to %}<input type="hidden" name="return_to" value="{{ return_to }}">{% endif %}
+                                    <input type="hidden" name="payment_status" value="partial">
+                                    <select class="form-select form-select-sm mb-2" name="payment_method">
+                                        {% for method, label in invoice.PAYMENT_METHODS %}
+                                        <option value="{{ method }}" {% if invoice.payment_method == method %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <input class="form-control form-control-sm mb-2" type="text" name="status_reason" placeholder="Reason for partial payment" required>
+                                    <button type="submit" class="btn btn-warning btn-sm w-100"><i class="bi bi-send"></i> Request Approval</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Pay Later -->
+                    <div class="col-md-4">
+                        <div class="card border-secondary h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-clock-history text-secondary" style="font-size:2rem;"></i>
+                                <h6 class="mt-2 mb-1">Pay Later</h6>
+                                <p class="small text-muted mb-2">Charges stay on invoice. Patient pays on next visit.</p>
+                                <form method="post" action="{% url 'billing:update_payment' invoice.pk %}">
+                                    {% csrf_token %}
+                                    {% if return_to %}<input type="hidden" name="return_to" value="{{ return_to }}">{% endif %}
+                                    <input type="hidden" name="payment_status" value="pending">
+                                    <input type="hidden" name="status_reason" value="Patient deferred payment.">
+                                    <button type="submit" class="btn btn-outline-secondary btn-sm w-100"><i class="bi bi-clock"></i> Defer Payment</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if invoice.payment_status == "paid" %}{% elif True %}
+                <!-- Paid Rollback (for already-paid invoices) -->
+                {% endif %}
+                {% endif %}
+
+                {% if line_items %}
+                <hr>
+                <h2 class="h5">Invoice Line Items</h2>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Description</th>
+                                <th>Charged</th>
+                                <th>Paid</th>
+                                <th>Status</th>
+                                <th>Stock Cost</th>
+                                <th>Profit</th>
+                                <th class="text-end">Cashier Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in line_items %}
+                            <tr>
+                                <td>{{ item.get_service_type_display }}</td>
+                                <td>{{ item.description }}</td>
+                                <td>{{ item.amount|ugx }}</td>
+                                <td>{{ item.paid_amount|ugx }}</td>
+                                <td>{{ item.get_payment_status_display }}</td>
+                                <td>{{ item.total_cost|ugx }}</td>
+                                <td>{{ item.profit_amount|ugx }}</td>
+                                <td class="text-end">
+                                    {% if item.payment_status != "paid" %}
+                                    <form method="post" action="{% url 'billing:pay_line_item' invoice.pk item.pk %}" class="d-flex gap-2 justify-content-end flex-wrap">
+                                        {% csrf_token %}
+                                        {% if return_to %}
+                                        <input type="hidden" name="return_to" value="{{ return_to }}">
+                                        {% endif %}
+                                        <input type="number" class="form-control form-control-sm" name="amount_paid" step="0.01" min="0.01" max="{{ item.amount|floatformat:2 }}" value="{{ item.amount|floatformat:2 }}" style="max-width:120px" required>
+                                        <select class="form-select form-select-sm" name="payment_method" style="max-width:140px">
+                                            {% for method, label in invoice.PAYMENT_METHODS %}
+                                            <option value="{{ method }}">{{ label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <button class="btn btn-sm btn-outline-success" type="submit">Pay Line</button>
+                                    </form>
+                                    {% else %}
+                                    <span class="badge text-bg-success">Settled</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if line_payments %}
+                <hr>
+                <h2 class="h5">Cashier Payment Log</h2>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Service</th>
+                                <th>Amount</th>
+                                <th>Method</th>
+                                <th>Cashier</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pay in line_payments %}
+                            <tr>
+                                <td>{{ pay.paid_at|date:"d M Y H:i" }}</td>
+                                <td>{{ pay.line_item.get_service_type_display }}</td>
+                                <td>{{ pay.amount_paid|ugx }}</td>
+                                <td>{{ pay.get_payment_method_display }}</td>
+                                <td>{% if pay.received_by %}{{ pay.received_by.get_full_name|default:pay.received_by.username }}{% else %}-{% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

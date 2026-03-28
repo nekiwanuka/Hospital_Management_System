@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+
+{% block title %}Walk-In Dispensing | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}Pharmacy / Walk-In Dispensing{% endblock %}
+
+{% block extra_css %}
+<style>
+.wi-hero {
+    position:relative;overflow:hidden;padding:1rem 1.25rem;border-radius:.75rem;margin-bottom:1rem;
+    background:linear-gradient(135deg,
+        color-mix(in srgb,#6366f1 8%,#fff),
+        color-mix(in srgb,#0ea5e9 10%,#fff));
+    border:1px solid color-mix(in srgb,#6366f1 12%,#e2e8f0);
+    box-shadow:0 4px 16px rgba(15,23,42,.06);
+}
+.wi-hero h1 { margin:0;font-size:1.1rem;font-weight:800;color:#1e293b; }
+.wi-hero h1 i { opacity:.4;margin-right:.35rem; }
+.wi-hero p { margin:.2rem 0 0;font-size:.78rem;color:#475569; }
+
+.wi-section { font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin:1rem 0 .5rem;display:flex;align-items:center;gap:.5rem; }
+.wi-section::after { content:"";flex:1;height:1px;background:#e2e8f0; }
+
+.wi-line-row { display:flex;align-items:flex-end;gap:.5rem;padding:.5rem;border:1px solid #e2e8f0;border-radius:.5rem;margin-bottom:.4rem;background:#fafbfc; }
+.wi-line-row .form-group { flex:1; }
+.wi-line-row .form-group.qty { max-width:100px; }
+.wi-line-row .form-group label { font-size:.68rem;font-weight:600;color:#64748b;text-transform:uppercase;margin-bottom:.15rem;display:block; }
+.wi-line-row .btn-remove { align-self:center;margin-bottom:.15rem; }
+.wi-line-row .price-hint { font-size:.72rem;color:#059669;font-weight:600;align-self:center;min-width:80px;text-align:right; }
+
+.wi-total-bar {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:.6rem .8rem;border-radius:.5rem;background:#f0fdf4;border:1px solid #a7f3d0;margin-top:.5rem;
+}
+.wi-total-bar .total-label { font-size:.75rem;font-weight:700;color:#059669;text-transform:uppercase; }
+.wi-total-bar .total-amount { font-size:1.1rem;font-weight:800;color:#047857; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wi">
+    <div class="wi-hero">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div>
+                <h1><i class="bi bi-bag-plus"></i>Walk-In Dispensing</h1>
+                <p>Add multiple medicines for over-the-counter / walk-in customers.</p>
+            </div>
+            <a class="btn btn-outline-dark btn-sm" href="{% url 'pharmacy:index' %}"><i class="bi bi-arrow-left me-1"></i>Back</a>
+        </div>
+    </div>
+
+    <div class="card border shadow-sm">
+        <div class="card-body">
+            <form method="post" novalidate id="walkin-form">
+                {% csrf_token %}
+
+                {% if customer_form.non_field_errors %}
+                <div class="alert alert-danger py-2" style="font-size:.82rem">
+                    {% for err in customer_form.non_field_errors %}
+                    <div>{{ err }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Customer Info -->
+                <div class="wi-section"><i class="bi bi-person"></i> Customer Details</div>
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="id_walk_in_name">Customer Name *</label>
+                        {{ customer_form.walk_in_name }}
+                        {% if customer_form.walk_in_name.errors %}<div class="invalid-feedback d-block">{{ customer_form.walk_in_name.errors.0 }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="id_walk_in_phone">Phone Number *</label>
+                        {{ customer_form.walk_in_phone }}
+                        {% if customer_form.walk_in_phone.errors %}<div class="invalid-feedback d-block">{{ customer_form.walk_in_phone.errors.0 }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <!-- Medicine Lines -->
+                <div class="wi-section"><i class="bi bi-capsule"></i> Medicines</div>
+
+                {{ line_formset.management_form }}
+
+                <div id="line-container">
+                    {% for lf in line_formset %}
+                    <div class="wi-line-row" data-index="{{ forloop.counter0 }}">
+                        <div class="form-group">
+                            <label>Medicine</label>
+                            {{ lf.medicine }}
+                            {% if lf.medicine.errors %}<div class="invalid-feedback d-block">{{ lf.medicine.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="form-group qty">
+                            <label>Qty</label>
+                            {{ lf.quantity }}
+                            {% if lf.quantity.errors %}<div class="invalid-feedback d-block">{{ lf.quantity.errors.0 }}</div>{% endif %}
+                        </div>
+                        <span class="price-hint" data-role="line-total">—</span>
+                        <button type="button" class="btn btn-outline-danger btn-sm btn-remove" title="Remove line"><i class="bi bi-x-lg"></i></button>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="btn-add-line"><i class="bi bi-plus-lg me-1"></i>Add Medicine</button>
+
+                <div class="wi-total-bar">
+                    <span class="total-label"><i class="bi bi-calculator me-1"></i>Estimated Total</span>
+                    <span class="total-amount" id="grand-total">—</span>
+                </div>
+
+                <div class="mt-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-success"><i class="bi bi-check2 me-1"></i>Dispense All</button>
+                    <a class="btn btn-outline-secondary" href="{% url 'pharmacy:index' %}">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var container = document.getElementById('line-container');
+    var totalForms = document.getElementById('id_lines-TOTAL_FORMS');
+    var addBtn = document.getElementById('btn-add-line');
+
+    /* Build a price map from the medicine option labels: "Name (batch) — price" */
+    var priceMap = {};
+    function buildPriceMap() {
+        var first = container.querySelector('select[name$="-medicine"]');
+        if (!first) return;
+        Array.from(first.options).forEach(function(opt) {
+            if (opt.value) priceMap[opt.value] = 0;
+        });
+    }
+    buildPriceMap();
+
+    /* Grab a medicine select's selling price by reading the data from the server */
+    function getPriceForOption(selectEl) {
+        /* price embedded in the option via data attr or we default to 0 */
+        var sel = selectEl.options[selectEl.selectedIndex];
+        return sel ? parseFloat(sel.getAttribute('data-price') || 0) : 0;
+    }
+
+    function recalc() {
+        var total = 0;
+        container.querySelectorAll('.wi-line-row').forEach(function(row) {
+            var med = row.querySelector('select[name$="-medicine"]');
+            var qty = row.querySelector('input[name$="-quantity"]');
+            var hint = row.querySelector('[data-role="line-total"]');
+            var p = getPriceForOption(med);
+            var q = parseInt(qty ? qty.value : 0) || 0;
+            var sub = p * q;
+            if (hint) hint.textContent = p > 0 ? sub.toLocaleString() : '—';
+            total += sub;
+        });
+        var gt = document.getElementById('grand-total');
+        if (gt) gt.textContent = total > 0 ? total.toLocaleString() : '—';
+    }
+
+    addBtn.addEventListener('click', function () {
+        var idx = parseInt(totalForms.value, 10);
+        var firstRow = container.querySelector('.wi-line-row');
+        if (!firstRow) return;
+        var clone = firstRow.cloneNode(true);
+        clone.setAttribute('data-index', idx);
+        /* Update names & IDs */
+        clone.querySelectorAll('[name]').forEach(function(el) {
+            el.name = el.name.replace(/-\d+-/, '-' + idx + '-');
+            if (el.id) el.id = el.id.replace(/-\d+-/, '-' + idx + '-');
+            if (el.tagName === 'SELECT') el.selectedIndex = 0;
+            if (el.tagName === 'INPUT') el.value = '1';
+        });
+        clone.querySelectorAll('[for]').forEach(function(el) {
+            el.setAttribute('for', el.getAttribute('for').replace(/-\d+-/, '-' + idx + '-'));
+        });
+        /* Clear errors */
+        clone.querySelectorAll('.invalid-feedback').forEach(function(el) { el.remove(); });
+        var hint = clone.querySelector('[data-role="line-total"]');
+        if (hint) hint.textContent = '—';
+
+        container.appendChild(clone);
+        totalForms.value = idx + 1;
+        bindRow(clone);
+        recalc();
+    });
+
+    function removeRow(e) {
+        if (container.querySelectorAll('.wi-line-row').length <= 1) return;
+        e.target.closest('.wi-line-row').remove();
+        /* re-index */
+        container.querySelectorAll('.wi-line-row').forEach(function(row, i) {
+            row.setAttribute('data-index', i);
+            row.querySelectorAll('[name]').forEach(function(el) {
+                el.name = el.name.replace(/-\d+-/, '-' + i + '-');
+                if (el.id) el.id = el.id.replace(/-\d+-/, '-' + i + '-');
+            });
+        });
+        totalForms.value = container.querySelectorAll('.wi-line-row').length;
+        recalc();
+    }
+
+    function bindRow(row) {
+        row.querySelector('.btn-remove').addEventListener('click', removeRow);
+        var med = row.querySelector('select[name$="-medicine"]');
+        var qty = row.querySelector('input[name$="-quantity"]');
+        if (med) med.addEventListener('change', recalc);
+        if (qty) qty.addEventListener('input', recalc);
+    }
+
+    container.querySelectorAll('.wi-line-row').forEach(bindRow);
+    recalc();
+})();
+</script>
+{% endblock %}

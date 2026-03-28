@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block title %}Referrals | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}Referrals{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+    <div>
+        <h1><i class="bi bi-send me-2" style="opacity:.5"></i>Referrals</h1>
+        <p>Patient referrals to external facilities.</p>
+    </div>
+    <a class="btn btn-primary" href="{% url 'referrals:create' %}"><i class="bi bi-plus-lg me-1"></i>New Referral</a>
+</div>
+
+<div class="cl-card">
+    <div class="cl-card-body">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>Patient</th>
+                        <th>Doctor</th>
+                        <th>Facility Name</th>
+                        <th>Reason</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for referral in referrals %}
+                    <tr>
+                        <td>{{ referral.patient.first_name }} {{ referral.patient.last_name }}</td>
+                        <td>{% if referral.referring_doctor %}{{ referral.referring_doctor.get_full_name|default:referral.referring_doctor.username }}{% else %}-{% endif %}</td>
+                        <td>{{ referral.facility_name }}</td>
+                        <td>{{ referral.reason|truncatechars:60 }}</td>
+                        <td>{{ referral.referral_date }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-muted">No referrals yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if page_obj and page_obj.paginator.num_pages > 1 %}
+        <nav class="mt-3">
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+                {% endif %}
+                <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block title %}Initial Setup | ClinicMS{% endblock %}
+
+{% block header_title %}Setup Wizard{% endblock %}
+
+{% block content %}
+<div class="cl-card">
+    <div class="cl-card-header">
+        <h5><i class="bi bi-magic me-2"></i>Initial Installation Wizard</h5>
+    </div>
+    <div class="cl-card-body">
+                <p class="text-muted mb-4">Configure the clinic profile, create the primary branch, and register the first system administrator.</p>
+
+                <form method="post" enctype="multipart/form-data" novalidate>
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <h2 class="h5 mt-2">Clinic Profile</h2>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.clinic_name.id_for_label }}">{{ form.clinic_name.label }}</label>
+                            {{ form.clinic_name }}
+                            {% if form.clinic_name.errors %}<div class="text-danger small">{{ form.clinic_name.errors|striptags }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.logo.id_for_label }}">{{ form.logo.label }}</label>
+                            {{ form.logo }}
+                            {% if form.logo.errors %}<div class="text-danger small">{{ form.logo.errors|striptags }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.system_email.id_for_label }}">{{ form.system_email.label }}</label>
+                            {{ form.system_email }}
+                            {% if form.system_email.errors %}<div class="text-danger small">{{ form.system_email.errors|striptags }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="{{ form.primary_color.id_for_label }}">{{ form.primary_color.label }}</label>
+                            {{ form.primary_color }}
+                            {% if form.primary_color.errors %}<div class="text-danger small">{{ form.primary_color.errors|striptags }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="{{ form.secondary_color.id_for_label }}">{{ form.secondary_color.label }}</label>
+                            {{ form.secondary_color }}
+                            {% if form.secondary_color.errors %}<div class="text-danger small">{{ form.secondary_color.errors|striptags }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.timezone.id_for_label }}">{{ form.timezone.label }}</label>
+                            {{ form.timezone }}
+                            {% if form.timezone.errors %}<div class="text-danger small">{{ form.timezone.errors|striptags }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <h2 class="h5">Primary Branch</h2>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.branch_name.id_for_label }}">{{ form.branch_name.label }}</label>
+                            {{ form.branch_name }}
+                            {% if form.branch_name.errors %}<div class="text-danger small">{{ form.branch_name.errors|striptags }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.branch_code.id_for_label }}">{{ form.branch_code.label }}</label>
+                            {{ form.branch_code }}
+                            {% if form.branch_code.errors %}<div class="text-danger small">{{ form.branch_code.errors|striptags }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.branch_city.id_for_label }}">{{ form.branch_city.label }}</label>
+                            {{ form.branch_city }}
+                            {% if form.branch_city.errors %}<div class="text-danger small">{{ form.branch_city.errors|striptags }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.branch_country.id_for_label }}">{{ form.branch_country.label }}</label>
+                            {{ form.branch_country }}
+                            {% if form.branch_country.errors %}<div class="text-danger small">{{ form.branch_country.errors|striptags }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.branch_phone.id_for_label }}">{{ form.branch_phone.label }}</label>
+                            {{ form.branch_phone }}
+                            {% if form.branch_phone.errors %}<div class="text-danger small">{{ form.branch_phone.errors|striptags }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.branch_email.id_for_label }}">{{ form.branch_email.label }}</label>
+                            {{ form.branch_email }}
+                            {% if form.branch_email.errors %}<div class="text-danger small">{{ form.branch_email.errors|striptags }}</div>{% endif %}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="{{ form.branch_address.id_for_label }}">{{ form.branch_address.label }}</label>
+                            {{ form.branch_address }}
+                            {% if form.branch_address.errors %}<div class="text-danger small">{{ form.branch_address.errors|striptags }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <h2 class="h5">System Administrator</h2>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.admin_username.id_for_label }}">{{ form.admin_username.label }}</label>
+                            {{ form.admin_username }}
+                            {% if form.admin_username.errors %}<div class="text-danger small">{{ form.admin_username.errors|striptags }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.admin_first_name.id_for_label }}">{{ form.admin_first_name.label }}</label>
+                            {{ form.admin_first_name }}
+                            {% if form.admin_first_name.errors %}<div class="text-danger small">{{ form.admin_first_name.errors|striptags }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.admin_last_name.id_for_label }}">{{ form.admin_last_name.label }}</label>
+                            {{ form.admin_last_name }}
+                            {% if form.admin_last_name.errors %}<div class="text-danger small">{{ form.admin_last_name.errors|striptags }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.admin_phone.id_for_label }}">{{ form.admin_phone.label }}</label>
+                            {{ form.admin_phone }}
+                            {% if form.admin_phone.errors %}<div class="text-danger small">{{ form.admin_phone.errors|striptags }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.admin_email.id_for_label }}">{{ form.admin_email.label }}</label>
+                            {{ form.admin_email }}
+                            {% if form.admin_email.errors %}<div class="text-danger small">{{ form.admin_email.errors|striptags }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.admin_password.id_for_label }}">{{ form.admin_password.label }}</label>
+                            {{ form.admin_password }}
+                            {% if form.admin_password.errors %}<div class="text-danger small">{{ form.admin_password.errors|striptags }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.admin_password_confirm.id_for_label }}">{{ form.admin_password_confirm.label }}</label>
+                            {{ form.admin_password_confirm }}
+                            {% if form.admin_password_confirm.errors %}<div class="text-danger small">{{ form.admin_password_confirm.errors|striptags }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Complete Setup</button>
+                </form>
+    </div>
+</div>
+{% endblock %}

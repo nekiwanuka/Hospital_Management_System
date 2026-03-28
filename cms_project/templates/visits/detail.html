@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% block title %}Visit {{ visit.visit_number }} | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}Visit Detail{% endblock %}
+
+{% block content %}
+<div class="cl-breadcrumb"><a href="{% url 'visits:index' %}">Visits Queue</a> <span class="separator">/</span> {{ visit.visit_number }}</div>
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card card-soft h-100">
+            <div class="card-body p-4">
+                <h1 class="h5 mb-3">Visit Summary</h1>
+                {% if is_review_no_payment %}
+                <div class="alert alert-success py-2">
+                    <strong>Review Visit (No Payment)</strong>
+                    <div class="small">Billing waived because follow-up is valid until {{ review_valid_until }}.</div>
+                </div>
+                {% elif visit.status == 'billing_queue' %}
+                <div class="alert alert-warning py-2">
+                    <strong>Awaiting Cashier Payment</strong>
+                    <div class="small">This patient has been registered for a visit and is waiting for cashier clearance before triage.</div>
+                </div>
+                {% elif visit.status == 'waiting_triage' %}
+                <div class="alert alert-info py-2">
+                    <strong>Ready For Triage</strong>
+                    <div class="small">Cashier payment has been confirmed. The patient should now proceed to triage before consultation.</div>
+                </div>
+                {% elif visit.status == 'waiting_doctor' %}
+                <div class="alert alert-primary py-2">
+                    <strong>Ready For Consultation</strong>
+                    <div class="small">Triage is complete. The patient can now be seen in the doctor&apos;s room.</div>
+                </div>
+                {% endif %}
+                <dl class="row mb-0">
+                    <dt class="col-5">Visit No.</dt><dd class="col-7">{{ visit.visit_number }}</dd>
+                    <dt class="col-5">Patient</dt><dd class="col-7">{{ visit.patient }}</dd>
+                    <dt class="col-5">Type</dt><dd class="col-7">{{ visit.get_visit_type_display }}</dd>
+                    <dt class="col-5">Status</dt><dd class="col-7">{{ visit.get_status_display }}</dd>
+                    <dt class="col-5">Clinician</dt>
+                    <dd class="col-7">
+                        {% if visit.assigned_clinician %}
+                            {{ visit.assigned_clinician.get_full_name|default:visit.assigned_clinician.username }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </dd>
+                    <dt class="col-5">Consultation Room</dt><dd class="col-7">{{ visit.assigned_consultation_room|default:'-' }}</dd>
+                    <dt class="col-5">Branch</dt><dd class="col-7">{{ visit.branch }}</dd>
+                    <dt class="col-5">Check-In</dt><dd class="col-7">{{ visit.check_in_time }}</dd>
+                    <dt class="col-5">Check-Out</dt><dd class="col-7">{{ visit.check_out_time|default:'-' }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card card-soft h-100">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h5 mb-0">Queue Timeline</h2>
+                    <div class="d-flex gap-2">
+                        {% include 'core/includes/delete_request_modal.html' %}
+                        <a class="btn btn-sm btn-outline-secondary" href="{% url 'visits:index' %}">Back to Queue</a>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr>
+                                <th>Moved At</th>
+                                <th>From</th>
+                                <th>To</th>
+                                <th>By</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for event in visit.events.all %}
+                            <tr>
+                                <td>{{ event.moved_at }}</td>
+                                <td>{{ event.from_status|default:'-' }}</td>
+                                <td>{{ event.to_status }}</td>
+                                <td>{{ event.moved_by }}</td>
+                                <td>{{ event.notes|default:'-' }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-muted">No queue events recorded yet.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

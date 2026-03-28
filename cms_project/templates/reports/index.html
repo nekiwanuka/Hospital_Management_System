@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+
+{% block title %}Reports | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}Reports{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-12">
+        <div class="cl-card">
+            <div class="cl-card-header"><i class="bi bi-bar-chart-line me-2"></i>Reports</div>
+            <div class="cl-card-body">
+                <p class="text-muted mb-3">Generate operational reports including financial statements, branch performance, and Inventory / Medical Stores stock snapshots with CSV/PDF export.</p>
+                <div class="mb-3">
+                    <a class="btn btn-outline-primary btn-sm" href="{% url 'reports:index' %}?report=gross_profit">
+                        <i class="bi bi-graph-up-arrow me-1"></i>Open Gross Profit Report
+                    </a>
+                    <a class="btn btn-outline-secondary btn-sm" href="{% url 'reports:profit' %}">
+                        <i class="bi bi-speedometer2 me-1"></i>Open Gross Profit Dashboard
+                    </a>
+                    <a class="btn btn-outline-secondary btn-sm" href="{% url 'reports:laboratory_profitability' %}">
+                        <i class="bi bi-droplet-half me-1"></i>Laboratory Profit Detail
+                    </a>
+                    <a class="btn btn-outline-secondary btn-sm" href="{% url 'reports:radiology_profitability' %}">
+                        <i class="bi bi-radioactive me-1"></i>Radiology Profit Detail
+                    </a>
+                </div>
+
+                <form method="get" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label" for="report">Report Type</label>
+                        <select class="form-select" id="report" name="report">
+                            {% for key, label in report_types.items %}
+                            <option value="{{ key }}" {% if selected_report == key %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" for="date_from">Date From</label>
+                        <input class="form-control" type="date" id="date_from" name="date_from" value="{{ date_from|date:'Y-m-d' }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" for="date_to">Date To</label>
+                        <input class="form-control" type="date" id="date_to" name="date_to" value="{{ date_to|date:'Y-m-d' }}">
+                    </div>
+                    {% if selected_report == 'gross_profit' %}
+                    <div class="col-md-3">
+                        <label class="form-label" for="branch">Branch</label>
+                        <select class="form-select" id="branch" name="branch">
+                            <option value="">All branches</option>
+                            {% for branch in branch_options %}
+                            <option value="{{ branch.pk }}" {% if selected_branch == branch.pk %}selected{% endif %}>{{ branch.branch_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" for="department">Department</label>
+                        <select class="form-select" id="department" name="department">
+                            <option value="">All departments</option>
+                            {% for key, label in gross_profit_department_options.items %}
+                            <option value="{{ key }}" {% if selected_department == key %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+                    <div class="col-md-3 d-flex gap-2">
+                        <button class="btn btn-primary" type="submit">Run Report</button>
+                        <a class="btn btn-outline-secondary" href="{% url 'reports:export' %}?report={{ selected_report }}&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}{% if selected_branch %}&branch={{ selected_branch }}{% endif %}{% if selected_department %}&department={{ selected_department }}{% endif %}&format=csv">CSV</a>
+                        <a class="btn btn-outline-secondary" href="{% url 'reports:export' %}?report={{ selected_report }}&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}{% if selected_branch %}&branch={{ selected_branch }}{% endif %}{% if selected_department %}&department={{ selected_department }}{% endif %}&format=pdf">PDF</a>
+                    </div>
+                </form>
+
+                <hr>
+
+                <h2 class="h5">{{ selected_report_label }}</h2>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr>
+                                {% for header in headers %}
+                                <th>{{ header|cut:'_'|title }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in rows %}
+                            <tr>
+                                {% for value in row %}
+                                <td>{{ value }}</td>
+                                {% endfor %}
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="{{ headers|length }}" class="text-muted">No report data for the selected period.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if data_page_obj.paginator.num_pages > 1 %}
+                <nav class="mt-2">
+                    <ul class="pagination pagination-sm mb-0">
+                        {% if data_page_obj.has_previous %}
+                        <li class="page-item"><a class="page-link" href="?report={{ selected_report }}&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}{% if selected_branch %}&branch={{ selected_branch }}{% endif %}{% if selected_department %}&department={{ selected_department }}{% endif %}&data_page={{ data_page_obj.previous_page_number }}&history_page={{ history_page_obj.number }}">Previous</a></li>
+                        {% endif %}
+                        <li class="page-item disabled"><span class="page-link">Page {{ data_page_obj.number }} of {{ data_page_obj.paginator.num_pages }}</span></li>
+                        {% if data_page_obj.has_next %}
+                        <li class="page-item"><a class="page-link" href="?report={{ selected_report }}&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}{% if selected_branch %}&branch={{ selected_branch }}{% endif %}{% if selected_department %}&department={{ selected_department }}{% endif %}&data_page={{ data_page_obj.next_page_number }}&history_page={{ history_page_obj.number }}">Next</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="card card-soft">
+            <div class="card-body p-4">
+                <h2 class="h5 mb-3">Export History</h2>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Format</th>
+                                <th>Date Range</th>
+                                <th>Rows</th>
+                                <th>Generated By</th>
+                                <th>Generated At</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for report in history %}
+                            <tr>
+                                <td>{{ report.report_type }}</td>
+                                <td>{{ report.export_format|upper }}</td>
+                                <td>{{ report.date_from }} to {{ report.date_to }}</td>
+                                <td>{{ report.row_count }}</td>
+                                <td>{{ report.generated_by.username }}</td>
+                                <td>{{ report.generated_at }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="6" class="text-muted">No exports yet.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if history_page_obj.paginator.num_pages > 1 %}
+                <nav class="mt-2">
+                    <ul class="pagination pagination-sm mb-0">
+                        {% if history_page_obj.has_previous %}
+                        <li class="page-item"><a class="page-link" href="?report={{ selected_report }}&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}{% if selected_branch %}&branch={{ selected_branch }}{% endif %}{% if selected_department %}&department={{ selected_department }}{% endif %}&data_page={{ data_page_obj.number }}&history_page={{ history_page_obj.previous_page_number }}">Previous</a></li>
+                        {% endif %}
+                        <li class="page-item disabled"><span class="page-link">Page {{ history_page_obj.number }} of {{ history_page_obj.paginator.num_pages }}</span></li>
+                        {% if history_page_obj.has_next %}
+                        <li class="page-item"><a class="page-link" href="?report={{ selected_report }}&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}{% if selected_branch %}&branch={{ selected_branch }}{% endif %}{% if selected_department %}&department={{ selected_department }}{% endif %}&data_page={{ data_page_obj.number }}&history_page={{ history_page_obj.next_page_number }}">Next</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

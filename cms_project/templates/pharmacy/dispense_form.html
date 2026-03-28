@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block title %}Dispense | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}Pharmacy / Dispense{% endblock %}
+
+{% block content %}
+<nav class="cl-breadcrumb"><a href="{% url 'pharmacy:index' %}">Pharmacy</a> / Dispense</nav>
+<div class="cl-card">
+    <div class="cl-card-header"><i class="bi bi-capsule me-2"></i>Choose Dispensing Mode</div>
+    <div class="cl-card-body">
+        <p class="text-muted mb-4">Select how you'd like to dispense medicines.</p>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <a href="{% url 'pharmacy:dispense_prescription' %}" class="d-block text-decoration-none">
+                    <div class="border rounded p-4 text-center h-100" style="transition:all .15s;cursor:pointer;" onmouseover="this.style.borderColor='#059669';this.style.background='#f0fdf4'" onmouseout="this.style.borderColor='';this.style.background=''">
+                        <i class="bi bi-clipboard2-pulse" style="font-size:2.5rem;color:#059669;"></i>
+                        <h3 class="h6 fw-bold mt-3 mb-1">Prescription Dispensing</h3>
+                        <p class="text-muted small mb-0">Dispense medicines prescribed by a doctor for a patient visit. Only shows items the doctor has requested.</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-6">
+                <a href="{% url 'pharmacy:dispense_walkin' %}" class="d-block text-decoration-none">
+                    <div class="border rounded p-4 text-center h-100" style="transition:all .15s;cursor:pointer;" onmouseover="this.style.borderColor='#6366f1';this.style.background='#eef2ff'" onmouseout="this.style.borderColor='';this.style.background=''">
+                        <i class="bi bi-bag-plus" style="font-size:2.5rem;color:#6366f1;"></i>
+                        <h3 class="h6 fw-bold mt-3 mb-1">Walk-In Sale</h3>
+                        <p class="text-muted small mb-0">Sell over-the-counter medicines to walk-in customers. Add multiple medicines to one transaction.</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

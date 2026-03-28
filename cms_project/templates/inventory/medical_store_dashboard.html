@@ -1,0 +1,455 @@
+{% extends 'base.html' %}
+{% load currency %}
+
+{% block title %}{% if selected_store == 'all' %}Medical Stores Dashboard{% else %}{{ selected_store_label }} Dashboard{% endif %} | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}{% if selected_store == 'all' %}Medical Stores Dashboard{% else %}{{ selected_store_label }} Dashboard{% endif %}{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+    <div>
+        <h1><i class="bi bi-speedometer2 me-2" style="opacity:.5"></i>{% if selected_store == 'all' %}Medical Stores Control Center{% else %}{{ selected_store_label }} Dashboard{% endif %}</h1>
+        <p>{% if selected_store == 'all' %}Each store now has its own stock-entry lane, manager assignment, and request-based fulfillment dashboard.{% else %}Manage {{ selected_store_label|lower }} stock, accountability, and request-only fulfillment from one store-scoped dashboard.{% endif %}</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        {% if selected_store != 'all' and selected_store_entry_url %}
+        <a class="btn btn-outline-dark" href="{{ selected_store_entry_url }}" title="Add new stock batch to this store only">
+            <i class="bi bi-plus-circle me-1"></i>{{ selected_store_label }} Entry
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="d-flex gap-2 flex-wrap mb-3">
+    {% for key, label in store_navigation %}
+    <a
+        class="btn btn-sm {% if selected_store == key %}btn-primary{% else %}btn-outline-primary{% endif %}"
+        href="{% if key == 'all' %}{% url 'inventory:medical_store_dashboard' %}{% else %}{% url 'inventory:medical_store_dashboard_by_store' key %}{% endif %}"
+    >{{ label }}</a>
+    {% endfor %}
+</div>
+
+{% if selected_store == 'radiology' %}
+<div class="d-flex gap-2 flex-wrap mb-3">
+    <a class="btn btn-sm {% if not request_unit %}btn-dark{% else %}btn-outline-dark{% endif %}" href="{% url 'inventory:medical_store_dashboard_by_store' 'radiology' %}">All Radiology Units</a>
+    {% for value, label in request_unit_choices %}
+    <a class="btn btn-sm {% if request_unit == value %}btn-dark{% else %}btn-outline-dark{% endif %}" href="{% url 'inventory:medical_store_dashboard_by_store' 'radiology' %}?request_unit={{ value }}">{{ label }}</a>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="alert alert-secondary mb-3">
+    <div class="fw-semibold">Store Release Rule</div>
+    <div class="small">Store-level sales are disabled. Stock leaves a store only after the corresponding department submits a request and the store team approves and fulfills it.</div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="alert alert-warning h-100 mb-0">
+            <div class="fw-semibold">Low Stock Alerts</div>
+            <div class="small">{{ medical_store_snapshot.low_stock_count }} item(s) at or below reorder level.</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="alert alert-info h-100 mb-0">
+            <div class="fw-semibold">Expiring in 30 Days</div>
+            <div class="small">{{ medical_store_snapshot.expiring_count }} batch(es) need attention.</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="alert alert-danger h-100 mb-0">
+            <div class="fw-semibold">Expired Stock</div>
+            <div class="small">{{ medical_store_snapshot.expired_count }} batch(es) should be quarantined.</div>
+        </div>
+    </div>
+</div>
+
+{% if selected_store == 'all' %}
+<div class="row g-3 mb-3">
+    {% for store_card in store_cards %}
+    <div class="col-md-6 col-xl-3">
+        <div class="cl-card h-100">
+            <div class="cl-card-header">{{ store_card.label }}</div>
+            <div class="cl-card-body d-flex flex-column gap-2">
+                <div><span class="text-muted small d-block">Store Manager</span>{% if store_card.manager %}{{ store_card.manager.get_full_name|default:store_card.manager.username }}{% else %}<span class="text-muted">Unassigned</span>{% endif %}</div>
+                <div><span class="text-muted small d-block">Location</span>{% if store_card.location %}{{ store_card.location }}{% else %}<span class="text-muted">Not configured</span>{% endif %}</div>
+                <div><span class="text-muted small d-block">Notes</span>{% if store_card.notes %}{{ store_card.notes }}{% else %}<span class="text-muted">No notes</span>{% endif %}</div>
+                <div class="d-flex gap-2 mt-auto pt-2">
+                    <a class="btn btn-sm btn-outline-primary flex-fill" href="{{ store_card.dashboard_url }}">Open Dashboard</a>
+                    <a class="btn btn-sm btn-primary flex-fill" href="{{ store_card.entry_url }}">Stock Entry</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% elif current_store_profile %}
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="cl-card h-100">
+            <div class="cl-card-header"><i class="bi bi-person-badge me-2"></i>Store Manager</div>
+            <div class="cl-card-body">
+                {% if current_store_profile.manager %}
+                <div class="fw-semibold">{{ current_store_profile.manager.get_full_name|default:current_store_profile.manager.username }}</div>
+                <div class="text-muted small">{{ current_store_profile.manager.role|title }}</div>
+                {% else %}
+                <div class="text-muted">No manager assigned for this store yet.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="cl-card h-100">
+            <div class="cl-card-header"><i class="bi bi-geo-alt me-2"></i>Store Location</div>
+            <div class="cl-card-body">
+                {% if current_store_profile.location %}{{ current_store_profile.location }}{% else %}<span class="text-muted">No store location configured yet.</span>{% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="cl-card h-100">
+            <div class="cl-card-header"><i class="bi bi-journal-text me-2"></i>Management Notes</div>
+            <div class="cl-card-body">
+                {% if current_store_profile.notes %}{{ current_store_profile.notes }}{% else %}<span class="text-muted">No store notes configured yet.</span>{% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="cl-stat">
+            <div class="cl-stat-icon primary"><i class="bi bi-123"></i></div>
+            <div><div class="cl-stat-label">Total Stock (Units)</div><div class="cl-stat-value">{{ medical_store_snapshot.total_units }}</div></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="cl-stat">
+            <div class="cl-stat-icon warning"><i class="bi bi-box"></i></div>
+            <div><div class="cl-stat-label">Equivalent Packs</div><div class="cl-stat-value">{{ medical_store_snapshot.equivalent_packs|floatformat:2 }}</div></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="cl-stat">
+            <div class="cl-stat-icon success"><i class="bi bi-cash-coin"></i></div>
+            <div><div class="cl-stat-label">Stock Value (Cost)</div><div class="cl-stat-value">{{ medical_store_snapshot.total_cost_value|ugx }}</div></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="cl-stat">
+            <div class="cl-stat-icon success"><i class="bi bi-graph-up-arrow"></i></div>
+            <div><div class="cl-stat-label">Stock Value (Retail)</div><div class="cl-stat-value">{{ medical_store_snapshot.total_retail_value|ugx }}</div></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="cl-card h-100">
+            <div class="cl-card-header"><i class="bi bi-exclamation-triangle me-2"></i>Low-Stock Items</div>
+            <div class="cl-card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Category</th>
+                                <th>On Hand</th>
+                                <th>Reorder</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in low_stock_items %}
+                            <tr>
+                                <td>{{ item.item_name }}</td>
+                                <td>{{ item.category.name }}</td>
+                                <td>{{ item.quantity_on_hand }}</td>
+                                <td>{{ item.reorder_level }}</td>
+                                <td>
+                                    {% if item.quantity_on_hand <= 0 %}
+                                    <span class="badge text-bg-danger">Out</span>
+                                    {% else %}
+                                    <span class="badge text-bg-warning">Low</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-muted">No low-stock items right now.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="cl-card h-100">
+            <div class="cl-card-header"><i class="bi bi-hourglass-split me-2"></i>Expiring Batches (Next 30 Days)</div>
+            <div class="cl-card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Batch</th>
+                                <th>Item</th>
+                                <th>Expiry</th>
+                                <th>Qty Left</th>
+                                <th>Unit Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for batch in expiring_batches %}
+                            <tr>
+                                <td>{{ batch.batch_number }}</td>
+                                <td>{{ batch.item.item_name }}</td>
+                                <td>{{ batch.exp_date|date:"d M Y" }}</td>
+                                <td>{{ batch.quantity_remaining }}</td>
+                                <td>{{ batch.selling_price_per_unit|ugx }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-muted">No batches expiring in the next 30 days.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="cl-card mt-3">
+    <div class="cl-card-header"><i class="bi bi-archive me-2"></i>Current Store Stock (All Active Batches)</div>
+    <div class="cl-card-body">
+        <form method="get" class="row g-2 mb-3">
+            <div class="col-md-3">
+                <input
+                    type="text"
+                    name="item"
+                    class="form-control form-control-sm"
+                    placeholder="Filter by item"
+                    value="{{ stock_filters.item }}"
+                >
+            </div>
+            <div class="col-md-3">
+                <input
+                    type="text"
+                    name="batch"
+                    class="form-control form-control-sm"
+                    placeholder="Filter by batch number"
+                    value="{{ stock_filters.batch }}"
+                >
+            </div>
+            <div class="col-md-3">
+                <input
+                    type="text"
+                    name="supplier"
+                    class="form-control form-control-sm"
+                    placeholder="Filter by supplier"
+                    value="{{ stock_filters.supplier }}"
+                >
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-sm btn-primary flex-fill">
+                    <i class="bi bi-search me-1"></i>Search
+                </button>
+                <a href="{% if selected_store == 'all' %}{% url 'inventory:medical_store_dashboard' %}{% else %}{% url 'inventory:medical_store_dashboard_by_store' selected_store %}{% endif %}" class="btn btn-sm btn-outline-secondary flex-fill">
+                    Reset
+                </a>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Batch</th>
+                        <th>Units Left</th>
+                        <th>Equivalent Packs</th>
+                        <th>Pack Size</th>
+                        <th>Expiry</th>
+                        <th>Supplier</th>
+                        <th>Entered</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for batch in current_stock_batches %}
+                    <tr>
+                        <td>{{ batch.item.item_name }}</td>
+                        <td>{{ batch.batch_number }}</td>
+                        <td>{{ batch.quantity_remaining }}</td>
+                        <td>{{ batch.equivalent_packs_remaining|floatformat:2 }}</td>
+                        <td>{{ batch.pack_size_units }}</td>
+                        <td>{{ batch.exp_date|date:"d M Y" }}</td>
+                        <td>{% if batch.supplier %}{{ batch.supplier.name }}{% else %}-{% endif %}</td>
+                        <td>{{ batch.created_at|date:"d M Y H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" class="text-muted">No active stock batches available.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="cl-card mt-3">
+    <div class="cl-card-header"><i class="bi bi-slash-circle me-2"></i>Expired Batches</div>
+    <div class="cl-card-body">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Batch</th>
+                        <th>Item</th>
+                        <th>Expired On</th>
+                        <th>Qty Left</th>
+                        <th>Supplier</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for batch in expired_batches %}
+                    <tr>
+                        <td>{{ batch.batch_number }}</td>
+                        <td>{{ batch.item.item_name }}</td>
+                        <td>{{ batch.exp_date|date:"d M Y" }}</td>
+                        <td>{{ batch.quantity_remaining }}</td>
+                        <td>{% if batch.supplier %}{{ batch.supplier.name }}{% else %}-{% endif %}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-muted">No expired batches found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mt-1 mb-1">
+    <div class="col-md-3">
+        <div class="alert alert-warning h-100 mb-0"><div class="fw-semibold">Pending</div><div class="small">{{ request_summary.pending }} request(s)</div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="alert alert-info h-100 mb-0"><div class="fw-semibold">Approved</div><div class="small">{{ request_summary.approved }} request(s)</div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="alert alert-success h-100 mb-0"><div class="fw-semibold">Fulfilled</div><div class="small">{{ request_summary.fulfilled }} request(s)</div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="alert alert-danger h-100 mb-0"><div class="fw-semibold">Rejected</div><div class="small">{{ request_summary.rejected }} request(s)</div></div>
+    </div>
+</div>
+
+<div class="cl-card mt-3">
+    <div class="cl-card-header"><i class="bi bi-inbox me-2"></i>{% if selected_store == 'radiology' %}Radiology Store Fulfillment Queue{% else %}{{ selected_store_label }} Fulfillment Queue{% endif %}</div>
+    <div class="cl-card-body">
+        <form method="get" class="row g-2 mb-3">
+            {% if selected_store == 'radiology' and request_unit %}
+            <input type="hidden" name="request_unit" value="{{ request_unit }}">
+            {% endif %}
+            <div class="col-md-4">
+                <select class="form-select form-select-sm" name="request_status">
+                    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All statuses</option>
+                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+                    <option value="fulfilled" {% if status_filter == 'fulfilled' %}selected{% endif %}>Fulfilled</option>
+                    <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-grid">
+                <button class="btn btn-sm btn-primary" type="submit">Filter Queue</button>
+            </div>
+        </form>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>Requested At</th>
+                        <th>Store</th>
+                        <th>Scope</th>
+                        <th>Item</th>
+                        <th>Available</th>
+                        <th>Qty Requested</th>
+                        <th>Requested By</th>
+                        <th>Status</th>
+                        <th>Audit Trail</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in store_requests %}
+                    <tr>
+                        <td>{{ req.created_at|date:"d M Y H:i" }}</td>
+                        <td>{{ req.get_requested_for_display }}</td>
+                        <td>{{ req.request_scope_label }}</td>
+                        <td>{{ req.medicine_name }}</td>
+                        <td>{{ req.available_quantity }}</td>
+                        <td>{{ req.quantity_requested }}</td>
+                        <td>{% if req.requested_by %}{{ req.requested_by.get_full_name|default:req.requested_by.username }}{% else %}-{% endif %}</td>
+                        <td>{{ req.get_status_display }}</td>
+                        <td>
+                            {% if req.handled_by %}
+                            <div class="small">
+                                <div>By {{ req.handled_by.get_full_name|default:req.handled_by.username }}</div>
+                                {% if req.handled_at %}<div class="text-muted">{{ req.handled_at|date:"d M Y H:i" }}</div>{% endif %}
+                                {% if req.decision_remarks %}<div class="mt-1">{{ req.decision_remarks }}</div>{% endif %}
+                            </div>
+                            {% else %}
+                            <span class="text-muted small">Pending review</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if can_manage_store_requests and req.status == 'pending' %}
+                            <div class="d-flex justify-content-end gap-2 flex-wrap">
+                                <form method="post" action="{% url 'inventory:update_store_request_status' req.pk 'approve' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                    <input type="text" name="remarks" class="form-control form-control-sm mb-2" placeholder="Approval remarks" required>
+                                    <button class="btn btn-sm btn-outline-primary" type="submit">
+                                        <i class="bi bi-check2 me-1"></i>Approve
+                                    </button>
+                                </form>
+                                <form method="post" action="{% url 'inventory:update_store_request_status' req.pk 'reject' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                    <input type="text" name="remarks" class="form-control form-control-sm mb-2" placeholder="Rejection remarks" required>
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">
+                                        <i class="bi bi-x-lg me-1"></i>Reject
+                                    </button>
+                                </form>
+                                <form method="post" action="{% url 'inventory:update_store_request_status' req.pk 'fulfill' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                    <button class="btn btn-sm btn-primary" type="submit" title="Mark request fulfilled">
+                                        <i class="bi bi-check2-circle me-1"></i>Fulfill
+                                    </button>
+                                </form>
+                            </div>
+                            {% elif can_manage_store_requests and req.status == 'approved' %}
+                            <div class="d-flex justify-content-end gap-2 flex-wrap">
+                                <form method="post" action="{% url 'inventory:update_store_request_status' req.pk 'fulfill' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                    <button class="btn btn-sm btn-primary" type="submit" title="Mark request fulfilled">
+                                        <i class="bi bi-check2-circle me-1"></i>Fulfill
+                                    </button>
+                                </form>
+                            </div>
+                            {% elif req.handled_by %}
+                            <span class="text-muted small">Handled by {{ req.handled_by.get_full_name|default:req.handled_by.username }}</span>
+                            {% else %}
+                            <span class="text-muted small">No action available</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="10" class="text-muted">No store requests found for the selected queue filters.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

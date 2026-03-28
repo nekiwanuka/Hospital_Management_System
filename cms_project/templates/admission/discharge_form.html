@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Discharge Patient | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}Discharge{% endblock %}
+
+{% block content %}
+<nav class="cl-breadcrumb"><a href="{% url 'admission:index' %}">Admission</a> / Discharge</nav>
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="cl-card">
+            <div class="cl-card-header"><i class="bi bi-box-arrow-right me-2"></i>{{ page_title }}</div>
+            <div class="cl-card-body">
+                <p class="text-muted mb-4">Patient: {{ admission.patient.first_name }} {{ admission.patient.last_name }}</p>
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="id_discharge_date">Discharge Date</label>
+                            {{ form.discharge_date }}
+                            {% for error in form.discharge_date.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="id_discharge_summary">Discharge Summary</label>
+                            {{ form.discharge_summary }}
+                            {% for error in form.discharge_summary.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="mt-4 d-flex gap-2">
+                        <button class="btn btn-primary" type="submit">{{ submit_label }}</button>
+                        <a class="btn btn-outline-secondary" href="{% url 'admission:detail' admission.pk %}">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

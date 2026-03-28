@@ -1,0 +1,493 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}Inventory / {{ store_label|default:"Medical Stores" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Stock-entry scoped styles ─────────────────────────────────── */
+.se { --se-radius:.75rem; --se-border:#e2e8f0; --se-muted:#64748b; --se-ink:#1e293b; }
+
+.se-hero {
+    position:relative;overflow:hidden;padding:1rem 1.25rem;border-radius:var(--se-radius);margin-bottom:1rem;
+    background:linear-gradient(135deg,
+        color-mix(in srgb,#059669 10%,#fff),
+        color-mix(in srgb,#0891b2 12%,#fff));
+    border:1px solid color-mix(in srgb,#059669 12%,var(--se-border));
+    box-shadow:0 4px 16px rgba(15,23,42,.06);
+}
+.se-hero::after {
+    content:"";position:absolute;top:-40%;right:-4%;width:180px;height:180px;border-radius:50%;
+    background:radial-gradient(circle,rgba(255,255,255,.3) 0%,transparent 72%);pointer-events:none;
+}
+.se-hero-inner { position:relative;z-index:1;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.5rem; }
+.se-hero h1 { margin:0;font-size:1.15rem;font-weight:800;color:#10233d;letter-spacing:-.02em; }
+.se-hero h1 i { opacity:.45;margin-right:.35rem; }
+.se-hero-meta { display:flex;flex-wrap:wrap;gap:.75rem;margin-top:.15rem; }
+.se-hero-meta span { font-size:.78rem;color:#35506f; }
+.se-hero-meta span i { margin-right:.2rem;font-size:.72rem;opacity:.6; }
+.se-hero-meta strong { font-weight:700;color:#10233d; }
+
+/* Card */
+.se-card {
+    border:1px solid var(--se-border);border-radius:var(--se-radius);background:#fff;
+    box-shadow:0 1px 3px rgba(15,23,42,.04);overflow:hidden;
+}
+.se-card-body { padding:.85rem 1rem; }
+
+/* Step indicator */
+.se-steps { display:flex;align-items:center;gap:0;margin-bottom:1rem; }
+.se-step {
+    display:flex;align-items:center;gap:.4rem;padding:.4rem .85rem;
+    font-size:.75rem;font-weight:600;color:var(--se-muted);background:#f8fafc;
+    border:1px solid var(--se-border);cursor:pointer;transition:all .15s;position:relative;
+}
+.se-step:first-child { border-radius:var(--se-radius) 0 0 var(--se-radius); }
+.se-step:last-child { border-radius:0 var(--se-radius) var(--se-radius) 0; }
+.se-step + .se-step { border-left:0; }
+.se-step.active { background:#059669;color:#fff;border-color:#059669;z-index:1; }
+.se-step.completed { background:#ecfdf5;color:#059669;border-color:#a7f3d0; }
+.se-step-num {
+    display:inline-flex;align-items:center;justify-content:center;width:1.4rem;height:1.4rem;
+    border-radius:50%;font-size:.65rem;font-weight:800;
+    background:rgba(0,0,0,.08);color:inherit;
+}
+.se-step.active .se-step-num { background:rgba(255,255,255,.25); }
+.se-step.completed .se-step-num { background:#059669;color:#fff; }
+
+/* Form labels */
+.se .form-label { font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--se-muted);margin-bottom:.2rem; }
+.se .form-control,.se .form-select { font-size:.82rem;padding:.35rem .6rem;border-radius:.45rem; }
+.se .form-control:focus,.se .form-select:focus { border-color:#059669;box-shadow:0 0 0 .2rem rgba(5,150,105,.12); }
+
+/* Read-only preview fields */
+.se .form-control[readonly] { background:#f1f5f9;color:var(--se-muted);font-weight:600;border-style:dashed; }
+
+/* Nav buttons */
+.se-nav { display:flex;align-items:center;justify-content:space-between;padding:.6rem 0 0; }
+.se-nav .btn { min-width:2.2rem; }
+
+/* Section divider with label */
+.se-divider { display:flex;align-items:center;gap:.5rem;margin:1rem 0 .65rem;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--se-muted); }
+.se-divider::after { content:"";flex:1;height:1px;background:var(--se-border); }
+
+/* Tooltip icon */
+.se-tip {
+    display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;
+    border-radius:50%;background:#e2e8f0;color:#475569;font-size:.6rem;font-weight:800;
+    cursor:help;margin-left:.3rem;vertical-align:middle;line-height:1;
+}
+
+/* Live preview panel */
+.se-preview {
+    border:2px dashed #a7f3d0;border-radius:var(--se-radius);background:#ecfdf5;
+    padding:.75rem 1rem;margin-top:.75rem;
+}
+.se-preview-title {
+    font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
+    color:#059669;margin-bottom:.5rem;display:flex;align-items:center;gap:.35rem;
+}
+.se-preview-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.5rem; }
+.se-preview-item { text-align:center; }
+.se-preview-label { font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--se-muted); }
+.se-preview-value { font-size:1rem;font-weight:800;color:var(--se-ink); }
+.se-preview-value.profit { color:#059669; }
+
+@media(max-width:767.98px){
+    .se-hero { padding:.75rem .85rem; }
+    .se-step { padding:.35rem .5rem;font-size:.68rem; }
+    .se-preview-grid { grid-template-columns:repeat(2,1fr); }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="se">
+    <!-- ═══ Hero banner ═══ -->
+    <div class="se-hero">
+        <div class="se-hero-inner">
+            <div>
+                <h1><i class="bi bi-box-seam"></i>{{ page_title }}</h1>
+                <div class="se-hero-meta">
+                    <span><i class="bi bi-shop"></i>Store: <strong>{{ store_label }}</strong></span>
+                    {% if current_store_profile and current_store_profile.manager %}
+                    <span><i class="bi bi-person-badge"></i>Manager: <strong>{{ current_store_profile.manager.get_full_name|default:current_store_profile.manager.username }}</strong></span>
+                    {% endif %}
+                    {% if current_store_profile and current_store_profile.location %}
+                    <span><i class="bi bi-geo-alt"></i>{{ current_store_profile.location }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <a class="btn btn-outline-dark btn-sm" href="{% url 'inventory:medical_store_dashboard_by_store' store_code %}"><i class="bi bi-arrow-left me-1"></i>Back to Store</a>
+        </div>
+    </div>
+
+    <!-- ═══ Step indicator ═══ -->
+    <div class="se-steps" id="seStepBar">
+        <div class="se-step active" data-target="1"><span class="se-step-num">1</span> Product Info</div>
+        <div class="se-step" data-target="2"><span class="se-step-num">2</span> Batch Details</div>
+        <div class="se-step" data-target="3"><span class="se-step-num">3</span> Stock & Pricing</div>
+    </div>
+
+    <!-- ═══ Form card ═══ -->
+    <div class="se-card">
+        <div class="se-card-body">
+            <form method="post" novalidate id="medical-store-form">
+                {% csrf_token %}
+                {% if form.non_field_errors %}<div class="alert alert-danger py-2" style="font-size:.82rem">{{ form.non_field_errors }}</div>{% endif %}
+
+                <!-- Step 1: Product Info -->
+                <div class="step-pane" data-step="1">
+                    <div class="se-divider"><i class="bi bi-capsule"></i> Item Identification</div>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.item_name.id_for_label }}">Item Name *
+                                <span class="se-tip" title="Enter the official product name as it appears on the package label.">?</span>
+                            </label>
+                            {{ form.item_name }}
+                            {% if form.item_name.errors %}<div class="invalid-feedback d-block">{{ form.item_name.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.generic_name.id_for_label }}">Generic Name
+                                <span class="se-tip" title="The scientific / INN name of the active ingredient, e.g. Paracetamol.">?</span>
+                            </label>
+                            {{ form.generic_name }}
+                            {% if form.generic_name.errors %}<div class="invalid-feedback d-block">{{ form.generic_name.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="se-divider"><i class="bi bi-tag"></i> Classification</div>
+                    <div class="row g-2">
+                        <div class="col-md-3">
+                            <label class="form-label" for="{{ form.category.id_for_label }}">Category *</label>
+                            {{ form.category }}
+                            {% if form.category.errors %}<div class="invalid-feedback d-block">{{ form.category.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="{{ form.new_category_name.id_for_label }}">New Category</label>
+                            {{ form.new_category_name }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="{{ form.brand.id_for_label }}">Brand *</label>
+                            {{ form.brand }}
+                            {% if form.brand.errors %}<div class="invalid-feedback d-block">{{ form.brand.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="{{ form.new_brand_name.id_for_label }}">New Brand</label>
+                            {{ form.new_brand_name }}
+                        </div>
+                    </div>
+
+                    <div class="se-divider"><i class="bi bi-grid-3x3-gap"></i> Specifications</div>
+                    <div class="row g-2">
+                        <div class="col-md-3">
+                            <label class="form-label" for="{{ form.dosage_form.id_for_label }}">Dosage Form *
+                                <span class="se-tip" title="The physical form of the product: tablet, syrup, injection, cream, etc.">?</span>
+                            </label>
+                            {{ form.dosage_form }}
+                            {% if form.dosage_form.errors %}<div class="invalid-feedback d-block">{{ form.dosage_form.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="{{ form.strength.id_for_label }}">Strength
+                                <span class="se-tip" title="Dosage strength, e.g. 500mg, 250mg/5ml.">?</span>
+                            </label>
+                            {{ form.strength }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="{{ form.unit_of_measure.id_for_label }}">Base Unit *
+                                <span class="se-tip" title="The smallest dispensing unit, e.g. Tablet, Vial, Tube, Bottle. All stock is tracked in this unit.">?</span>
+                            </label>
+                            {{ form.unit_of_measure }}
+                            {% if form.unit_of_measure.errors %}<div class="invalid-feedback d-block">{{ form.unit_of_measure.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="{{ form.pack_size.id_for_label }}">Pack Size Label
+                                <span class="se-tip" title="Optional label describing the packaging, e.g. '10x10 blister'.">?</span>
+                            </label>
+                            {{ form.pack_size }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.barcode.id_for_label }}">Barcode</label>
+                            {{ form.barcode }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.reorder_level.id_for_label }}">Reorder Level *
+                                <span class="se-tip" title="When stock drops below this number of base units, the item is marked as low stock.">?</span>
+                            </label>
+                            {{ form.reorder_level }}
+                            {% if form.reorder_level.errors %}<div class="invalid-feedback d-block">{{ form.reorder_level.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4">&nbsp;</div>
+                        <div class="col-12">
+                            <label class="form-label" for="{{ form.description.id_for_label }}">Description</label>
+                            {{ form.description }}
+                        </div>
+                    </div>
+                    {% if form.store_department.errors %}<div class="invalid-feedback d-block mt-1">{{ form.store_department.errors.0 }}</div>{% endif %}
+                </div>
+
+                <!-- Step 2: Batch Details -->
+                <div class="step-pane d-none" data-step="2">
+                    <div class="se-divider"><i class="bi bi-upc-scan"></i> Batch Information</div>
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.batch_number.id_for_label }}">Batch Number *
+                                <span class="se-tip" title="The manufacturer's batch/lot number printed on the package.">?</span>
+                            </label>
+                            {{ form.batch_number }}
+                            {% if form.batch_number.errors %}<div class="invalid-feedback d-block">{{ form.batch_number.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.mfg_date.id_for_label }}">Manufacturing Date</label>
+                            {{ form.mfg_date }}
+                            {% if form.mfg_date.errors %}<div class="invalid-feedback d-block">{{ form.mfg_date.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.exp_date.id_for_label }}">Expiry Date *
+                                <span class="se-tip" title="Stock with earliest expiry is always dispensed first (FEFO rule).">?</span>
+                            </label>
+                            {{ form.exp_date }}
+                            {% if form.exp_date.errors %}<div class="invalid-feedback d-block">{{ form.exp_date.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+                    <div class="se-divider"><i class="bi bi-box"></i> Physical Details</div>
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.batch_barcode.id_for_label }}">Batch Barcode</label>
+                            {{ form.batch_barcode }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.weight.id_for_label }}">Weight</label>
+                            {{ form.weight }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.volume.id_for_label }}">Volume</label>
+                            {{ form.volume }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Stock & Pricing -->
+                <div class="step-pane d-none" data-step="3">
+                    <div class="se-divider"><i class="bi bi-boxes"></i> Quantity Received</div>
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.pack_size_units.id_for_label }}">Units Per Pack *
+                                <span class="se-tip" title="How many base units (e.g. Tablets) are inside one pack. The system will multiply this by packs received to get total stock.">?</span>
+                            </label>
+                            {{ form.pack_size_units }}
+                            {% if form.pack_size_units.errors %}<div class="invalid-feedback d-block">{{ form.pack_size_units.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.packs_received.id_for_label }}">Packs Received *
+                                <span class="se-tip" title="Enter the number of packages received (e.g. 1 Box or 10 Packs). The system will automatically convert into individual base units.">?</span>
+                            </label>
+                            {{ form.packs_received }}
+                            {% if form.packs_received.errors %}<div class="invalid-feedback d-block">{{ form.packs_received.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Total Base Units (Auto)
+                                <span class="se-tip" title="Total base units = Units per pack × Packs received. This is the actual stock that will be tracked.">?</span>
+                            </label>
+                            <input type="text" id="total-units-preview" class="form-control" readonly>
+                        </div>
+                    </div>
+
+                    <div class="se-divider"><i class="bi bi-currency-dollar"></i> Cost & Margin</div>
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.purchase_price_per_pack.id_for_label }}">Purchase Price / Pack *
+                                <span class="se-tip" title="Enter the full invoice cost for ONE pack. Do not calculate per unit — the system will do that automatically.">?</span>
+                            </label>
+                            {{ form.purchase_price_per_pack }}
+                            {% if form.purchase_price_per_pack.errors %}<div class="invalid-feedback d-block">{{ form.purchase_price_per_pack.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.target_profit_margin.id_for_label }}">Profit Margin (%) *
+                                <span class="se-tip" title="Enter the desired profit percentage (0–99%). The system will automatically calculate the selling price per unit. Example: 25% margin means selling price is 33% above cost.">?</span>
+                            </label>
+                            {{ form.target_profit_margin }}
+                            {% if form.target_profit_margin.errors %}<div class="invalid-feedback d-block">{{ form.target_profit_margin.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Total Purchase Cost (Auto)
+                                <span class="se-tip" title="Total cost = Purchase price per pack × Packs received.">?</span>
+                            </label>
+                            <input type="text" id="total-cost-preview" class="form-control" readonly>
+                        </div>
+                    </div>
+
+                    <!-- ═══ Live Auto-Calculated Preview ═══ -->
+                    <div class="se-preview" id="pricing-preview">
+                        <div class="se-preview-title">
+                            <i class="bi bi-calculator"></i> Live Pricing Preview
+                            <span class="se-tip" title="This is a live preview. Values are automatically calculated based on your inputs above. You do not need to enter prices manually.">?</span>
+                        </div>
+                        <div class="se-preview-grid">
+                            <div class="se-preview-item">
+                                <div class="se-preview-label">Cost / Unit</div>
+                                <div class="se-preview-value" id="pv-unit-cost">—</div>
+                            </div>
+                            <div class="se-preview-item">
+                                <div class="se-preview-label">Selling / Unit</div>
+                                <div class="se-preview-value" id="pv-selling-price">—</div>
+                            </div>
+                            <div class="se-preview-item">
+                                <div class="se-preview-label">Profit / Unit</div>
+                                <div class="se-preview-value profit" id="pv-profit-unit">—</div>
+                            </div>
+                            <div class="se-preview-item">
+                                <div class="se-preview-label">Total Base Units</div>
+                                <div class="se-preview-value" id="pv-total-units">—</div>
+                            </div>
+                            <div class="se-preview-item">
+                                <div class="se-preview-label">Expected Total Profit</div>
+                                <div class="se-preview-value profit" id="pv-total-profit">—</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="se-divider"><i class="bi bi-truck"></i> Supplier</div>
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.supplier.id_for_label }}">Supplier</label>
+                            {{ form.supplier }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.new_supplier_name.id_for_label }}">New Supplier</label>
+                            {{ form.new_supplier_name }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.supplier_contact.id_for_label }}">Supplier Contact</label>
+                            {{ form.supplier_contact }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="{{ form.supplier_address.id_for_label }}">Supplier Address</label>
+                            {{ form.supplier_address }}
+                        </div>
+                    </div>
+                </div>
+
+                {{ form.store_department }}
+                {{ form.service_type }}
+                {{ form.service_code }}
+                <input type="hidden" id="current-step" value="1">
+
+                <div class="se-nav">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-prev" title="Previous step"><i class="bi bi-arrow-left me-1"></i>Back</button>
+                    <div class="d-flex gap-2">
+                        <a class="btn btn-outline-secondary btn-sm" href="{% url 'inventory:medical_store_dashboard_by_store' store_code %}"><i class="bi bi-x-lg me-1"></i>Cancel</a>
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-next" title="Next step">Next<i class="bi bi-arrow-right ms-1"></i></button>
+                        <button type="submit" class="btn btn-success btn-sm d-none" id="btn-submit" title="Save stock entry"><i class="bi bi-check2 me-1"></i>Save Entry</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var panes = Array.from(document.querySelectorAll('.step-pane'));
+    var stepBtns = Array.from(document.querySelectorAll('.se-step'));
+    var currentStepInput = document.getElementById('current-step');
+    var btnPrev = document.getElementById('btn-prev');
+    var btnNext = document.getElementById('btn-next');
+    var btnSubmit = document.getElementById('btn-submit');
+
+    var packSize = document.getElementById('{{ form.pack_size_units.id_for_label }}');
+    var packsReceived = document.getElementById('{{ form.packs_received.id_for_label }}');
+    var purchasePerPack = document.getElementById('{{ form.purchase_price_per_pack.id_for_label }}');
+    var marginInput = document.getElementById('{{ form.target_profit_margin.id_for_label }}');
+
+    var totalUnitsPreview = document.getElementById('total-units-preview');
+    var totalCostPreview = document.getElementById('total-cost-preview');
+
+    // Live preview panel elements
+    var pvUnitCost = document.getElementById('pv-unit-cost');
+    var pvSellingPrice = document.getElementById('pv-selling-price');
+    var pvProfitUnit = document.getElementById('pv-profit-unit');
+    var pvTotalUnits = document.getElementById('pv-total-units');
+    var pvTotalProfit = document.getElementById('pv-total-profit');
+
+    function fmt(n, d) { return n.toLocaleString(undefined, {minimumFractionDigits: d, maximumFractionDigits: d}); }
+
+    function recalcPricing() {
+        var size = parseFloat((packSize && packSize.value) || '0');
+        var packs = parseFloat((packsReceived && packsReceived.value) || '0');
+        var purchase = parseFloat((purchasePerPack && purchasePerPack.value) || '0');
+        var margin = parseFloat((marginInput && marginInput.value) || '0');
+
+        var totalUnits = size > 0 && packs > 0 ? Math.round(size * packs) : 0;
+        var totalCost = packs > 0 && purchase > 0 ? packs * purchase : 0;
+
+        totalUnitsPreview.value = totalUnits > 0 ? totalUnits : '';
+        totalCostPreview.value = totalCost > 0 ? fmt(totalCost, 2) : '';
+
+        if (size > 0 && purchase > 0) {
+            var unitCost = purchase / size;
+            var sellingPrice = margin > 0 && margin < 100
+                ? unitCost / (1 - margin / 100)
+                : unitCost;
+            var profitPerUnit = sellingPrice - unitCost;
+            var totalProfit = profitPerUnit * totalUnits;
+
+            pvUnitCost.textContent = fmt(unitCost, 4);
+            pvSellingPrice.textContent = fmt(sellingPrice, 2);
+            pvProfitUnit.textContent = fmt(profitPerUnit, 2);
+            pvTotalUnits.textContent = totalUnits > 0 ? totalUnits.toLocaleString() : '—';
+            pvTotalProfit.textContent = totalUnits > 0 ? fmt(totalProfit, 2) : '—';
+        } else {
+            pvUnitCost.textContent = '—';
+            pvSellingPrice.textContent = '—';
+            pvProfitUnit.textContent = '—';
+            pvTotalUnits.textContent = '—';
+            pvTotalProfit.textContent = '—';
+            totalUnitsPreview.value = '';
+            totalCostPreview.value = '';
+        }
+    }
+
+    function syncStep() {
+        var step = parseInt(currentStepInput.value, 10);
+        panes.forEach(function(pane, idx) {
+            pane.classList.toggle('d-none', (idx + 1) !== step);
+        });
+        stepBtns.forEach(function(btn, idx) {
+            btn.classList.remove('active', 'completed');
+            if (idx + 1 === step) btn.classList.add('active');
+            else if (idx + 1 < step) btn.classList.add('completed');
+        });
+        btnPrev.disabled = step === 1;
+        btnNext.classList.toggle('d-none', step === panes.length);
+        btnSubmit.classList.toggle('d-none', step !== panes.length);
+    }
+
+    btnPrev.addEventListener('click', function () {
+        var current = parseInt(currentStepInput.value, 10);
+        if (current > 1) { currentStepInput.value = String(current - 1); syncStep(); }
+    });
+
+    btnNext.addEventListener('click', function () {
+        var current = parseInt(currentStepInput.value, 10);
+        if (current < panes.length) { currentStepInput.value = String(current + 1); syncStep(); }
+    });
+
+    stepBtns.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var target = parseInt(btn.getAttribute('data-target'), 10);
+            if (target) { currentStepInput.value = String(target); syncStep(); }
+        });
+    });
+
+    [packSize, packsReceived, purchasePerPack, marginInput].forEach(function(el) {
+        if (el) el.addEventListener('input', recalcPricing);
+    });
+
+    recalcPricing();
+    syncStep();
+})();
+</script>
+{% endblock %}

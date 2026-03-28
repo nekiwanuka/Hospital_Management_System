@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block title %}Visits Queue | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}Visits Queue{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+    <div>
+        <h1><i class="bi bi-arrow-left-right me-2" style="opacity:.5"></i>Visits Queue</h1>
+        <p>Track patient flow across triage, diagnostics, pharmacy, billing, and admission queues.</p>
+    </div>
+    <a class="btn btn-primary" href="{% url 'visits:create' %}"><i class="bi bi-plus-lg me-1"></i>Register Visit</a>
+</div>
+
+<div class="cl-card">
+    <div class="cl-card-body">
+
+        <form method="get" class="row g-2 align-items-end mb-3">
+            <div class="col-sm-6 col-md-4">
+                <label class="form-label" for="status">Status</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">All statuses</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-sm-6 col-md-3">
+                <button class="btn btn-outline-primary w-100" type="submit">Filter</button>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>Visit</th>
+                        <th>Patient</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Check-In</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for visit in visits %}
+                    <tr>
+                        <td>{{ visit.visit_number }}</td>
+                        <td>{{ visit.patient }}</td>
+                        <td>{{ visit.get_visit_type_display }}</td>
+                        <td>{{ visit.get_status_display }}</td>
+                        <td>{{ visit.check_in_time }}</td>
+                        <td><a class="btn btn-sm btn-outline-secondary" href="{% url 'visits:detail' visit.pk %}">Details</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-muted">No visits found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.paginator.num_pages > 1 %}
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?status={{ status }}&page={{ page_obj.previous_page_number }}">Previous</a></li>
+                {% endif %}
+                <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?status={{ status }}&page={{ page_obj.next_page_number }}">Next</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

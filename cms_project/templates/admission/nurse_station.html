@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}Nurse Station | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}Nurse Station{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+    <div>
+        <h1><i class="bi bi-heart-pulse me-2"></i>Nurse Station</h1>
+        <p>Manage your admitted patients, add nursing notes, and track care.</p>
+    </div>
+    <div>
+        <a class="btn btn-outline-secondary btn-sm" href="{% url 'admission:index' %}"><i class="bi bi-hospital me-1"></i>All Admissions</a>
+    </div>
+</div>
+
+{% if my_patients %}
+<div class="cl-card mb-4">
+    <div class="cl-card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-person-badge me-2"></i>My Assigned Patients <span class="badge bg-primary ms-1">{{ my_patients|length }}</span></span>
+    </div>
+    <div class="cl-card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Patient</th>
+                        <th>Ward / Bed</th>
+                        <th>Doctor</th>
+                        <th>Admitted</th>
+                        <th>Diagnosis</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in my_patients %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'patients:detail' a.patient.pk %}" class="text-decoration-none fw-semibold">
+                                {{ a.patient.first_name }} {{ a.patient.last_name }}
+                            </a>
+                        </td>
+                        <td><span class="badge bg-light text-dark border">{{ a.ward }}</span> <small>Bed {{ a.bed }}</small></td>
+                        <td>{% if a.doctor %}Dr. {{ a.doctor.get_full_name|default:a.doctor.username }}{% else %}-{% endif %}</td>
+                        <td><small>{{ a.admission_date|date:"d M Y H:i" }}</small></td>
+                        <td><small class="text-muted">{{ a.diagnosis|truncatechars:60 }}</small></td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a class="btn btn-outline-primary" href="{% url 'admission:add_nursing_note' a.pk %}" title="Add Note"><i class="bi bi-pencil-square"></i></a>
+                                <a class="btn btn-outline-info" href="{% url 'admission:detail' a.pk %}" title="View Details"><i class="bi bi-eye"></i></a>
+                                <a class="btn btn-outline-secondary" href="{% url 'admission:nursing_notes' a.pk %}" title="All Notes"><i class="bi bi-journal-text"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if other_patients %}
+<div class="cl-card mb-4">
+    <div class="cl-card-header">
+        <span><i class="bi bi-people me-2"></i>Other Admitted Patients <span class="badge bg-secondary ms-1">{{ other_patients|length }}</span></span>
+    </div>
+    <div class="cl-card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Patient</th>
+                        <th>Ward / Bed</th>
+                        <th>Doctor</th>
+                        <th>Nurse</th>
+                        <th>Admitted</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in other_patients %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'patients:detail' a.patient.pk %}" class="text-decoration-none">
+                                {{ a.patient.first_name }} {{ a.patient.last_name }}
+                            </a>
+                        </td>
+                        <td><span class="badge bg-light text-dark border">{{ a.ward }}</span> <small>Bed {{ a.bed }}</small></td>
+                        <td>{% if a.doctor %}Dr. {{ a.doctor.get_full_name|default:a.doctor.username }}{% else %}-{% endif %}</td>
+                        <td>{% if a.nurse %}{{ a.nurse.get_full_name|default:a.nurse.username }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                        <td><small>{{ a.admission_date|date:"d M Y H:i" }}</small></td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a class="btn btn-outline-primary" href="{% url 'admission:add_nursing_note' a.pk %}" title="Add Note"><i class="bi bi-pencil-square"></i></a>
+                                <a class="btn btn-outline-info" href="{% url 'admission:detail' a.pk %}" title="View Details"><i class="bi bi-eye"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if not my_patients and not other_patients %}
+<div class="cl-card">
+    <div class="cl-card-body text-center py-5">
+        <i class="bi bi-hospital display-4 text-muted"></i>
+        <h5 class="mt-3 text-muted">No admitted patients</h5>
+        <p class="text-muted">There are no active admissions in your branch at the moment.</p>
+    </div>
+</div>
+{% endif %}
+
+{% if recent_notes %}
+<div class="cl-card">
+    <div class="cl-card-header"><i class="bi bi-journal-text me-2"></i>Recent Nursing Notes</div>
+    <div class="cl-card-body">
+        {% for note in recent_notes %}
+        <div class="mb-2 p-2 border rounded {% if note.nurse == request.user %}bg-light{% endif %}">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <strong class="small">{{ note.admission.patient.first_name }} {{ note.admission.patient.last_name }}</strong>
+                    <span class="badge bg-secondary ms-1 small">{{ note.get_category_display }}</span>
+                </div>
+                <small class="text-muted">{{ note.created_at|date:"d M Y H:i" }}</small>
+            </div>
+            <div class="small mt-1">{{ note.note|truncatechars:200 }}</div>
+            <small class="text-muted">— {{ note.nurse.get_full_name|default:note.nurse.username }}</small>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

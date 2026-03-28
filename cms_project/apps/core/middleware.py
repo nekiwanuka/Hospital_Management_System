@@ -1,0 +1,78 @@
+import json
+
+from apps.settingsapp.models import SystemSettings
+
+
+class BranchContextMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        request.branch = None
+        if hasattr(request, "user") and request.user.is_authenticated:
+            request.branch = request.user.branch
+        response = self.get_response(request)
+        return response
+
+
+class SetupRequiredMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        setup_paths = ("/setup/", "/admin/", "/static/", "/media/")
+        if not request.path.startswith(setup_paths):
+            if not SystemSettings.objects.filter(is_initialized=True).exists():
+                from django.shortcuts import redirect
+
+                return redirect("core:setup")
+        return self.get_response(request)
+
+
+class AuditLogMiddleware:
+    WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+    EXCLUDED_PREFIXES = ("/static/", "/media/")
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+
+        if (
+            not hasattr(request, "user")
+            or not request.user.is_authenticated
+            or request.method not in self.WRITE_METHODS
+            or request.path.startswith(self.EXCLUDED_PREFIXES)
+        ):
+            return response
+
+        from apps.core.models import AuditLog
+
+        object_type = request.path.strip("/").split("/")[0] or "core"
+        details = {
+            "path": request.path,
+            "method": request.method,
+            "status_code": response.status_code,
+        }
+
+        try:
+            AuditLog.objects.create(
+                user=request.user,
+                branch=getattr(request, "branch", None),
+                action=request.method,
+                object_type=object_type,
+                details=json.dumps(details),
+                ip_address=self._get_client_ip(request),
+            )
+        except Exception:
+            # Do not block requests if audit persistence fails.
+            pass
+
+        return response
+
+    def _get_client_ip(self, request):
+        forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+        return request.META.get("REMOTE_ADDR")

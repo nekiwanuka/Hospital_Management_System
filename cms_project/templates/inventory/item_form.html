@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}Inventory{% endblock %}
+
+{% block content %}
+<div class="cl-breadcrumb"><a href="{% url 'inventory:index' %}">Inventory</a> <span>Create Item</span></div>
+<div class="cl-card">
+    <div class="cl-card-header"><h5>{{ page_title }}</h5></div>
+    <div class="cl-card-body">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+            <div class="row g-3">
+                {% for field in form %}
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors.0 }}</div>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <div class="mt-3 d-flex gap-2 justify-content-end">
+                <a class="btn btn-outline-secondary" href="{% url 'inventory:index' %}">Cancel</a>
+                <button class="btn btn-primary" type="submit">{{ submit_label }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

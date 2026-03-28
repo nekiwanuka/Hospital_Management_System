@@ -1,0 +1,663 @@
+{% extends 'base.html' %}
+{% load currency %}
+
+{% block title %}Billing | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}Billing{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Billing scoped styles ──────────────────────────────────── */
+.bl {
+    --bl-radius: 1.15rem;
+    --bl-border: var(--cl-border, #e2e8f0);
+    --bl-muted: var(--cl-muted, #64748b);
+    --bl-ink: var(--cl-ink, #1e293b);
+    --bl-card-bg: rgba(255,255,255,.97);
+    --bl-soft-shadow: 0 2px 8px rgba(15,23,42,.06);
+}
+
+/* Hero banner --------------------------------------------------- */
+.bl-hero {
+    position:relative;overflow:hidden;
+    padding:1.75rem 1.75rem 1.5rem;border-radius:var(--bl-radius);
+    background:linear-gradient(135deg,
+        color-mix(in srgb, var(--cl-primary,#0d6efd) 10%, #ffffff),
+        color-mix(in srgb, var(--cl-secondary,#16a085) 12%, #ffffff));
+    border:1px solid color-mix(in srgb, var(--cl-primary,#0d6efd) 12%, var(--bl-border));
+    box-shadow:0 16px 36px rgba(15,23,42,.08);margin-bottom:1.25rem;
+}
+.bl-hero::after {
+    content:"";position:absolute;top:-35%;right:-5%;width:240px;height:240px;border-radius:50%;
+    background:radial-gradient(circle,rgba(255,255,255,.4) 0%,rgba(255,255,255,0) 72%);pointer-events:none;
+}
+.bl-hero-inner { position:relative;z-index:1; }
+.bl-hero-icon {
+    width:3.5rem;height:3.5rem;border-radius:1rem;display:inline-flex;align-items:center;justify-content:center;
+    background:rgba(255,255,255,.82);color:var(--cl-primary,#0d6efd);font-size:1.35rem;
+    box-shadow:0 4px 12px rgba(15,23,42,.08);flex-shrink:0;
+}
+.bl-hero h1 { margin:0;font-size:1.45rem;font-weight:800;color:#10233d;letter-spacing:-.02em; }
+.bl-hero p  { margin:.25rem 0 0;color:#35506f;font-size:.85rem; }
+
+/* Stat cards ---------------------------------------------------- */
+.bl-stats { display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem;margin-bottom:1.25rem; }
+.bl-stat-card {
+    padding:1rem 1.1rem;border-radius:1rem;background:var(--bl-card-bg);
+    border:1px solid var(--bl-border);box-shadow:var(--bl-soft-shadow);
+    display:flex;align-items:center;gap:.85rem;
+    transition:border-color .18s ease,box-shadow .18s ease;
+}
+.bl-stat-card:hover { border-color:color-mix(in srgb,var(--cl-primary,#0d6efd) 18%,#e8eef5);box-shadow:0 6px 16px rgba(15,23,42,.06); }
+.bl-stat-icon {
+    width:2.5rem;height:2.5rem;border-radius:.75rem;display:inline-flex;align-items:center;justify-content:center;
+    font-size:1.1rem;flex-shrink:0;
+}
+.bl-stat-icon.success  { background:#ecfdf5;color:#065f46; }
+.bl-stat-icon.warning  { background:#fff8eb;color:#9a5b00; }
+.bl-stat-icon.info     { background:#eaf8fc;color:#0b7285; }
+.bl-stat-icon.primary  { background:#eef4ff;color:#27548a; }
+.bl-stat-icon.danger   { background:#fef2f2;color:#b91c1c; }
+.bl-stat-label { font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--bl-muted);margin-bottom:.1rem; }
+.bl-stat-value { font-size:1.15rem;font-weight:800;color:var(--bl-ink); }
+
+/* Launcher cards ------------------------------------------------ */
+.bl-launchers { display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;margin-bottom:1.25rem; }
+.bl-launcher {
+    position:relative;overflow:hidden;cursor:pointer;text-decoration:none;
+    padding:1.35rem 1.25rem;border-radius:var(--bl-radius);
+    background:var(--bl-card-bg);border:1px solid var(--bl-border);box-shadow:var(--bl-soft-shadow);
+    display:flex;align-items:flex-start;gap:1rem;
+    transition:all .2s ease;
+}
+.bl-launcher:hover {
+    border-color:color-mix(in srgb,var(--cl-primary,#0d6efd) 25%,#e8eef5);
+    box-shadow:0 8px 24px rgba(15,23,42,.09);transform:translateY(-2px);
+}
+.bl-launcher-icon {
+    width:3rem;height:3rem;border-radius:.85rem;display:inline-flex;align-items:center;justify-content:center;
+    font-size:1.25rem;flex-shrink:0;
+}
+.bl-launcher-icon.amber   { background:linear-gradient(135deg,#fff8eb,#fef3cd);color:#9a5b00; }
+.bl-launcher-icon.violet  { background:linear-gradient(135deg,#f3e8ff,#e9d5ff);color:#6d28d9; }
+.bl-launcher-icon.blue    { background:linear-gradient(135deg,#eef4ff,#dbeafe);color:#1d4ed8; }
+.bl-launcher h3 { margin:0 0 .2rem;font-size:.92rem;font-weight:700;color:var(--bl-ink); }
+.bl-launcher p  { margin:0;font-size:.78rem;color:var(--bl-muted);line-height:1.4; }
+.bl-launcher-badge {
+    position:absolute;top:.85rem;right:1rem;
+    display:inline-flex;min-width:1.6rem;height:1.6rem;padding:0 .45rem;border-radius:999px;
+    align-items:center;justify-content:center;font-size:.72rem;font-weight:800;
+}
+.bl-launcher-badge.amber  { background:#fff8eb;color:#9a5b00;border:1px solid rgba(217,119,6,.15); }
+.bl-launcher-badge.violet { background:#f3e8ff;color:#6d28d9;border:1px solid rgba(109,40,217,.12); }
+.bl-launcher-badge.blue   { background:#eef4ff;color:#1d4ed8;border:1px solid rgba(29,78,216,.12); }
+.bl-launcher-arrow {
+    position:absolute;bottom:.85rem;right:1rem;color:var(--bl-muted);font-size:.9rem;
+    transition:transform .18s ease,color .18s ease;
+}
+.bl-launcher:hover .bl-launcher-arrow { transform:translateX(3px);color:var(--cl-primary,#0d6efd); }
+
+/* Section cards (used inside modals) ---------------------------- */
+.bl-section {
+    margin-bottom:1.15rem;border:1px solid var(--bl-border);border-radius:var(--bl-radius);
+    background:var(--bl-card-bg);box-shadow:var(--bl-soft-shadow);overflow:hidden;
+}
+.bl-section-head {
+    display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;
+    padding:1rem 1.25rem .85rem;border-bottom:1px solid rgba(226,232,240,.75);
+    background:linear-gradient(180deg,rgba(248,250,252,.95),rgba(255,255,255,.98));
+}
+.bl-section-title {
+    margin:0;font-size:.97rem;font-weight:700;color:var(--bl-ink);display:flex;align-items:center;gap:.5rem;
+}
+.bl-section-title i { color:var(--cl-primary,#0d6efd);font-size:1.05rem; }
+.bl-section-count {
+    display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .65rem;border-radius:999px;
+    background:rgba(13,110,253,.08);color:var(--cl-primary-dark,#0a58ca);font-size:.73rem;font-weight:700;
+}
+.bl-section-body { padding:1.15rem 1.25rem; }
+.bl-section-body:empty { display:none; }
+
+/* Filter pills -------------------------------------------------- */
+.bl-filter-bar { display:flex;flex-wrap:wrap;gap:.4rem; }
+.bl-filter-pill {
+    display:inline-flex;align-items:center;gap:.3rem;padding:.38rem .75rem;border-radius:999px;
+    font-size:.78rem;font-weight:600;text-decoration:none;border:1px solid var(--bl-border);
+    background:#fff;color:var(--bl-muted);transition:all .15s ease;
+}
+.bl-filter-pill:hover { border-color:color-mix(in srgb,var(--cl-primary,#0d6efd) 22%,#e8eef5);color:var(--bl-ink); }
+.bl-filter-pill.active { background:var(--cl-primary,#0d6efd);border-color:var(--cl-primary,#0d6efd);color:#fff; }
+.bl-filter-pill.active-success { background:#059669;border-color:#059669;color:#fff; }
+.bl-filter-pill.active-warning { background:#d97706;border-color:#d97706;color:#fff; }
+.bl-filter-pill.active-info    { background:#0891b2;border-color:#0891b2;color:#fff; }
+
+/* Search bar ---------------------------------------------------- */
+.bl-search { display:flex;gap:.5rem;margin-bottom:1rem; }
+.bl-search .form-control { border-radius:999px;padding-left:2.5rem;border-color:var(--bl-border); }
+.bl-search .form-control:focus { border-color:var(--cl-primary,#0d6efd);box-shadow:0 0 0 3px rgba(13,110,253,.1); }
+.bl-search-wrap { position:relative;flex:1; }
+.bl-search-wrap i { position:absolute;left:.9rem;top:50%;transform:translateY(-50%);color:var(--bl-muted);font-size:.9rem; }
+
+/* Tables -------------------------------------------------------- */
+.bl-table { width:100%;border-collapse:separate;border-spacing:0; }
+.bl-table thead th {
+    padding:.7rem .85rem;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--bl-muted);border-bottom:2px solid var(--bl-border);background:transparent;
+}
+.bl-table tbody td {
+    padding:.75rem .85rem;font-size:.85rem;color:var(--bl-ink);border-bottom:1px solid rgba(226,232,240,.5);
+    vertical-align:middle;
+}
+.bl-table tbody tr { transition:background .12s ease; }
+.bl-table tbody tr:hover { background:rgba(13,110,253,.02); }
+.bl-table tbody tr:last-child td { border-bottom:none; }
+
+/* Status pills -------------------------------------------------- */
+.bl-pill {
+    display:inline-flex;align-items:center;gap:.3rem;padding:.28rem .55rem;border-radius:999px;
+    font-size:.72rem;font-weight:700;
+}
+.bl-pill-success { background:#ecfdf5;color:#065f46; }
+.bl-pill-warning { background:#fff8eb;color:#9a5b00; }
+.bl-pill-info    { background:#eaf8fc;color:#0b7285; }
+.bl-pill-danger  { background:#fef2f2;color:#b91c1c; }
+.bl-pill-muted   { background:#eef2f7;color:#465569; }
+.bl-pill-primary { background:#eef4ff;color:#27548a; }
+
+/* Shift card ---------------------------------------------------- */
+.bl-shift-card {
+    padding:1.15rem;border-radius:1rem;
+    background:linear-gradient(135deg,rgba(217,119,6,.06),rgba(245,158,11,.04));
+    border:1px solid rgba(217,119,6,.12);margin-bottom:1.25rem;
+}
+.bl-shift-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.75rem; }
+.bl-shift-label { font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--bl-muted);margin-bottom:.1rem; }
+.bl-shift-value { font-size:.92rem;font-weight:700;color:var(--bl-ink); }
+
+/* Fullscreen modal overrides ------------------------------------ */
+.bl-modal .modal-content {
+    border:none;border-radius:0;min-height:100vh;
+}
+.bl-modal .modal-header {
+    padding:1rem 1.5rem;border-bottom:1px solid var(--bl-border);
+    background:linear-gradient(180deg,rgba(248,250,252,.98),#fff);
+}
+.bl-modal .modal-header .modal-title {
+    font-size:1.1rem;font-weight:800;color:var(--bl-ink);display:flex;align-items:center;gap:.5rem;
+}
+.bl-modal .modal-header .modal-title i { color:var(--cl-primary,#0d6efd); }
+.bl-modal .modal-body { padding:1.25rem 1.5rem;background:#f8fafc; }
+.bl-modal .btn-close:focus { box-shadow:none; }
+
+/* Pagination ---------------------------------------------------- */
+.bl-pagination {
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;
+    padding-top:1rem;border-top:1px solid var(--bl-border);margin-top:.5rem;
+}
+.bl-pagination-info { font-size:.8rem;color:var(--bl-muted);font-weight:600; }
+.bl-pagination-pages { display:flex;align-items:center;gap:.25rem; }
+.bl-page-btn {
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:2.1rem;height:2.1rem;padding:0 .5rem;border-radius:.6rem;
+    font-size:.8rem;font-weight:600;text-decoration:none;
+    border:1px solid var(--bl-border);background:#fff;color:var(--bl-ink);
+    transition:all .15s ease;
+}
+.bl-page-btn:hover { border-color:var(--cl-primary,#0d6efd);color:var(--cl-primary,#0d6efd);background:rgba(13,110,253,.04); }
+.bl-page-btn.active { background:var(--cl-primary,#0d6efd);border-color:var(--cl-primary,#0d6efd);color:#fff; }
+.bl-page-btn.disabled { opacity:.4;pointer-events:none; }
+.bl-page-ellipsis { display:inline-flex;align-items:center;padding:0 .3rem;color:var(--bl-muted);font-size:.8rem; }
+
+/* Empty --------------------------------------------------------- */
+.bl-empty {
+    display:grid;place-items:center;gap:.5rem;min-height:100px;padding:1.5rem;text-align:center;color:var(--bl-muted);
+}
+.bl-empty i {
+    width:2.5rem;height:2.5rem;display:inline-flex;align-items:center;justify-content:center;border-radius:.75rem;
+    background:#f8fafc;color:var(--cl-primary,#0d6efd);font-size:1.1rem;
+}
+.bl-empty strong { display:block;color:var(--bl-ink);font-size:.85rem; }
+
+/* Responsive ---------------------------------------------------- */
+@media(max-width:767.98px){
+    .bl-hero { padding:1.15rem; }
+    .bl-stats { grid-template-columns:repeat(2,1fr); }
+    .bl-launchers { grid-template-columns:1fr; }
+    .bl-modal .modal-body { padding:1rem; }
+    .bl-pagination { flex-direction:column;align-items:flex-start; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bl">
+    <!-- ═══ Hero banner ═══ -->
+    <section class="bl-hero">
+        <div class="bl-hero-inner d-flex flex-wrap justify-content-between align-items-start gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <span class="bl-hero-icon"><i class="bi bi-receipt-cutoff"></i></span>
+                <div>
+                    <h1>Billing</h1>
+                    <p>Invoices, cashier filters, and pending department requests.</p>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2 align-items-start">
+                {% if request.user.role == 'director' or request.user.role == 'system_admin' %}
+                <a class="btn btn-outline-secondary btn-sm" href="{% url 'billing:shift_sessions_report' %}"><i class="bi bi-table me-1"></i>Shift Report</a>
+                <a class="btn btn-outline-danger btn-sm" href="{% url 'billing:approval_requests' %}"><i class="bi bi-shield-check me-1"></i>Approvals</a>
+                <a class="btn btn-outline-warning btn-sm" href="{% url 'billing:sequence_anomalies' %}"><i class="bi bi-exclamation-triangle me-1"></i>Anomalies</a>
+                {% endif %}
+                <a class="btn btn-outline-primary btn-sm" href="{% url 'billing:payments_register' %}{% if return_to %}?return_to={{ return_to|urlencode }}{% endif %}"><i class="bi bi-funnel me-1"></i>Payments Register</a>
+                <a class="btn btn-primary btn-sm" href="{% url 'billing:create' %}{% if return_to %}?return_to={{ return_to|urlencode }}{% endif %}"><i class="bi bi-plus-lg me-1"></i>Create Invoice</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══ Cashier Shift ═══ -->
+    {% if request.user.role == 'cashier' or request.user.role == 'receptionist' %}
+    <div class="bl-shift-card">
+        {% if active_shift %}
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <h2 class="bl-section-title m-0" style="font-size:.92rem;"><i class="bi bi-clock-history"></i>Active shift</h2>
+            <span class="bl-pill bl-pill-success"><i class="bi bi-check-circle"></i>Open</span>
+        </div>
+        <div class="bl-shift-grid mb-3">
+            <div><span class="bl-shift-label">Opened at</span><span class="bl-shift-value">{{ active_shift.created_at|date:"d M Y H:i" }}</span></div>
+            <div><span class="bl-shift-label">Opening float</span><span class="bl-shift-value">{{ active_shift.opening_float|ugx }}</span></div>
+            <div><span class="bl-shift-label">Status</span><span class="bl-shift-value">{{ active_shift.get_status_display }}</span></div>
+        </div>
+        <form method="post" action="{% url 'billing:close_shift' active_shift.pk %}" class="row g-2 align-items-end">
+            {% csrf_token %}
+            <div class="col-md-4">
+                <label class="form-label fw-semibold" style="font-size:.78rem;">Declared cash total</label>
+                <input class="form-control form-control-sm" type="number" name="declared_cash_total" step="0.01" min="0" placeholder="0.00" required>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label fw-semibold" style="font-size:.78rem;">Reason if variance</label>
+                <input class="form-control form-control-sm" type="text" name="variance_reason" placeholder="Optional reason">
+            </div>
+            <div class="col-md-3 d-grid">
+                <button class="btn btn-warning btn-sm" type="submit"><i class="bi bi-lock me-1"></i>Close Shift</button>
+            </div>
+        </form>
+        {% else %}
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <h2 class="bl-section-title m-0" style="font-size:.92rem;"><i class="bi bi-clock"></i>No active shift</h2>
+            <span class="bl-pill bl-pill-muted">Closed</span>
+        </div>
+        <form method="post" action="{% url 'billing:open_shift' %}" class="row g-2 align-items-end">
+            {% csrf_token %}
+            <div class="col-md-4">
+                <label class="form-label fw-semibold" style="font-size:.78rem;">Opening float</label>
+                <input class="form-control form-control-sm" type="number" name="opening_float" step="0.01" min="0" required>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label fw-semibold" style="font-size:.78rem;">Shift notes</label>
+                <input class="form-control form-control-sm" type="text" name="shift_notes" placeholder="Optional notes">
+            </div>
+            <div class="col-md-3 d-grid">
+                <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-play-fill me-1"></i>Open Shift</button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- ═══ Stat cards ═══ -->
+    <div class="bl-stats">
+        <div class="bl-stat-card">
+            <span class="bl-stat-icon success"><i class="bi bi-cash-coin"></i></span>
+            <div><div class="bl-stat-label">Pending clearance</div><div class="bl-stat-value">{{ visit_pending_invoices|length }}</div></div>
+        </div>
+        <div class="bl-stat-card">
+            <span class="bl-stat-icon warning"><i class="bi bi-hourglass-split"></i></span>
+            <div><div class="bl-stat-label">All pending</div><div class="bl-stat-value">{{ pending_request_counts.all }}</div></div>
+        </div>
+        <div class="bl-stat-card">
+            <span class="bl-stat-icon info"><i class="bi bi-droplet-half"></i></span>
+            <div><div class="bl-stat-label">Lab</div><div class="bl-stat-value">{{ pending_request_counts.lab }}</div></div>
+        </div>
+        <div class="bl-stat-card">
+            <span class="bl-stat-icon primary"><i class="bi bi-radioactive"></i></span>
+            <div><div class="bl-stat-label">Radiology</div><div class="bl-stat-value">{{ pending_request_counts.radiology }}</div></div>
+        </div>
+        <div class="bl-stat-card">
+            <span class="bl-stat-icon danger"><i class="bi bi-send"></i></span>
+            <div><div class="bl-stat-label">Referral</div><div class="bl-stat-value">{{ pending_request_counts.referral }}</div></div>
+        </div>
+        <div class="bl-stat-card">
+            <span class="bl-stat-icon warning"><i class="bi bi-capsule"></i></span>
+            <div><div class="bl-stat-label">Pharmacy</div><div class="bl-stat-value">{{ pending_request_counts.pharmacy }}</div></div>
+        </div>
+    </div>
+
+    <!-- ═══ Launcher buttons ═══ -->
+    <div class="bl-launchers">
+        <!-- Visits pending clearance -->
+        <div class="bl-launcher" data-bs-toggle="modal" data-bs-target="#blVisitsModal" role="button" tabindex="0">
+            <span class="bl-launcher-icon amber"><i class="bi bi-clock-history"></i></span>
+            <div>
+                <h3>Visits Pending Clearance</h3>
+                <p>Patients awaiting payment processing or invoice creation before discharge.</p>
+            </div>
+            <span class="bl-launcher-badge amber">{{ visit_pending_invoices|length }}</span>
+            <i class="bi bi-arrow-right bl-launcher-arrow"></i>
+        </div>
+
+        <!-- Pending department requests -->
+        <div class="bl-launcher" data-bs-toggle="modal" data-bs-target="#blRequestsModal" role="button" tabindex="0">
+            <span class="bl-launcher-icon violet"><i class="bi bi-inbox"></i></span>
+            <div>
+                <h3>Department Requests</h3>
+                <p>Lab, radiology, pharmacy &amp; referral requests awaiting billing.</p>
+            </div>
+            <span class="bl-launcher-badge violet">{{ pending_request_counts.all }}</span>
+            <i class="bi bi-arrow-right bl-launcher-arrow"></i>
+        </div>
+
+        <!-- Invoice list -->
+        <div class="bl-launcher" data-bs-toggle="modal" data-bs-target="#blInvoicesModal" role="button" tabindex="0">
+            <span class="bl-launcher-icon blue"><i class="bi bi-receipt"></i></span>
+            <div>
+                <h3>Invoice List</h3>
+                <p>Search, filter, and manage all invoices with full pagination.</p>
+            </div>
+            {% if page_obj %}<span class="bl-launcher-badge blue">{{ page_obj.paginator.count }}</span>{% endif %}
+            <i class="bi bi-arrow-right bl-launcher-arrow"></i>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MODAL 1 — Visits Pending Clearance
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="modal fade bl-modal" id="blVisitsModal" tabindex="-1" aria-labelledby="blVisitsLabel" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-arrow-left me-1"></i>Back to Billing</button>
+                    <h5 class="modal-title mb-0" id="blVisitsLabel"><i class="bi bi-clock-history"></i>Visits Pending Clearance
+                        <span class="bl-section-count ms-2"><i class="bi bi-people"></i>{{ visit_pending_invoices|length }}</span>
+                    </h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {% if visit_pending_invoices %}
+                <section class="bl-section">
+                    <div class="bl-section-body">
+                        <div class="table-responsive">
+                            <table class="bl-table">
+                                <thead>
+                                    <tr>
+                                        <th>Visit No.</th>
+                                        <th>Patient</th>
+                                        <th>Type</th>
+                                        <th>Check-in</th>
+                                        <th>Created by</th>
+                                        <th>Invoice</th>
+                                        <th class="text-end">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in visit_pending_invoices %}
+                                    <tr>
+                                        <td><a href="{% url 'visits:detail' item.visit.pk %}" class="text-decoration-none fw-semibold">{{ item.visit.visit_number }}</a></td>
+                                        <td>{{ item.visit.patient.first_name }} {{ item.visit.patient.last_name }}</td>
+                                        <td>{{ item.visit.get_visit_type_display }}</td>
+                                        <td>{{ item.visit.check_in_time|date:"d M Y H:i" }}</td>
+                                        <td>{% if item.visit.created_by %}{{ item.visit.created_by.get_full_name|default:item.visit.created_by.username }}{% else %}—{% endif %}</td>
+                                        <td>
+                                            {% if item.invoice %}
+                                            <a href="{% url 'billing:detail' item.invoice.pk %}{% if return_to %}?return_to={{ return_to|urlencode }}{% endif %}" class="text-decoration-none fw-semibold">{{ item.invoice.invoice_number }}</a>
+                                            {% else %}
+                                            <span class="bl-pill bl-pill-muted">No invoice</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            {% if item.invoice %}
+                                            <a class="btn btn-sm btn-warning" href="{% url 'billing:detail' item.invoice.pk %}{% if return_to %}?return_to={{ return_to|urlencode }}{% endif %}"><i class="bi bi-cash-coin me-1"></i>Process</a>
+                                            {% else %}
+                                            <a class="btn btn-sm btn-outline-primary" href="{% url 'billing:create' %}?visit={{ item.visit.pk }}&patient={{ item.visit.patient_id }}{% if return_to %}&return_to={{ return_to|urlencode }}{% endif %}"><i class="bi bi-plus-lg me-1"></i>Invoice</a>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+                {% else %}
+                <div class="bl-empty" style="min-height:200px;">
+                    <i class="bi bi-check-circle" style="background:#ecfdf5;color:#065f46;"></i>
+                    <div><strong>All clear</strong>No visits are pending clearance right now.</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MODAL 2 — Pending Department Requests
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="modal fade bl-modal" id="blRequestsModal" tabindex="-1" aria-labelledby="blRequestsLabel" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-arrow-left me-1"></i>Back to Billing</button>
+                    <h5 class="modal-title mb-0" id="blRequestsLabel"><i class="bi bi-inbox"></i>Pending Department Requests
+                        <span class="bl-section-count ms-2">{{ pending_request_counts.all }}</span>
+                    </h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Department filter pills -->
+                <div class="bl-filter-bar mb-3">
+                    <a class="bl-filter-pill {% if selected_request_type == 'all' %}active{% endif %}" href="?q={{ query|urlencode }}&status={{ selected_status }}&request_type=all&_modal=requests{% if return_to %}&return_to={{ return_to|urlencode }}{% endif %}">All</a>
+                    <a class="bl-filter-pill {% if selected_request_type == 'lab' %}active{% endif %}" href="?q={{ query|urlencode }}&status={{ selected_status }}&request_type=lab&_modal=requests{% if return_to %}&return_to={{ return_to|urlencode }}{% endif %}"><i class="bi bi-droplet-half"></i>Lab</a>
+                    <a class="bl-filter-pill {% if selected_request_type == 'radiology' %}active{% endif %}" href="?q={{ query|urlencode }}&status={{ selected_status }}&request_type=radiology&_modal=requests{% if return_to %}&return_to={{ return_to|urlencode }}{% endif %}"><i class="bi bi-radioactive"></i>Radiology</a>
+                    <a class="bl-filter-pill {% if selected_request_type == 'pharmacy' %}active{% endif %}" href="?q={{ query|urlencode }}&status={{ selected_status }}&request_type=pharmacy&_modal=requests{% if return_to %}&return_to={{ return_to|urlencode }}{% endif %}"><i class="bi bi-capsule"></i>Pharmacy</a>
+                    <a class="bl-filter-pill {% if selected_request_type == 'referral' %}active{% endif %}" href="?q={{ query|urlencode }}&status={{ selected_status }}&request_type=referral&_modal=requests{% if return_to %}&return_to={{ return_to|urlencode }}{% endif %}"><i class="bi bi-box-arrow-up-right"></i>Referral</a>
+                </div>
+
+                <section class="bl-section">
+                    <div class="bl-section-body">
+                        <div class="table-responsive">
+                            <table class="bl-table">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>Patient</th>
+                                        <th>Visit</th>
+                                        <th>Request</th>
+                                        <th>Requested by</th>
+                                        <th>Date</th>
+                                        <th class="text-end">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for req in pending_requests %}
+                                    <tr>
+                                        <td>
+                                            <span class="bl-pill {% if req.request_type == 'lab' %}bl-pill-info{% elif req.request_type == 'radiology' %}bl-pill-primary{% elif req.request_type == 'pharmacy' %}bl-pill-warning{% else %}bl-pill-danger{% endif %}">
+                                                {{ req.request_type_label }}
+                                            </span>
+                                        </td>
+                                        <td class="fw-semibold">{{ req.patient_name }}</td>
+                                        <td>{{ req.visit_number }}</td>
+                                        <td>{{ req.description }}</td>
+                                        <td>{{ req.requested_by }}</td>
+                                        <td>{{ req.requested_on }}</td>
+                                        <td class="text-end">
+                                            <a class="btn btn-sm btn-outline-primary" href="{% url 'billing:create' %}?patient={{ req.patient_id }}{% if req.visit_id %}&visit={{ req.visit_id }}{% endif %}{% if return_to %}&return_to={{ return_to|urlencode }}{% endif %}"><i class="bi bi-plus-lg me-1"></i>Invoice</a>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr><td colspan="7">
+                                        <div class="bl-empty">
+                                            <i class="bi bi-inbox"></i>
+                                            <div><strong>No pending requests</strong>All department requests have been invoiced.</div>
+                                        </div>
+                                    </td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MODAL 3 — Invoice List
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="modal fade bl-modal" id="blInvoicesModal" tabindex="-1" aria-labelledby="blInvoicesLabel" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-arrow-left me-1"></i>Back to Billing</button>
+                    <h5 class="modal-title mb-0" id="blInvoicesLabel"><i class="bi bi-receipt"></i>Invoice List
+                        {% if page_obj %}<span class="bl-section-count ms-2">{{ page_obj.paginator.count }} total</span>{% endif %}
+                    </h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Search bar -->
+                <form method="get" class="bl-search">
+                    <div class="bl-search-wrap">
+                        <i class="bi bi-search"></i>
+                        <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search invoice no, patient, visit no, service&hellip;">
+                    </div>
+                    <button class="btn btn-primary btn-sm" type="submit" style="border-radius:999px;padding:.4rem 1.25rem;"><i class="bi bi-search me-1"></i>Search</button>
+                    <input type="hidden" name="status" value="{{ selected_status }}">
+                    <input type="hidden" name="request_type" value="{{ selected_request_type }}">
+                    <input type="hidden" name="_modal" value="invoices">
+                    {% if return_to %}<input type="hidden" name="return_to" value="{{ return_to }}">{% endif %}
+                </form>
+
+                <!-- Status filters -->
+                <div class="bl-filter-bar mb-3">
+                    <a class="bl-filter-pill {% if selected_status == 'all' %}active{% endif %}" href="?q={{ query|urlencode }}&status=all&request_type={{ selected_request_type }}&_modal=invoices{% if return_to %}&return_to={{ return_to|urlencode }}{% endif %}"><i class="bi bi-grid"></i>All</a>
+                    <a class="bl-filter-pill {% if selected_status == 'pending' %}active-warning{% endif %}" href="?q={{ query|urlencode }}&status=pending&request_type={{ selected_request_type }}&_modal=invoices{% if return_to %}&return_to={{ return_to|urlencode }}{% endif %}"><i class="bi bi-hourglass-split"></i>Pending</a>
+                    <a class="bl-filter-pill {% if selected_status == 'partial' %}active-info{% endif %}" href="?q={{ query|urlencode }}&status=partial&request_type={{ selected_request_type }}&_modal=invoices{% if return_to %}&return_to={{ return_to|urlencode }}{% endif %}"><i class="bi bi-pie-chart"></i>Partial</a>
+                    <a class="bl-filter-pill {% if selected_status == 'paid' %}active-success{% endif %}" href="?q={{ query|urlencode }}&status=paid&request_type={{ selected_request_type }}&_modal=invoices{% if return_to %}&return_to={{ return_to|urlencode }}{% endif %}"><i class="bi bi-check-circle"></i>Paid</a>
+                </div>
+
+                <!-- Invoice table -->
+                <section class="bl-section">
+                    <div class="bl-section-body">
+                        <div class="table-responsive">
+                            <table class="bl-table">
+                                <thead>
+                                    <tr>
+                                        <th>Invoice</th>
+                                        <th>Patient</th>
+                                        <th>Total</th>
+                                        <th>Date</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for invoice in invoices %}
+                                    <tr>
+                                        <td><a href="{% url 'billing:detail' invoice.pk %}{% if return_to %}?return_to={{ return_to|urlencode }}{% endif %}" class="text-decoration-none fw-semibold">{{ invoice.invoice_number }}</a></td>
+                                        <td>{{ invoice.patient.first_name }} {{ invoice.patient.last_name }}</td>
+                                        <td class="fw-semibold">{{ invoice.total_amount|ugx }}</td>
+                                        <td>{{ invoice.date }}</td>
+                                        <td>
+                                            <span class="bl-pill {% if invoice.payment_status == 'paid' %}bl-pill-success{% elif invoice.payment_status == 'partial' %}bl-pill-info{% elif invoice.payment_status == 'pending' %}bl-pill-warning{% else %}bl-pill-muted{% endif %}">
+                                                {{ invoice.get_payment_status_display }}
+                                            </span>
+                                        </td>
+                                        <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'billing:detail' invoice.pk %}{% if return_to %}?return_to={{ return_to|urlencode }}{% endif %}"><i class="bi bi-eye me-1"></i>View</a></td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr><td colspan="6">
+                                        <div class="bl-empty">
+                                            <i class="bi bi-receipt"></i>
+                                            <div><strong>No invoices</strong>Create your first invoice to get started.</div>
+                                        </div>
+                                    </td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {% if page_obj and page_obj.paginator.num_pages > 1 %}
+                        {% with num_pages=page_obj.paginator.num_pages current=page_obj.number %}
+                        <div class="bl-pagination">
+                            <span class="bl-pagination-info">
+                                Page {{ current }} of {{ num_pages }} &middot; {{ page_obj.paginator.count }} invoice{{ page_obj.paginator.count|pluralize }}
+                            </span>
+                            <div class="bl-pagination-pages">
+                                {% if page_obj.has_previous %}
+                                <a class="bl-page-btn" href="?page={{ page_obj.previous_page_number }}&q={{ query|urlencode }}&status={{ selected_status }}&request_type={{ selected_request_type }}&_modal=invoices{% if return_to %}&return_to={{ return_to|urlencode }}{% endif %}" title="Previous"><i class="bi bi-chevron-left"></i></a>
+                                {% else %}
+                                <span class="bl-page-btn disabled"><i class="bi bi-chevron-left"></i></span>
+                                {% endif %}
+
+                                {% if current > 3 %}
+                                <a class="bl-page-btn" href="?page=1&q={{ query|urlencode }}&status={{ selected_status }}&request_type={{ selected_request_type }}&_modal=invoices{% if return_to %}&return_to={{ return_to|urlencode }}{% endif %}">1</a>
+                                {% if current > 4 %}<span class="bl-page-ellipsis">&hellip;</span>{% endif %}
+                                {% endif %}
+
+                                {% for p in page_obj.paginator.page_range %}
+                                    {% if p >= current|add:"-2" and p <= current|add:"2" %}
+                                    {% if p == current %}
+                                    <span class="bl-page-btn active">{{ p }}</span>
+                                    {% else %}
+                                    <a class="bl-page-btn" href="?page={{ p }}&q={{ query|urlencode }}&status={{ selected_status }}&request_type={{ selected_request_type }}&_modal=invoices{% if return_to %}&return_to={{ return_to|urlencode }}{% endif %}">{{ p }}</a>
+                                    {% endif %}
+                                    {% endif %}
+                                {% endfor %}
+
+                                {% if current < num_pages|add:"-2" %}
+                                {% if current < num_pages|add:"-3" %}<span class="bl-page-ellipsis">&hellip;</span>{% endif %}
+                                <a class="bl-page-btn" href="?page={{ num_pages }}&q={{ query|urlencode }}&status={{ selected_status }}&request_type={{ selected_request_type }}&_modal=invoices{% if return_to %}&return_to={{ return_to|urlencode }}{% endif %}">{{ num_pages }}</a>
+                                {% endif %}
+
+                                {% if page_obj.has_next %}
+                                <a class="bl-page-btn" href="?page={{ page_obj.next_page_number }}&q={{ query|urlencode }}&status={{ selected_status }}&request_type={{ selected_request_type }}&_modal=invoices{% if return_to %}&return_to={{ return_to|urlencode }}{% endif %}" title="Next"><i class="bi bi-chevron-right"></i></a>
+                                {% else %}
+                                <span class="bl-page-btn disabled"><i class="bi bi-chevron-right"></i></span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endwith %}
+                        {% endif %}
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* Auto-open the correct modal when page loads with _modal param or active filters */
+document.addEventListener('DOMContentLoaded', function() {
+    var params = new URLSearchParams(window.location.search);
+    var target = params.get('_modal');
+    var modalMap = {
+        'invoices': 'blInvoicesModal',
+        'requests': 'blRequestsModal',
+        'visits':   'blVisitsModal'
+    };
+    if (target && modalMap[target]) {
+        var el = document.getElementById(modalMap[target]);
+        if (el) new bootstrap.Modal(el).show();
+    }
+});
+</script>
+{% endblock %}

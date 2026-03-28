@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block title %}Compare Radiology Scans | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}Scan Comparison{% endblock %}
+
+{% block content %}
+<nav class="cl-breadcrumb">
+    {% if return_to %}
+    <a href="{{ return_to }}">Back</a>
+    {% else %}
+    <a href="{% url 'radiology:index' %}">Radiology</a>
+    {% endif %}
+    / <a href="{% url 'radiology:detail' current_request.pk %}{% if return_to %}?return_to={{ return_to|urlencode }}{% endif %}">{{ current_request.request_identifier }}</a> / Compare
+</nav>
+<div class="cl-card">
+    <div class="cl-card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span><i class="bi bi-layout-split me-2"></i>Scan Comparison</span>
+        <a class="btn btn-outline-secondary btn-sm" href="{% if return_to %}{{ return_to }}{% else %}{% url 'radiology:detail' current_request.pk %}{% endif %}"><i class="bi bi-arrow-left me-1"></i>Back</a>
+    </div>
+    <div class="cl-card-body">
+        <p class="text-muted mb-3">Previous scan on the left, current scan on the right.</p>
+
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="border rounded p-3 h-100">
+                    <h2 class="h6">Previous Scan</h2>
+                    <div class="small text-muted mb-2">{{ previous_request.examination_label|default:previous_request.get_imaging_type_display }} | {{ previous_request.date_requested }}</div>
+                    {% with previous_item=previous_attachments|first %}
+                        {% if previous_item and previous_item.image_file %}
+                        <img src="{{ previous_item.image_file.url }}" alt="Previous scan" class="img-fluid rounded border">
+                        {% elif previous_request.result and previous_request.result.image_file %}
+                        <img src="{{ previous_request.result.image_file.url }}" alt="Previous scan" class="img-fluid rounded border">
+                        {% else %}
+                        <div class="text-muted">No previous preview image available.</div>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="border rounded p-3 h-100">
+                    <h2 class="h6">Current Scan</h2>
+                    <div class="small text-muted mb-2">{{ current_request.examination_label|default:current_request.get_imaging_type_display }} | {{ current_request.date_requested }}</div>
+                    {% with current_item=current_attachments|first %}
+                        {% if current_item and current_item.image_file %}
+                        <img src="{{ current_item.image_file.url }}" alt="Current scan" class="img-fluid rounded border">
+                        {% elif current_request.result and current_request.result.image_file %}
+                        <img src="{{ current_request.result.image_file.url }}" alt="Current scan" class="img-fluid rounded border">
+                        {% else %}
+                        <div class="text-muted">No current preview image available.</div>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Medical Stores Request | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}Medical Stores Request{% endblock %}
+
+{% block content %}
+<nav class="cl-breadcrumb"><a href="{% url section_index_url %}">{{ section_label }}</a> / Medical Stores Request</nav>
+<div class="cl-card">
+    <div class="cl-card-header"><i class="bi bi-send me-2"></i>{{ page_title }}</div>
+    <div class="cl-card-body">
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                <div>{{ error }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="row g-3">
+                <div class="col-md-8"><label class="form-label" for="id_item">{{ form.item.label }}</label>{{ form.item }}</div>
+                <div class="col-md-4"><label class="form-label" for="id_quantity_requested">Quantity Requested</label>{{ form.quantity_requested }}</div>
+                <div class="col-12"><label class="form-label" for="id_notes">Request Notes</label>{{ form.notes }}</div>
+            </div>
+
+            <div class="mt-4 d-flex gap-2">
+                <button class="btn btn-primary" type="submit">{{ submit_label }}</button>
+                <a class="btn btn-outline-secondary" href="{% url section_index_url %}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

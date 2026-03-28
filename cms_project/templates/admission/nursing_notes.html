@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}Nursing Notes | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}Nursing Notes{% endblock %}
+
+{% block content %}
+<nav class="cl-breadcrumb">
+    <a href="{% url 'admission:nurse_station' %}">Nurse Station</a> /
+    <a href="{% url 'admission:detail' admission.pk %}">{{ admission.patient.first_name }} {{ admission.patient.last_name }}</a> /
+    Notes
+</nav>
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+        <div class="cl-card">
+            <div class="cl-card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-journal-text me-2"></i>Nursing Notes — {{ admission.patient.first_name }} {{ admission.patient.last_name }}</span>
+                <div class="d-flex gap-2">
+                    <a class="btn btn-primary btn-sm" href="{% url 'admission:add_nursing_note' admission.pk %}"><i class="bi bi-plus-lg me-1"></i>Add Note</a>
+                    <a class="btn btn-outline-secondary btn-sm" href="{% url 'admission:detail' admission.pk %}">Back</a>
+                </div>
+            </div>
+            <div class="cl-card-body">
+                <div class="mb-2 p-2 bg-light rounded small">
+                    <strong>Ward:</strong> {{ admission.ward }} &middot;
+                    <strong>Bed:</strong> {{ admission.bed }} &middot;
+                    <strong>Doctor:</strong> {% if admission.doctor %}Dr. {{ admission.doctor.get_full_name|default:admission.doctor.username }}{% else %}-{% endif %} &middot;
+                    <strong>Admitted:</strong> {{ admission.admission_date|date:"d M Y H:i" }}
+                </div>
+
+                {% for note in notes %}
+                <div class="mb-3 p-3 border rounded">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <div>
+                            <span class="badge {% if note.category == 'vitals' %}bg-info{% elif note.category == 'medication' %}bg-success{% elif note.category == 'wound_care' %}bg-warning text-dark{% elif note.category == 'handover' %}bg-dark{% elif note.category == 'intake_output' %}bg-secondary{% else %}bg-primary{% endif %} me-1">{{ note.get_category_display }}</span>
+                            <strong class="small">{{ note.nurse.get_full_name|default:note.nurse.username }}</strong>
+                        </div>
+                        <small class="text-muted">{{ note.created_at|date:"d M Y H:i" }}</small>
+                    </div>
+                    <div class="small">{{ note.note|linebreaksbr }}</div>
+                </div>
+                {% empty %}
+                <div class="text-center py-4">
+                    <i class="bi bi-journal-text display-5 text-muted"></i>
+                    <p class="text-muted mt-2">No nursing notes recorded yet.</p>
+                    <a class="btn btn-primary btn-sm" href="{% url 'admission:add_nursing_note' admission.pk %}"><i class="bi bi-plus-lg me-1"></i>Add First Note</a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

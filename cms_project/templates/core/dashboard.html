@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+    <div>
+        <h1>Dashboard</h1>
+        <p>Welcome back. Quick access to all clinic modules.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        {% if is_director %}
+        <a class="btn btn-primary" href="{% url 'core:director_dashboard' %}"><i class="bi bi-speedometer2 me-1"></i>Director Dashboard</a>
+        {% endif %}
+        {% if is_system_admin %}
+        <a class="btn btn-outline-primary" href="{% url 'core:system_admin_dashboard' %}"><i class="bi bi-shield-check me-1"></i>System Admin</a>
+        {% endif %}
+    </div>
+</div>
+
+{% if is_director or is_system_admin %}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-4">
+        <a class="cl-stat text-decoration-none" href="{% url 'billing:approval_requests' %}">
+            <div class="cl-stat-icon warning"><i class="bi bi-shield-exclamation"></i></div>
+            <div>
+                <div class="cl-stat-label">Pending Approvals</div>
+                <div class="cl-stat-value">{{ exception_counts.pending_financial_approvals }}</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-lg-4">
+        <a class="cl-stat text-decoration-none" href="{% url 'billing:sequence_anomalies' %}">
+            <div class="cl-stat-icon danger"><i class="bi bi-exclamation-triangle"></i></div>
+            <div>
+                <div class="cl-stat-label">Open Sequence Anomalies</div>
+                <div class="cl-stat-value">{{ exception_counts.open_sequence_anomalies }}</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-lg-4">
+        <a class="cl-stat text-decoration-none" href="{% url 'billing:approval_requests' %}?status=pending">
+            <div class="cl-stat-icon info"><i class="bi bi-arrow-counterclockwise"></i></div>
+            <div>
+                <div class="cl-stat-label">Today's Rollback Requests</div>
+                <div class="cl-stat-value">{{ exception_counts.today_rollback_requests }}</div>
+            </div>
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-3">
+    <div class="col-6 col-md-4 col-xl-3">
+        <{% if user_modules.patients %}a href="{% url 'patients:index' %}"{% else %}div{% endif %} class="cl-module-card{% if not user_modules.patients %} disabled{% endif %}">
+            <div class="cl-module-icon cl-mi-patients"><i class="bi bi-people"></i></div>
+            <h2>Patients</h2>
+            <p>Registration and medical records</p>
+            {% if user_modules.patients %}<span class="text-primary" style="font-size:.75rem;font-weight:600;">Open &rarr;</span>{% else %}<span class="text-muted" style="font-size:.75rem;font-weight:600;"><i class="bi bi-lock me-1"></i>No Access</span>{% endif %}
+        </{% if user_modules.patients %}a{% else %}div{% endif %}>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <{% if user_modules.visits %}a href="{% url 'visits:index' %}"{% else %}div{% endif %} class="cl-module-card{% if not user_modules.visits %} disabled{% endif %}">
+            <div class="cl-module-icon cl-mi-visits"><i class="bi bi-arrow-left-right"></i></div>
+            <h2>Visits Queue</h2>
+            <p>Patient flow and queue transitions</p>
+            {% if user_modules.visits %}<span class="text-primary" style="font-size:.75rem;font-weight:600;">Open &rarr;</span>{% else %}<span class="text-muted" style="font-size:.75rem;font-weight:600;"><i class="bi bi-lock me-1"></i>No Access</span>{% endif %}
+        </{% if user_modules.visits %}a{% else %}div{% endif %}>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <{% if user_modules.triage %}a href="{% url 'triage:index' %}"{% else %}div{% endif %} class="cl-module-card{% if not user_modules.triage %} disabled{% endif %}">
+            <div class="cl-module-icon cl-mi-triage"><i class="bi bi-clipboard2-pulse"></i></div>
+            <h2>Triage</h2>
+            <p>Vitals recording and priority outcomes</p>
+            {% if user_modules.triage %}<span class="text-primary" style="font-size:.75rem;font-weight:600;">Open &rarr;</span>{% else %}<span class="text-muted" style="font-size:.75rem;font-weight:600;"><i class="bi bi-lock me-1"></i>No Access</span>{% endif %}
+        </{% if user_modules.triage %}a{% else %}div{% endif %}>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <{% if user_modules.billing %}a href="{% url 'billing:index' %}"{% else %}div{% endif %} class="cl-module-card{% if not user_modules.billing %} disabled{% endif %}">
+            <div class="cl-module-icon cl-mi-billing"><i class="bi bi-receipt"></i></div>
+            <h2>Billing</h2>
+            <p>Invoices and payment tracking</p>
+            {% if user_modules.billing %}<span class="text-primary" style="font-size:.75rem;font-weight:600;">Open &rarr;</span>{% else %}<span class="text-muted" style="font-size:.75rem;font-weight:600;"><i class="bi bi-lock me-1"></i>No Access</span>{% endif %}
+        </{% if user_modules.billing %}a{% else %}div{% endif %}>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <{% if user_modules.consultation %}a href="{% url 'consultation:index' %}"{% else %}div{% endif %} class="cl-module-card{% if not user_modules.consultation %} disabled{% endif %}">
+            <div class="cl-module-icon cl-mi-consult"><i class="bi bi-journal-medical"></i></div>
+            <h2>Consultation</h2>
+            <p>Doctor notes and diagnosis</p>
+            {% if user_modules.consultation %}<span class="text-primary" style="font-size:.75rem;font-weight:600;">Open &rarr;</span>{% else %}<span class="text-muted" style="font-size:.75rem;font-weight:600;"><i class="bi bi-lock me-1"></i>No Access</span>{% endif %}
+        </{% if user_modules.consultation %}a{% else %}div{% endif %}>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <{% if user_modules.laboratory %}a href="{% url 'laboratory:index' %}"{% else %}div{% endif %} class="cl-module-card{% if not user_modules.laboratory %} disabled{% endif %}">
+            <div class="cl-module-icon cl-mi-lab"><i class="bi bi-droplet-half"></i></div>
+            <h2>Laboratory</h2>
+            <p>Lab tests and result tracking</p>
+            {% if user_modules.laboratory %}<span class="text-primary" style="font-size:.75rem;font-weight:600;">Open &rarr;</span>{% else %}<span class="text-muted" style="font-size:.75rem;font-weight:600;"><i class="bi bi-lock me-1"></i>No Access</span>{% endif %}
+        </{% if user_modules.laboratory %}a{% else %}div{% endif %}>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <{% if user_modules.radiology %}a href="{% url 'radiology:index' %}"{% else %}div{% endif %} class="cl-module-card{% if not user_modules.radiology %} disabled{% endif %}">
+            <div class="cl-module-icon cl-mi-radiology"><i class="bi bi-radioactive"></i></div>
+            <h2>Radiology</h2>
+            <p>X-ray and ultrasound departments</p>
+            {% if user_modules.radiology %}<span class="text-primary" style="font-size:.75rem;font-weight:600;">Open &rarr;</span>{% else %}<span class="text-muted" style="font-size:.75rem;font-weight:600;"><i class="bi bi-lock me-1"></i>No Access</span>{% endif %}
+        </{% if user_modules.radiology %}a{% else %}div{% endif %}>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <{% if user_modules.pharmacy %}a href="{% url 'pharmacy:index' %}"{% else %}div{% endif %} class="cl-module-card{% if not user_modules.pharmacy %} disabled{% endif %}">
+            <div class="cl-module-icon cl-mi-pharmacy"><i class="bi bi-capsule"></i></div>
+            <h2>Pharmacy</h2>
+            <p>Medicine inventory and dispensing</p>
+            {% if user_modules.pharmacy %}<span class="text-primary" style="font-size:.75rem;font-weight:600;">Open &rarr;</span>{% else %}<span class="text-muted" style="font-size:.75rem;font-weight:600;"><i class="bi bi-lock me-1"></i>No Access</span>{% endif %}
+        </{% if user_modules.pharmacy %}a{% else %}div{% endif %}>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <{% if user_modules.admission %}a href="{% url 'admission:index' %}"{% else %}div{% endif %} class="cl-module-card{% if not user_modules.admission %} disabled{% endif %}">
+            <div class="cl-module-icon cl-mi-admission"><i class="bi bi-hospital"></i></div>
+            <h2>Admission</h2>
+            <p>Inpatient wards and discharge</p>
+            {% if user_modules.admission %}<span class="text-primary" style="font-size:.75rem;font-weight:600;">Open &rarr;</span>{% else %}<span class="text-muted" style="font-size:.75rem;font-weight:600;"><i class="bi bi-lock me-1"></i>No Access</span>{% endif %}
+        </{% if user_modules.admission %}a{% else %}div{% endif %}>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <{% if user_modules.admission %}a href="{% url 'admission:nurse_station' %}"{% else %}div{% endif %} class="cl-module-card{% if not user_modules.admission %} disabled{% endif %}">
+            <div class="cl-module-icon cl-mi-admission"><i class="bi bi-heart-pulse"></i></div>
+            <h2>Nurse Station</h2>
+            <p>Patient notes and nursing dashboard</p>
+            {% if user_modules.admission %}<span class="text-primary" style="font-size:.75rem;font-weight:600;">Open &rarr;</span>{% else %}<span class="text-muted" style="font-size:.75rem;font-weight:600;"><i class="bi bi-lock me-1"></i>No Access</span>{% endif %}
+        </{% if user_modules.admission %}a{% else %}div{% endif %}>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <{% if user_modules.referrals %}a href="{% url 'referrals:index' %}"{% else %}div{% endif %} class="cl-module-card{% if not user_modules.referrals %} disabled{% endif %}">
+            <div class="cl-module-icon cl-mi-referrals"><i class="bi bi-send"></i></div>
+            <h2>Referrals</h2>
+            <p>Patient referrals and transfers</p>
+            {% if user_modules.referrals %}<span class="text-primary" style="font-size:.75rem;font-weight:600;">Open &rarr;</span>{% else %}<span class="text-muted" style="font-size:.75rem;font-weight:600;"><i class="bi bi-lock me-1"></i>No Access</span>{% endif %}
+        </{% if user_modules.referrals %}a{% else %}div{% endif %}>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <{% if user_modules.emergency %}a href="{% url 'emergency:index' %}"{% else %}div{% endif %} class="cl-module-card{% if not user_modules.emergency %} disabled{% endif %}">
+            <div class="cl-module-icon cl-mi-emergency"><i class="bi bi-exclamation-triangle"></i></div>
+            <h2>Emergency</h2>
+            <p>Emergency triage and acute care</p>
+            {% if user_modules.emergency %}<span class="text-primary" style="font-size:.75rem;font-weight:600;">Open &rarr;</span>{% else %}<span class="text-muted" style="font-size:.75rem;font-weight:600;"><i class="bi bi-lock me-1"></i>No Access</span>{% endif %}
+        </{% if user_modules.emergency %}a{% else %}div{% endif %}>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <{% if user_modules.inventory %}a href="{% url 'inventory:index' %}"{% else %}div{% endif %} class="cl-module-card{% if not user_modules.inventory %} disabled{% endif %}">
+            <div class="cl-module-icon cl-mi-inventory"><i class="bi bi-box-seam"></i></div>
+            <h2>Inventory / Medical Stores</h2>
+            <p>Medical-store stock, batch control, and request handling</p>
+            {% if user_modules.inventory %}<span class="text-primary" style="font-size:.75rem;font-weight:600;">Open &rarr;</span>{% else %}<span class="text-muted" style="font-size:.75rem;font-weight:600;"><i class="bi bi-lock me-1"></i>No Access</span>{% endif %}
+        </{% if user_modules.inventory %}a{% else %}div{% endif %}>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <{% if user_modules.reports %}a href="{% url 'reports:index' %}"{% else %}div{% endif %} class="cl-module-card{% if not user_modules.reports %} disabled{% endif %}">
+            <div class="cl-module-icon cl-mi-reports"><i class="bi bi-bar-chart-line"></i></div>
+            <h2>Reports</h2>
+            <p>Financial statements and exports</p>
+            {% if user_modules.reports %}<span class="text-primary" style="font-size:.75rem;font-weight:600;">Open &rarr;</span>{% else %}<span class="text-muted" style="font-size:.75rem;font-weight:600;"><i class="bi bi-lock me-1"></i>No Access</span>{% endif %}
+        </{% if user_modules.reports %}a{% else %}div{% endif %}>
+    </div>
+    {% if is_system_admin or request.user.role == 'director' %}
+    <div class="col-6 col-md-4 col-xl-3">
+        <a class="cl-module-card" href="{% url 'settingsapp:index' %}">
+            <div class="cl-module-icon cl-mi-settings"><i class="bi bi-gear"></i></div>
+            <h2>Administration</h2>
+            <p>Settings, branches, users &amp; permissions</p>
+            <span class="text-primary" style="font-size:.75rem;font-weight:600;">Open &rarr;</span>
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

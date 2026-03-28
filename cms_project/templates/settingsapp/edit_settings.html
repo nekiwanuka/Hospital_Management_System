@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Settings | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}Edit Settings{% endblock %}
+
+{% block content %}
+<nav class="cl-breadcrumb">
+    <a href="{% url 'settingsapp:index' %}">Administration</a>
+    <span>Edit Settings</span>
+</nav>
+
+<div class="cl-card">
+    <div class="cl-card-header"><h5><i class="bi bi-gear me-2"></i>Edit System Settings</h5></div>
+    <div class="cl-card-body">
+        <form method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="{{ form.clinic_name.id_for_label }}" class="form-label">Clinic / Medical Center Name</label>
+                    {{ form.clinic_name }}
+                    {% if form.clinic_name.errors %}<div class="invalid-feedback d-block">{{ form.clinic_name.errors.0 }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <label for="{{ form.system_email.id_for_label }}" class="form-label">System Email</label>
+                    {{ form.system_email }}
+                    {% if form.system_email.errors %}<div class="invalid-feedback d-block">{{ form.system_email.errors.0 }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <label for="{{ form.timezone.id_for_label }}" class="form-label">Timezone</label>
+                    {{ form.timezone }}
+                    {% if form.timezone.errors %}<div class="invalid-feedback d-block">{{ form.timezone.errors.0 }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <label for="{{ form.logo.id_for_label }}" class="form-label">Logo</label>
+                    {% if settings_obj.logo %}
+                    <div class="mb-2">
+                        <img src="{{ settings_obj.logo.url }}" alt="Current logo" style="max-height:48px;" class="rounded border">
+                    </div>
+                    {% endif %}
+                    {{ form.logo }}
+                    {% if form.logo.errors %}<div class="invalid-feedback d-block">{{ form.logo.errors.0 }}</div>{% endif %}
+                    <small class="form-text text-muted">Leave blank to keep the current logo.</small>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="{{ form.primary_color.id_for_label }}" class="form-label">Primary Color</label>
+                    <div class="d-flex align-items-center gap-2">
+                        {{ form.primary_color }}
+                    </div>
+                    {% if form.primary_color.errors %}<div class="invalid-feedback d-block">{{ form.primary_color.errors.0 }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-3">
+                    <label for="{{ form.secondary_color.id_for_label }}" class="form-label">Secondary Color</label>
+                    <div class="d-flex align-items-center gap-2">
+                        {{ form.secondary_color }}
+                    </div>
+                    {% if form.secondary_color.errors %}<div class="invalid-feedback d-block">{{ form.secondary_color.errors.0 }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-3">
+                    <label for="{{ form.sidebar_color.id_for_label }}" class="form-label">Sidebar Color</label>
+                    <div class="d-flex align-items-center gap-2">
+                        {{ form.sidebar_color }}
+                    </div>
+                    {% if form.sidebar_color.errors %}<div class="invalid-feedback d-block">{{ form.sidebar_color.errors.0 }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-3">
+                    <label for="{{ form.sidebar_text_color.id_for_label }}" class="form-label">Sidebar Text Color</label>
+                    <div class="d-flex align-items-center gap-2">
+                        {{ form.sidebar_text_color }}
+                    </div>
+                    {% if form.sidebar_text_color.errors %}<div class="invalid-feedback d-block">{{ form.sidebar_text_color.errors.0 }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-3">
+                    <label for="{{ form.sidebar_text_size.id_for_label }}" class="form-label">Sidebar Text Size (rem)</label>
+                    {{ form.sidebar_text_size }}
+                    {% if form.sidebar_text_size.errors %}<div class="invalid-feedback d-block">{{ form.sidebar_text_size.errors.0 }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-3">
+                    <label for="{{ form.dashboard_color.id_for_label }}" class="form-label">Dashboard Color</label>
+                    <div class="d-flex align-items-center gap-2">
+                        {{ form.dashboard_color }}
+                    </div>
+                    {% if form.dashboard_color.errors %}<div class="invalid-feedback d-block">{{ form.dashboard_color.errors.0 }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-3">
+                    <label for="{{ form.text_color.id_for_label }}" class="form-label">Text Color</label>
+                    <div class="d-flex align-items-center gap-2">
+                        {{ form.text_color }}
+                    </div>
+                    {% if form.text_color.errors %}<div class="invalid-feedback d-block">{{ form.text_color.errors.0 }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-4">
+                    <label for="{{ form.consultation_fee.id_for_label }}" class="form-label">Consultation Fee (Visit)</label>
+                    {{ form.consultation_fee }}
+                    {% if form.consultation_fee.errors %}<div class="invalid-feedback d-block">{{ form.consultation_fee.errors.0 }}</div>{% endif %}
+                </div>
+
+                <div class="col-12"><hr class="my-1"></div>
+
+                <div class="col-12">
+                    <h6 class="mb-2">Laboratory Charges Per Service</h6>
+                </div>
+                {% for label, field in form.lab_rate_fields %}
+                <div class="col-md-4">
+                    <label for="{{ field.id_for_label }}" class="form-label">{{ label }}</label>
+                    {{ field }}
+                    {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors.0 }}</div>{% endif %}
+                </div>
+                {% endfor %}
+
+                <div class="col-12"><hr class="my-1"></div>
+
+                <div class="col-12">
+                    <h6 class="mb-2">Radiology Rates Per Service</h6>
+                </div>
+                {% for label, field in form.radiology_rate_fields %}
+                <div class="col-md-4">
+                    <label for="{{ field.id_for_label }}" class="form-label">{{ label }}</label>
+                    {{ field }}
+                    {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors.0 }}</div>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 mt-4">
+                <a href="{% url 'settingsapp:index' %}" class="btn btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

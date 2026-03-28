@@ -1,0 +1,359 @@
+{% extends 'base.html' %}
+{% load currency %}
+
+{% block title %}System Admin Dashboard | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}System Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── System-admin scoped styles ─────────────────────────────── */
+.sa { --sa-radius:.75rem; --sa-border:#e2e8f0; --sa-muted:#64748b; --sa-ink:#1e293b; }
+
+/* Hero banner */
+.sa-hero {
+    position:relative;overflow:hidden;padding:1.25rem 1.5rem;border-radius:var(--sa-radius);margin-bottom:1rem;
+    background:linear-gradient(135deg,
+        color-mix(in srgb,var(--cl-primary,#0d6efd) 12%,#fff),
+        color-mix(in srgb,var(--cl-secondary,#16a085) 14%,#fff));
+    border:1px solid color-mix(in srgb,var(--cl-primary,#0d6efd) 12%,var(--sa-border));
+    box-shadow:0 4px 16px rgba(15,23,42,.06);
+}
+.sa-hero::after {
+    content:"";position:absolute;top:-40%;right:-4%;width:200px;height:200px;border-radius:50%;
+    background:radial-gradient(circle,rgba(255,255,255,.3) 0%,transparent 72%);pointer-events:none;
+}
+.sa-hero-inner { position:relative;z-index:1;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem; }
+.sa-hero h1 { margin:0;font-size:1.25rem;font-weight:800;color:#10233d;letter-spacing:-.02em; }
+.sa-hero h1 i { opacity:.45;margin-right:.4rem; }
+.sa-hero p { margin:.2rem 0 0;font-size:.82rem;color:#35506f; }
+
+/* Branch switcher */
+.sa-branch-bar {
+    display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;padding:.6rem 1rem;
+    border-radius:var(--sa-radius);background:#f8fafc;border:1px solid var(--sa-border);margin-bottom:1rem;
+}
+.sa-branch-bar label { font-size:.78rem;font-weight:700;color:var(--sa-muted);white-space:nowrap; }
+.sa-branch-pill {
+    display:inline-flex;align-items:center;gap:.3rem;padding:.3rem .7rem;border-radius:999px;
+    font-size:.75rem;font-weight:600;border:1px solid var(--sa-border);background:#fff;color:var(--sa-ink);
+    text-decoration:none;transition:all .15s;cursor:pointer;
+}
+.sa-branch-pill:hover { border-color:var(--cl-primary,#0d6efd);color:var(--cl-primary,#0d6efd); }
+.sa-branch-pill.active { background:var(--cl-primary,#0d6efd);color:#fff;border-color:var(--cl-primary,#0d6efd); }
+.sa-branch-pill i { font-size:.72rem; }
+
+/* Stat cards */
+.sa-stat {
+    display:flex;align-items:center;gap:.65rem;padding:.85rem 1rem;border-radius:var(--sa-radius);
+    background:#fff;border:1px solid var(--sa-border);box-shadow:0 1px 3px rgba(15,23,42,.04);
+    transition:box-shadow .18s,border-color .18s;
+}
+.sa-stat:hover { border-color:color-mix(in srgb,var(--cl-primary,#0d6efd) 25%,#e2e8f0);box-shadow:0 4px 12px rgba(15,23,42,.07); }
+.sa-stat-icon {
+    width:2.5rem;height:2.5rem;border-radius:.65rem;display:flex;align-items:center;justify-content:center;
+    font-size:1.1rem;flex-shrink:0;
+}
+.sa-stat-icon.primary { background:#eef4ff;color:#2563eb; }
+.sa-stat-icon.success { background:#ecfdf5;color:#059669; }
+.sa-stat-icon.warning { background:#fff8eb;color:#d97706; }
+.sa-stat-icon.danger  { background:#fef2f2;color:#dc2626; }
+.sa-stat-icon.info    { background:#eaf8fc;color:#0891b2; }
+.sa-stat-icon.purple  { background:#f3f0ff;color:#7c3aed; }
+.sa-stat-label { font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--sa-muted); }
+.sa-stat-value { font-size:1.15rem;font-weight:800;color:var(--sa-ink);line-height:1.2; }
+
+/* Cards */
+.sa-card {
+    border:1px solid var(--sa-border);border-radius:var(--sa-radius);background:#fff;
+    box-shadow:0 1px 3px rgba(15,23,42,.04);overflow:hidden;
+}
+.sa-card-head {
+    display:flex;align-items:center;justify-content:space-between;gap:.5rem;
+    padding:.6rem 1rem;border-bottom:1px solid rgba(226,232,240,.7);
+    background:linear-gradient(180deg,rgba(248,250,252,.95),#fff);
+    font-size:.82rem;font-weight:700;color:var(--sa-ink);
+}
+.sa-card-head i { color:var(--cl-primary,#0d6efd);margin-right:.35rem;font-size:.9rem; }
+.sa-card-body { padding:.65rem .85rem; }
+
+/* Table tweaks */
+.sa-table { font-size:.78rem; }
+.sa-table thead th { font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--sa-muted);border-bottom-width:1px; }
+.sa-table td { color:var(--sa-ink);vertical-align:middle; }
+
+/* Pills */
+.sa-pill {
+    display:inline-flex;align-items:center;gap:.2rem;padding:.15rem .45rem;border-radius:999px;
+    font-size:.67rem;font-weight:700;
+}
+.sa-pill-primary { background:#eef4ff;color:#27548a; }
+.sa-pill-success { background:#ecfdf5;color:#065f46; }
+.sa-pill-warning { background:#fff8eb;color:#9a5b00; }
+.sa-pill-danger  { background:#fef2f2;color:#b91c1c; }
+.sa-pill-muted   { background:#eef2f7;color:#465569; }
+
+/* Quick-link grid */
+.sa-quick-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.5rem; }
+
+/* Pagination */
+.sa-pagination { display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.5rem 0 0;font-size:.75rem;color:var(--sa-muted); }
+.sa-pagination-info { font-weight:600; }
+.sa-page-btns { display:flex;align-items:center;gap:.25rem; }
+.sa-page-btn {
+    display:inline-flex;align-items:center;justify-content:center;min-width:1.75rem;height:1.75rem;
+    padding:0 .4rem;border-radius:.4rem;border:1px solid var(--sa-border);background:#fff;
+    font-size:.72rem;font-weight:600;color:var(--sa-ink);cursor:pointer;transition:all .15s;
+}
+.sa-page-btn:hover:not(:disabled):not(.active) { border-color:var(--cl-primary,#0d6efd);color:var(--cl-primary,#0d6efd); }
+.sa-page-btn.active { background:var(--cl-primary,#0d6efd);color:#fff;border-color:var(--cl-primary,#0d6efd); }
+.sa-page-btn:disabled { opacity:.4;cursor:default; }
+.sa-quick-link {
+    display:flex;align-items:center;gap:.5rem;padding:.6rem .85rem;border-radius:.6rem;
+    background:linear-gradient(180deg,#fafbfd,#f4f6fa);border:1px solid #e8eef5;
+    text-decoration:none;color:var(--sa-ink);font-size:.78rem;font-weight:600;transition:all .15s;
+}
+.sa-quick-link:hover { border-color:var(--cl-primary,#0d6efd);box-shadow:0 2px 8px rgba(15,23,42,.06);color:var(--cl-primary,#0d6efd); }
+.sa-quick-link i { font-size:1rem;color:var(--cl-primary,#0d6efd); }
+
+@media(max-width:767.98px){
+    .sa-hero { padding:.85rem 1rem; }
+    .sa-stat { padding:.6rem .75rem; }
+    .sa-stat-icon { width:2rem;height:2rem;font-size:.9rem; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sa">
+    <!-- ═══ Hero banner ═══ -->
+    <div class="sa-hero">
+        <div class="sa-hero-inner">
+            <div>
+                <h1><i class="bi bi-shield-check"></i>System Admin Dashboard</h1>
+                <p>Operations snapshot &middot; {{ metrics.date_from|date:"M d" }} – {{ metrics.date_to|date:"M d, Y" }}{% if selected_branch %} &middot; <strong>{{ selected_branch.branch_name }}</strong>{% endif %}</p>
+            </div>
+            <div class="d-flex flex-wrap gap-1">
+                <a class="btn btn-primary btn-sm" href="{% url 'accounts:create' %}"><i class="bi bi-person-plus me-1"></i>Create User</a>
+                <a class="btn btn-outline-primary btn-sm" href="{% url 'permissions:index' %}"><i class="bi bi-shield-lock me-1"></i>Permissions</a>
+                <a class="btn btn-outline-secondary btn-sm" href="{% url 'reports:index' %}"><i class="bi bi-bar-chart-line me-1"></i>Reports</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Branch switcher ═══ -->
+    {% if available_branches.count > 1 %}
+    <div class="sa-branch-bar">
+        <label><i class="bi bi-building me-1"></i>Branch:</label>
+        <a class="sa-branch-pill {% if not selected_branch %}active{% endif %}" href="{% url 'core:system_admin_dashboard' %}">
+            <i class="bi bi-globe2"></i> All Branches
+        </a>
+        {% for b in available_branches %}
+        <a class="sa-branch-pill {% if selected_branch.id == b.id %}active{% endif %}" href="{% url 'core:system_admin_dashboard' %}?branch={{ b.id }}">
+            <i class="bi bi-geo-alt"></i> {{ b.branch_name }}
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ═══ Stat cards — 2 rows of 4 ═══ -->
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-lg-3">
+            <div class="sa-stat">
+                <div class="sa-stat-icon success"><i class="bi bi-currency-dollar"></i></div>
+                <div><div class="sa-stat-label">Revenue</div><div class="sa-stat-value">{{ metrics.revenue|ugx }}</div></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="sa-stat">
+                <div class="sa-stat-icon primary"><i class="bi bi-arrow-left-right"></i></div>
+                <div><div class="sa-stat-label">Visits</div><div class="sa-stat-value">{{ metrics.visits }}</div></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="sa-stat">
+                <div class="sa-stat-icon info"><i class="bi bi-droplet-half"></i></div>
+                <div><div class="sa-stat-label">Lab Tests</div><div class="sa-stat-value">{{ metrics.lab_tests }}</div></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="sa-stat">
+                <div class="sa-stat-icon purple"><i class="bi bi-radioactive"></i></div>
+                <div><div class="sa-stat-label">Radiology Scans</div><div class="sa-stat-value">{{ metrics.radiology_scans }}</div></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="sa-stat">
+                <div class="sa-stat-icon success"><i class="bi bi-capsule"></i></div>
+                <div><div class="sa-stat-label">Pharmacy Sales</div><div class="sa-stat-value">{{ metrics.pharmacy_sales|ugx }}</div></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="sa-stat">
+                <div class="sa-stat-icon danger"><i class="bi bi-hospital"></i></div>
+                <div><div class="sa-stat-label">Active Admissions</div><div class="sa-stat-value">{{ metrics.active_admissions }}</div></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="sa-stat">
+                <div class="sa-stat-icon warning"><i class="bi bi-exclamation-triangle"></i></div>
+                <div><div class="sa-stat-label">Low Stock Items</div><div class="sa-stat-value">{{ metrics.low_stock_items }}</div></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="sa-stat">
+                <div class="sa-stat-icon danger"><i class="bi bi-hourglass-split"></i></div>
+                <div><div class="sa-stat-label">Pending Lab/Rad</div><div class="sa-stat-value">{{ metrics.pending_lab }}/{{ metrics.pending_radiology }}</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Quick links ═══ -->
+    <div class="sa-card mb-3">
+        <div class="sa-card-head"><i class="bi bi-lightning-charge"></i>Quick Actions</div>
+        <div class="sa-card-body">
+            <div class="sa-quick-grid">
+                <a class="sa-quick-link" href="{% url 'accounts:create' %}"><i class="bi bi-person-plus"></i>New User</a>
+                <a class="sa-quick-link" href="{% url 'permissions:index' %}"><i class="bi bi-shield-lock"></i>Permissions</a>
+                <a class="sa-quick-link" href="{% url 'reports:index' %}"><i class="bi bi-bar-chart-line"></i>Reports</a>
+                <a class="sa-quick-link" href="{% url 'branches:index' %}"><i class="bi bi-building"></i>Branches</a>
+                <a class="sa-quick-link" href="{% url 'billing:index' %}"><i class="bi bi-receipt"></i>Billing</a>
+                <a class="sa-quick-link" href="{% url 'inventory:index' %}"><i class="bi bi-boxes"></i>Inventory</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-2">
+        <!-- ═══ User roles ═══ -->
+        <div class="col-lg-4">
+            <div class="sa-card h-100">
+                <div class="sa-card-head"><i class="bi bi-people"></i>User Roles</div>
+                <div class="sa-card-body">
+                    <table class="table table-sm align-middle sa-table mb-0">
+                        <thead><tr><th>Role</th><th class="text-end">Count</th></tr></thead>
+                        <tbody>
+                            {% for row in role_distribution %}
+                            <tr>
+                                <td><span class="sa-pill sa-pill-primary">{{ row.role }}</span></td>
+                                <td class="text-end fw-bold">{{ row.total }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="2" class="text-muted text-center small">No user data</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ Branch performance ═══ -->
+        <div class="col-lg-8">
+            <div class="sa-card h-100">
+                <div class="sa-card-head"><i class="bi bi-building"></i>Branch Performance (30 days)</div>
+                <div class="sa-card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle sa-table mb-0">
+                            <thead>
+                                <tr><th>Branch</th><th class="text-end">Visits</th><th class="text-end">Revenue</th><th class="text-end">Admissions</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for row in branch_rows %}
+                                <tr>
+                                    <td class="fw-semibold">{{ row.branch_name }}</td>
+                                    <td class="text-end">{{ row.visits }}</td>
+                                    <td class="text-end">{{ row.revenue|ugx }}</td>
+                                    <td class="text-end">{{ row.admissions }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="4" class="text-muted text-center small">No branch data</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Audit logs (full width) — paginated ═══ -->
+    <div class="sa-card mt-2">
+        <div class="sa-card-head">
+            <span><i class="bi bi-journal-text"></i>Recent Audit Logs</span>
+            <span class="sa-pagination-info" id="saAuditInfo"></span>
+        </div>
+        <div class="sa-card-body">
+            <div class="table-responsive">
+                <table class="table table-sm align-middle sa-table mb-0" id="saAuditTable">
+                    <thead>
+                        <tr><th>When</th><th>User</th><th>Action</th><th>Object</th><th>Branch</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for log in recent_audits %}
+                        <tr>
+                            <td class="text-nowrap">{{ log.created_at|date:"M d, H:i" }}</td>
+                            <td>{{ log.user.get_full_name|default:log.user.username|default:"system" }}</td>
+                            <td><span class="sa-pill {% if log.action == 'delete' %}sa-pill-danger{% elif log.action == 'create' %}sa-pill-success{% else %}sa-pill-muted{% endif %}">{{ log.action }}</span></td>
+                            <td>{{ log.object_type }}</td>
+                            <td>{{ log.branch.branch_name|default:"—" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="text-muted text-center small">No audit logs yet</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="sa-pagination" id="saAuditPagination"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+    const PER_PAGE = 5;
+    const tbody = document.querySelector('#saAuditTable tbody');
+    const rows  = Array.from(tbody.querySelectorAll('tr'));
+    const total = rows.length;
+    const pages = Math.max(1, Math.ceil(total / PER_PAGE));
+    const info  = document.getElementById('saAuditInfo');
+    const nav   = document.getElementById('saAuditPagination');
+    let cur = 1;
+
+    if (total <= 1 && rows[0] && rows[0].querySelector('.text-muted')) {
+        // "No audit logs yet" row — hide pagination
+        nav.style.display = 'none';
+        info.textContent = '';
+        return;
+    }
+
+    function render() {
+        const start = (cur - 1) * PER_PAGE;
+        const end   = start + PER_PAGE;
+        rows.forEach(function(r, i) { r.style.display = (i >= start && i < end) ? '' : 'none'; });
+        info.textContent = 'Showing ' + (start + 1) + '–' + Math.min(end, total) + ' of ' + total;
+        buildNav();
+    }
+
+    function btn(label, page, disabled, active) {
+        var b = document.createElement('button');
+        b.className = 'sa-page-btn' + (active ? ' active' : '');
+        b.disabled = disabled;
+        b.innerHTML = label;
+        if (!disabled && !active) b.addEventListener('click', function() { cur = page; render(); });
+        return b;
+    }
+
+    function buildNav() {
+        nav.innerHTML = '';
+        var wrap = document.createElement('div');
+        wrap.className = 'sa-page-btns';
+        wrap.appendChild(btn('<i class="bi bi-chevron-left"></i>', cur - 1, cur === 1, false));
+        for (var p = 1; p <= pages; p++) wrap.appendChild(btn(String(p), p, false, p === cur));
+        wrap.appendChild(btn('<i class="bi bi-chevron-right"></i>', cur + 1, cur === pages, false));
+        nav.appendChild(wrap);
+    }
+
+    render();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block title %}Record Radiology Consumables | ClinicMS{% endblock %}
+{% block header_title %}Radiology Consumables{% endblock %}
+
+{% block content %}
+<nav class="cl-breadcrumb">
+    <a href="{% url 'radiology:index' %}">Radiology</a>
+    <a href="{% url 'radiology:detail' imaging_request.pk %}">{{ imaging_request.request_identifier }}</a>
+    <span>Consumables</span>
+</nav>
+
+<div class="cl-card">
+    <div class="cl-card-header d-flex justify-content-between align-items-center gap-2">
+        <h5 class="mb-0"><i class="bi bi-bezier2 me-2"></i>Record {{ unit_config.unit_name }} Apparatus and Reagents</h5>
+        <a class="btn btn-outline-secondary btn-sm" href="{% url 'radiology:detail' imaging_request.pk %}">Back</a>
+    </div>
+    <div class="cl-card-body">
+        <p class="text-muted mb-4">{{ imaging_request.patient.first_name }} {{ imaging_request.patient.last_name }} - {{ imaging_request.examination_label|default:imaging_request.get_imaging_type_display }}</p>
+
+        <div class="alert alert-warning">
+            Record the stock items used for this paid scan before starting or completing radiology work. The selected stock cost will update the radiology gross profit automatically.
+        </div>
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {{ formset.management_form }}
+
+            {% if formset.non_form_errors %}
+            <div class="alert alert-danger">
+                {% for error in formset.non_form_errors %}
+                <div>{{ error }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="row g-3">
+                {% for form in formset %}
+                <div class="col-12">
+                    <div class="border rounded p-3">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-8">
+                                <label class="form-label" for="{{ form.item.id_for_label }}">Stock Item</label>
+                                {{ form.item }}
+                                {% for error in form.item.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="{{ form.quantity.id_for_label }}">Quantity Used</label>
+                                {{ form.quantity }}
+                                {% for error in form.quantity.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="mt-4 d-flex gap-2 flex-wrap">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Consumables Used</button>
+                <a class="btn btn-outline-secondary" href="{% url 'radiology:detail' imaging_request.pk %}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

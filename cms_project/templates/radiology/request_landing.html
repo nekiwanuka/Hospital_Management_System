@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}Radiology Requests | {{ clinic_name|default:"ClinicMS" }}{% endblock %}
+{% block header_title %}Radiology Requests{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="cl-card">
+            <div class="cl-card-header text-center"><i class="bi bi-radioactive me-2"></i>Consultation-Only Request Policy</div>
+            <div class="cl-card-body text-center">
+                <p class="mb-3">Direct radiology request creation has been removed.</p>
+                <p class="text-muted mb-4">All new X-ray and ultrasound requests must be initiated by the doctor from the consultation workbench.</p>
+                <div class="d-flex flex-wrap justify-content-center gap-3">
+                    <a class="btn btn-outline-secondary" href="{% url 'radiology:index' %}">Back to Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
