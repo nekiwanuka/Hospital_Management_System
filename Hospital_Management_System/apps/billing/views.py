@@ -219,12 +219,46 @@ def _source_billed(source_model: str, source_id: int) -> bool:
     ).exists()
 
 
-def _generate_invoice_number():
-    return f"INV-{timezone.now().strftime('%Y%m%d%H%M%S%f')}"
+def _generate_invoice_number(branch):
+    now = timezone.now()
+    prefix = (branch.branch_name[0] if branch.branch_name else "X").upper()
+    yy = now.strftime("%y")
+    mm = now.strftime("%m")
+    base = f"{prefix}{yy}{mm}"
+    last = (
+        Invoice.objects.filter(invoice_number__startswith=base)
+        .order_by("-invoice_number")
+        .values_list("invoice_number", flat=True)
+        .first()
+    )
+    seq = 1
+    if last:
+        try:
+            seq = int(last.rsplit("-", 1)[-1]) + 1
+        except (ValueError, IndexError):
+            seq = 1
+    return f"{base}-{seq:02d}"
 
 
-def _generate_receipt_number():
-    return f"RCT-{timezone.now().strftime('%Y%m%d%H%M%S%f')}"
+def _generate_receipt_number(branch):
+    now = timezone.now()
+    prefix = (branch.branch_name[0] if branch.branch_name else "X").upper()
+    yy = now.strftime("%y")
+    mm = now.strftime("%m")
+    base = f"R{prefix}{yy}{mm}"
+    last = (
+        Receipt.objects.filter(receipt_number__startswith=base)
+        .order_by("-receipt_number")
+        .values_list("receipt_number", flat=True)
+        .first()
+    )
+    seq = 1
+    if last:
+        try:
+            seq = int(last.rsplit("-", 1)[-1]) + 1
+        except (ValueError, IndexError):
+            seq = 1
+    return f"{base}-{seq:02d}"
 
 
 def _create_receipt(
@@ -236,7 +270,7 @@ def _create_receipt(
     balance_due = invoice.total_amount - total_paid
     return Receipt.objects.create(
         branch=invoice.branch,
-        receipt_number=_generate_receipt_number(),
+        receipt_number=_generate_receipt_number(invoice.branch),
         invoice=invoice,
         patient=invoice.patient,
         amount_paid=amount_paid,
@@ -843,7 +877,7 @@ def create(request):
                 invoice = form.save(commit=False)
                 invoice.branch = request.user.branch
                 invoice.cashier = request.user
-                invoice.invoice_number = _generate_invoice_number()
+                invoice.invoice_number = _generate_invoice_number(request.user.branch)
                 if invoice.visit and not invoice.patient_id:
                     invoice.patient = invoice.visit.patient
 
