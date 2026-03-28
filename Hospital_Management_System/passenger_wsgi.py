@@ -7,18 +7,18 @@ from dotenv import load_dotenv
 # 1. Add your project to sys.path
 # -------------------------------
 project_root = Path(__file__).resolve().parent
-sys.path.insert(0, str(project_root / "cms_project"))
+sys.path.insert(0, str(project_root))
 
 # -------------------------------
 # 2. Load environment variables from .env
 # -------------------------------
-env_path = project_root / "cms_project" / ".env"
+env_path = project_root / ".env"
 load_dotenv(dotenv_path=env_path)
 
 # -------------------------------
 # 3. Set the DJANGO_SETTINGS_MODULE
 # -------------------------------
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "cms_project.config.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
 # -------------------------------
 # 4. Activate your virtualenv (if needed)

@@ -9,4 +9,4 @@ db.sqlite3
 media/
 staticfiles/
 *.txt
-!cms_project/requirements.txt
+!Hospital_Management_System/requirements.txt
