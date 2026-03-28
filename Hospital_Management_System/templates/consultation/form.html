@@ -148,110 +148,117 @@
 
 <!-- ── Main work area: Patient History + Consultation + Actions ── -->
 <div class="row g-3 mt-1">
-  <!-- Left Column: Patient Medical History -->
-  <div class="col-lg-3">
-    <!-- Patient Demographics -->
-    {% if patient %}
-    <div class="cl-card mb-3 border-0 shadow-sm border-start border-4 border-info">
-      <div class="cl-card-header bg-light py-2"><h2 class="cl-card-title mb-0 fs-6 fw-bold"><i class="bi bi-person-badge"></i> Patient Profile</h2></div>
-      <div class="cl-card-body p-3" style="font-size: 0.9rem;">
-        <div class="d-flex justify-content-between mb-2">
-          <span class="text-muted">ID:</span>
-          <span class="fw-bold">{{ patient.patient_id }}</span>
-        </div>
-        <div class="d-flex justify-content-between mb-2">
-          <span class="text-muted">Age/Gender:</span>
-          <span>{% if patient.date_of_birth %}{{ patient.get_age }}y{% else %}—{% endif %} • {{ patient.get_gender_display|default:"—" }}</span>
-        </div>
-        <div class="d-flex justify-content-between mb-2">
-          <span class="text-muted">Contact:</span>
-          <span>{{ patient.phone_number|default:"—" }}</span>
-        </div>
-        {% if patient.allergies %}
-        <div class="alert alert-warning py-2 px-2 mb-0 mt-3 d-flex align-items-start gap-2 border-0" style="background-color: #fff3cd; font-size: 0.85rem;">
-          <i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
-          <div>
-            <strong class="d-block mb-1">Allergies</strong>
-            {{ patient.allergies }}
+  
+  <!-- Main Area: Profile, History & Doctor's Notes -->
+  <div class="col-lg-8">
+    
+    <!-- Top Row: Horizontal Profile & History -->
+    <div class="row g-3 mb-3">
+      <!-- Patient Demographics -->
+      <div class="col-md-5">
+        {% if patient %}
+        <div class="cl-card border-0 shadow-sm border-start border-4 border-info h-100">
+          <div class="cl-card-header bg-light py-2"><h2 class="cl-card-title mb-0 fs-6 fw-bold"><i class="bi bi-person-badge"></i> Patient Profile</h2></div>
+          <div class="cl-card-body p-3" style="font-size: 0.9rem;">
+            <div class="d-flex justify-content-between mb-2">
+              <span class="text-muted">ID:</span>
+              <span class="fw-bold">{{ patient.patient_id }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+              <span class="text-muted">Age/Gender:</span>
+              <span>{% if patient.date_of_birth %}{{ patient.get_age }}y{% else %}—{% endif %} • {{ patient.get_gender_display|default:"—" }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+              <span class="text-muted">Contact:</span>
+              <span>{{ patient.phone_number|default:"—" }}</span>
+            </div>
+            {% if patient.allergies %}
+            <div class="alert alert-warning py-2 px-2 mb-0 mt-3 d-flex align-items-start gap-2 border-0" style="background-color: #fff3cd; font-size: 0.85rem;">
+              <i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
+              <div>
+                <strong class="d-block mb-1">Allergies</strong>
+                {{ patient.allergies }}
+              </div>
+            </div>
+            {% endif %}
           </div>
         </div>
         {% endif %}
       </div>
-    </div>
-    {% endif %}
 
-    <!-- Medical History Accordion -->
-    {% if patient_lab_history or patient_radiology_history or patient_pharmacy_history %}
-    <div class="cl-card border-0 shadow-sm">
-      <div class="cl-card-header bg-light py-2 d-flex justify-content-between align-items-center">
-        <h2 class="cl-card-title mb-0 fs-6.fw-bold"><i class="bi bi-clock-history"></i> Past Records</h2>
-      </div>
-      <div class="cl-card-body p-0">
-        <div class="accordion accordion-flush" id="historyAccordion">
-          
-          {% if patient_lab_history %}
-          <div class="accordion-item">
-            <h2 class="accordion-header">
-              <button class="accordion-button py-2 px-3 fw-semibold text-success" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLab">
-                <i class="bi bi-droplet me-2"></i> Lab History
-              </button>
-            </h2>
-            <div id="collapseLab" class="accordion-collapse collapse show" data-bs-parent="#historyAccordion">
-              <div class="accordion-body p-0">
-                <table class="table table-sm table-hover mb-0" style="font-size: 0.85rem;">
-                  <thead class="table-light"><tr><th class="ps-3">Date</th><th>Test</th></tr></thead>
-                  <tbody>{% for lr in patient_lab_history|slice:":5" %}<tr><td class="text-nowrap ps-3">{{ lr.date|date:"d M y" }}</td><td><span title="{{ lr.results|default:'' }}" class="text-truncate d-inline-block" style="max-width: 150px;">{{ lr.test_type }}</span></td></tr>{% endfor %}</tbody>
-                </table>
+      <!-- Medical History Accordion -->
+      <div class="col-md-7">
+        {% if patient_lab_history or patient_radiology_history or patient_pharmacy_history %}
+        <div class="cl-card border-0 shadow-sm h-100">
+          <div class="cl-card-header bg-light py-2 d-flex justify-content-between align-items-center">
+            <h2 class="cl-card-title mb-0 fs-6 fw-bold"><i class="bi bi-clock-history"></i> Past Records</h2>
+          </div>
+          <div class="cl-card-body p-0">
+            <div class="accordion accordion-flush" id="historyAccordion">
+              
+              {% if patient_lab_history %}
+              <div class="accordion-item">
+                <h2 class="accordion-header">
+                  <button class="accordion-button py-2 px-3 fw-semibold text-success" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLab">
+                    <i class="bi bi-droplet me-2"></i> Lab History
+                  </button>
+                </h2>
+                <div id="collapseLab" class="accordion-collapse collapse show" data-bs-parent="#historyAccordion">
+                  <div class="accordion-body p-0">
+                    <table class="table table-sm table-hover mb-0" style="font-size: 0.85rem;">
+                      <thead class="table-light"><tr><th class="ps-3">Date</th><th>Test</th></tr></thead>
+                      <tbody>{% for lr in patient_lab_history|slice:":5" %}<tr><td class="text-nowrap ps-3">{{ lr.date|date:"d M y" }}</td><td><span title="{{ lr.results|default:'' }}" class="text-truncate d-inline-block" style="max-width: 150px;">{{ lr.test_type }}</span></td></tr>{% endfor %}</tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
+              {% endif %}
+
+              {% if patient_radiology_history %}
+              <div class="accordion-item">
+                <h2 class="accordion-header">
+                  <button class="accordion-button py-2 px-3 fw-semibold text-info {% if not patient_lab_history %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRadio">
+                    <i class="bi bi-x-ray me-2"></i> Radiology History
+                  </button>
+                </h2>
+                <div id="collapseRadio" class="accordion-collapse collapse {% if not patient_lab_history %}show{% endif %}" data-bs-parent="#historyAccordion">
+                  <div class="accordion-body p-0">
+                    <table class="table table-sm table-hover mb-0" style="font-size: 0.85rem;">
+                      <thead class="table-light"><tr><th class="ps-3">Date</th><th>Scan</th></tr></thead>
+                      <tbody>{% for ir in patient_radiology_history|slice:":5" %}<tr><td class="text-nowrap ps-3">{{ ir.date_requested|date:"d M y" }}</td><td>{{ ir.get_imaging_type_display }}</td></tr>{% endfor %}</tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+              {% endif %}
+
+              {% if patient_pharmacy_history %}
+              <div class="accordion-item">
+                <h2 class="accordion-header">
+                  <button class="accordion-button py-2 px-3 fw-semibold text-warning collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePharm">
+                    <i class="bi bi-capsule me-2"></i> Pharmacy History
+                  </button>
+                </h2>
+                <div id="collapsePharm" class="accordion-collapse collapse" data-bs-parent="#historyAccordion">
+                  <div class="accordion-body p-0">
+                    <table class="table table-sm table-hover mb-0" style="font-size: 0.85rem;">
+                      <thead class="table-light"><tr><th class="ps-3">Date</th><th>Medicine</th></tr></thead>
+                      <tbody>{% for d in patient_pharmacy_history|slice:":5" %}<tr><td class="text-nowrap ps-3">{{ d.dispensed_at|date:"d M y" }}</td><td>{{ d.medicine.name }}</td></tr>{% endfor %}</tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+              {% endif %}
+
             </div>
           </div>
-          {% endif %}
-
-          {% if patient_radiology_history %}
-          <div class="accordion-item">
-            <h2 class="accordion-header">
-              <button class="accordion-button py-2 px-3 fw-semibold text-info {% if not patient_lab_history %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRadio">
-                <i class="bi bi-x-ray me-2"></i> Radiology History
-              </button>
-            </h2>
-            <div id="collapseRadio" class="accordion-collapse collapse {% if not patient_lab_history %}show{% endif %}" data-bs-parent="#historyAccordion">
-              <div class="accordion-body p-0">
-                <table class="table table-sm table-hover mb-0" style="font-size: 0.85rem;">
-                  <thead class="table-light"><tr><th class="ps-3">Date</th><th>Scan</th></tr></thead>
-                  <tbody>{% for ir in patient_radiology_history|slice:":5" %}<tr><td class="text-nowrap ps-3">{{ ir.date_requested|date:"d M y" }}</td><td>{{ ir.get_imaging_type_display }}</td></tr>{% endfor %}</tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-          {% endif %}
-
-          {% if patient_pharmacy_history %}
-          <div class="accordion-item">
-            <h2 class="accordion-header">
-              <button class="accordion-button py-2 px-3 fw-semibold text-warning collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePharm">
-                <i class="bi bi-capsule me-2"></i> Pharmacy History
-              </button>
-            </h2>
-            <div id="collapsePharm" class="accordion-collapse collapse" data-bs-parent="#historyAccordion">
-              <div class="accordion-body p-0">
-                <table class="table table-sm table-hover mb-0" style="font-size: 0.85rem;">
-                  <thead class="table-light"><tr><th class="ps-3">Date</th><th>Medicine</th></tr></thead>
-                  <tbody>{% for d in patient_pharmacy_history|slice:":5" %}<tr><td class="text-nowrap ps-3">{{ d.dispensed_at|date:"d M y" }}</td><td>{{ d.medicine.name }}</td></tr>{% endfor %}</tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-          {% endif %}
-
         </div>
+        {% endif %}
       </div>
-    </div>
-    {% endif %}
-  </div>
+    </div> <!-- /Top Row -->
 
-  <!-- Center Column: Main Consultation Form -->
-  <div class="col-lg-5">
-    <div class="cl-card shadow-sm border-0 h-100">
+    <!-- Doctor's Notes (Split into two columns horizontally) -->
+    <div class="cl-card shadow-sm border-0 mb-3">
       <div class="cl-card-header bg-primary text-white py-3">
         <h2 class="cl-card-title mb-0 fs-5"><i class="bi bi-journal-medical me-2"></i> Doctor's Notes</h2>
       </div>
@@ -259,15 +266,54 @@
         <form method="post" novalidate>
           {% csrf_token %}
           <input type="hidden" name="panel" value="{{ selected_panel }}">
-          {% for field in form %}
-          <div class="mb-3">
-            <label for="{{ field.id_for_label }}" class="form-label fw-semibold text-secondary">{{ field.label }}</label>
-            {{ field }}
-            {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-          </div>
-          {% endfor %}
           {% if form.non_field_errors %}<div class="alert alert-danger py-2">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>{% endif %}
+          
+          <div class="row g-4">
+            <!-- Left Side of Form -->
+            <div class="col-md-6 border-end">
+              <div class="mb-3">
+                <label for="{{ form.consultation_room.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.consultation_room.label }}</label>
+                {{ form.consultation_room }}
+                {% for error in form.consultation_room.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+              </div>
+              <div class="mb-3">
+                <label for="{{ form.symptoms.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.symptoms.label }}</label>
+                {{ form.symptoms }}
+                {% for error in form.symptoms.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+              </div>
+              <div class="mb-3">
+                <label for="{{ form.diagnosis.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.diagnosis.label }}</label>
+                {{ form.diagnosis }}
+                {% for error in form.diagnosis.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+              </div>
+            </div>
+            
+            <!-- Right Side of Form -->
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="{{ form.treatment_plan.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.treatment_plan.label }}</label>
+                {{ form.treatment_plan }}
+                {% for error in form.treatment_plan.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+              </div>
+              <div class="mb-3">
+                <label for="{{ form.prescription.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.prescription.label }}</label>
+                {{ form.prescription }}
+                {% for error in form.prescription.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+              </div>
+              <div class="row g-2 mb-3">
+                <div class="col-lg-6">
+                  <label for="{{ form.lab_tests_requested.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.lab_tests_requested.label }}</label>
+                  {{ form.lab_tests_requested }}
+                  {% for error in form.lab_tests_requested.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-lg-6">
+                  <label for="{{ form.follow_up_date.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.follow_up_date.label }}</label>
+                  {{ form.follow_up_date }}
+                  {% for error in form.follow_up_date.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+              </div>
+            </div>
+          </div>
           
           <div class="mt-4 pt-3 border-top">
             <button type="submit" class="btn btn-primary w-100 py-2 fw-bold fs-6"><i class="bi bi-check-circle me-1"></i> Save Consultation</button>
