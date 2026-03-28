@@ -146,11 +146,87 @@
 </div>
 {% endif %}
 
-<!-- ── Main work area: Consultation + Actions side by side ── -->
+<!-- ── Main work area: Patient History + Consultation + Actions ── -->
 <div class="row g-2">
-  <!-- Consultation Form -->
-  <div class="col-lg-5">
-    <div class="cl-card mb-2">
+  <!-- Patient Medical History (left sidebar) -->
+  <div class="col-lg-3">
+    <!-- Patient Demographics -->
+    {% if patient %}
+    <div class="cl-card mb-2" style="border-left: 4px solid var(--bs-info);">
+      <div class="cl-card-header py-2" style="background-color: rgba(13, 110, 253, 0.05);"><h2 class="cl-card-title mb-0 fs-6"><i class="bi bi-person-circle"></i> Patient Info</h2></div>
+      <div class="cl-card-body" style="font-size: 0.9rem;">
+        <div class="mb-2"><strong>ID:</strong> <span class="badge bg-light text-dark">{{ patient.patient_id }}</span></div>
+        <div class="mb-2"><strong>Age:</strong> {% if patient.date_of_birth %}{{ patient.get_age }}y{% else %}—{% endif %}</div>
+        <div class="mb-2"><strong>Gender:</strong> {{ patient.get_gender_display|default:"—" }}</div>
+        <div class="mb-2"><strong>Contact:</strong> {{ patient.phone_number|default:"—" }}</div>
+        {% if patient.allergies %}
+        <div class="alert alert-warning py-1 px-2 mb-2" style="font-size: 0.85rem;">
+          <strong><i class="bi bi-exclamation-triangle"></i> Allergies:</strong><br>
+          {{ patient.allergies }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Patient Medical History (tabbed view) -->
+    {% if patient_lab_history or patient_radiology_history or patient_pharmacy_history %}
+    <div class="cl-card">
+      <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0 fs-6"><i class="bi bi-clock-history"></i> History</h2></div>
+      <div class="cl-card-body p-2">
+        <!-- Nav tabs -->
+        <ul class="nav nav-tabs nav-fill" role="tablist" style="font-size: 0.85rem;">
+          {% if patient_lab_history %}<li class="nav-item"><a class="nav-link active" href="#history-lab" data-bs-toggle="tab"><i class="bi bi-droplet"></i> Lab</a></li>{% endif %}
+          {% if patient_radiology_history %}<li class="nav-item"><a class="nav-link" href="#history-radio" data-bs-toggle="tab"><i class="bi bi-x-ray"></i> Radiology</a></li>{% endif %}
+          {% if patient_pharmacy_history %}<li class="nav-item"><a class="nav-link" href="#history-pharm" data-bs-toggle="tab"><i class="bi bi-capsule"></i> Pharmacy</a></li>{% endif %}
+        </ul>
+
+        <!-- Tab content -->
+        <div class="tab-content mt-2">
+          {% if patient_lab_history %}
+          <div class="tab-pane fade show active" id="history-lab">
+            <div class="table-responsive">
+              <table class="table table-sm mb-0" style="font-size: 0.85rem;">
+                <thead><tr><th>Date</th><th>Test</th></tr></thead>
+                <tbody>{% for lr in patient_lab_history|slice:":5" %}<tr><td>{{ lr.date|date:"d M y" }}</td><td><span title="{{ lr.results|truncatechars:60 }}">{{ lr.test_type }}</span></td></tr>{% endfor %}</tbody>
+              </table>
+            </div>
+            {% if patient_lab_history|length > 5 %}<small class="text-muted d-block mt-1">+{{ patient_lab_history|length|add:"-5" }} more</small>{% endif %}
+          </div>
+          {% endif %}
+
+          {% if patient_radiology_history %}
+          <div class="tab-pane fade" id="history-radio">
+            <div class="table-responsive">
+              <table class="table table-sm mb-0" style="font-size: 0.85rem;">
+                <thead><tr><th>Date</th><th>Type</th></tr></thead>
+                <tbody>{% for ir in patient_radiology_history|slice:":5" %}<tr><td>{{ ir.date_requested|date:"d M y" }}</td><td>{{ ir.get_imaging_type_display }}</td></tr>{% endfor %}</tbody>
+              </table>
+            </div>
+            {% if patient_radiology_history|length > 5 %}<small class="text-muted d-block mt-1">+{{ patient_radiology_history|length|add:"-5" }} more</small>{% endif %}
+          </div>
+          {% endif %}
+
+          {% if patient_pharmacy_history %}
+          <div class="tab-pane fade" id="history-pharm">
+            <div class="table-responsive">
+              <table class="table table-sm mb-0" style="font-size: 0.85rem;">
+                <thead><tr><th>Date</th><th>Medicine</th></tr></thead>
+                <tbody>{% for d in patient_pharmacy_history|slice:":5" %}<tr><td>{{ d.dispensed_at|date:"d M y" }}</td><td>{{ d.medicine.name }}</td></tr>{% endfor %}</tbody>
+              </table>
+            </div>
+            {% if patient_pharmacy_history|length > 5 %}<small class="text-muted d-block mt-1">+{{ patient_pharmacy_history|length|add:"-5" }} more</small>{% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Consultation Form (center) -->
+  <div class="col-lg-4">
+    <div class="cl-card">
       <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-journal-medical"></i> Record Consultation</h2></div>
       <div class="cl-card-body">
         <form method="post" novalidate>
@@ -164,17 +240,17 @@
           </div>
           {% endfor %}
           {% if form.non_field_errors %}<div class="alert alert-danger py-1">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>{% endif %}
-          <button type="submit" class="btn btn-primary btn-sm mt-1"><i class="bi bi-check-lg"></i> Save Consultation</button>
+          <button type="submit" class="btn btn-primary btn-sm mt-2 w-100"><i class="bi bi-check-lg"></i> Save Consultation</button>
         </form>
       </div>
     </div>
   </div>
 
-  <!-- Actions column -->
-  <div class="col-lg-7">
+  <!-- Actions column (right) -->
+  <div class="col-lg-5">
     <div class="row g-2">
       <!-- Request Lab Test -->
-      <div class="col-sm-6 col-md-4">
+      <div class="col-sm-6 col-lg-6">
         <div class="cl-card h-100">
           <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-droplet"></i> Lab Test</h2></div>
           <div class="cl-card-body py-2">
@@ -194,7 +270,7 @@
       </div>
 
       <!-- Request Radiology -->
-      <div class="col-sm-6 col-md-4">
+      <div class="col-sm-6 col-lg-6">
         <div class="cl-card h-100">
           <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-x-ray"></i> Radiology</h2></div>
           <div class="cl-card-body py-2">
@@ -214,7 +290,7 @@
       </div>
 
       <!-- Prescribe Medicine -->
-      <div class="col-sm-6 col-md-4">
+      <div class="col-sm-6 col-lg-6">
         <div class="cl-card h-100">
           <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-capsule"></i> Prescribe</h2></div>
           <div class="cl-card-body py-2">
@@ -236,7 +312,7 @@
       </div>
 
       <!-- Referral -->
-      <div class="col-sm-6 col-md-4">
+      <div class="col-sm-6 col-lg-6">
         <div class="cl-card h-100">
           <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-send"></i> Referral</h2></div>
           <div class="cl-card-body py-2">
@@ -256,7 +332,7 @@
       </div>
 
       <!-- Transfer -->
-      <div class="col-sm-6 col-md-4">
+      <div class="col-sm-6 col-lg-6">
         <div class="cl-card h-100">
           <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-arrow-left-right"></i> Transfer</h2></div>
           <div class="cl-card-body py-2">
@@ -276,7 +352,7 @@
       </div>
 
       <!-- Quick Actions -->
-      <div class="col-sm-6 col-md-4">
+      <div class="col-sm-6 col-lg-6">
         <div class="cl-card h-100">
           <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-lightning"></i> Actions</h2></div>
           <div class="cl-card-body py-2 d-grid gap-1">
@@ -294,48 +370,4 @@
     </div>
   </div>
 </div>
-
-<!-- ── Patient History ── -->
-{% if patient_lab_history or patient_radiology_history or patient_pharmacy_history %}
-<div class="cl-card mt-2">
-  <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-clock-history"></i> Patient History (Previous Visits)</h2></div>
-  <div class="cl-card-body p-0">
-    <div class="row g-0">
-      {% if patient_lab_history %}
-      <div class="col-md-4 border-end">
-        <h6 class="px-3 py-2 mb-0 bg-light border-bottom"><i class="bi bi-droplet text-success"></i> Lab</h6>
-        <div class="table-responsive">
-          <table class="table table-sm mb-0">
-            <thead><tr><th>Date</th><th>Test</th><th>Results</th></tr></thead>
-            <tbody>{% for lr in patient_lab_history %}<tr><td>{{ lr.date|date:"d M" }}</td><td>{{ lr.test_type }}</td><td>{{ lr.results|truncatechars:40|default:"—" }}</td></tr>{% endfor %}</tbody>
-          </table>
-        </div>
-      </div>
-      {% endif %}
-      {% if patient_radiology_history %}
-      <div class="col-md-4 border-end">
-        <h6 class="px-3 py-2 mb-0 bg-light border-bottom"><i class="bi bi-x-ray text-info"></i> Radiology</h6>
-        <div class="table-responsive">
-          <table class="table table-sm mb-0">
-            <thead><tr><th>Date</th><th>Type</th><th>Findings</th></tr></thead>
-            <tbody>{% for ir in patient_radiology_history %}<tr><td>{{ ir.date_requested|date:"d M" }}</td><td>{{ ir.get_imaging_type_display }}</td><td>{% if ir.result %}{{ ir.result.findings|truncatechars:40 }}{% else %}—{% endif %}</td></tr>{% endfor %}</tbody>
-          </table>
-        </div>
-      </div>
-      {% endif %}
-      {% if patient_pharmacy_history %}
-      <div class="col-md-4">
-        <h6 class="px-3 py-2 mb-0 bg-light border-bottom"><i class="bi bi-capsule text-warning"></i> Pharmacy</h6>
-        <div class="table-responsive">
-          <table class="table table-sm mb-0">
-            <thead><tr><th>Date</th><th>Medicine</th><th>Qty</th></tr></thead>
-            <tbody>{% for d in patient_pharmacy_history %}<tr><td>{{ d.dispensed_at|date:"d M" }}</td><td>{{ d.medicine.name }}</td><td>{{ d.quantity }}</td></tr>{% endfor %}</tbody>
-          </table>
-        </div>
-      </div>
-      {% endif %}
-    </div>
-  </div>
-</div>
-{% endif %}
 {% endblock %}
