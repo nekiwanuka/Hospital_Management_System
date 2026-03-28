@@ -11,11 +11,19 @@
 <div class="cl-card">
   <div class="cl-card-header">
     <h2 class="cl-card-title">Requests</h2>
-    <div class="ms-auto d-flex gap-1">
-      <a href="?status=pending" class="badge {% if status_filter == 'pending' %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none">Pending</a>
-      <a href="?status=approved" class="badge {% if status_filter == 'approved' %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none">Approved</a>
-      <a href="?status=rejected" class="badge {% if status_filter == 'rejected' %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none">Rejected</a>
-      <a href="?status=all" class="badge {% if status_filter == 'all' %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none">All</a>
+    <div class="ms-auto d-flex gap-2">
+      <form method="get" class="d-flex gap-2">
+        <input type="text" name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="Search requests...">
+        <input type="hidden" name="status" value="{{ status_filter }}">
+        <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-search"></i></button>
+        {% if query %}<a href="?status={{ status_filter }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg"></i></a>{% endif %}
+      </form>
+      <div class="d-flex gap-1">
+        <a href="?status=pending" class="badge {% if status_filter == 'pending' %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none">Pending</a>
+        <a href="?status=approved" class="badge {% if status_filter == 'approved' %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none">Approved</a>
+        <a href="?status=rejected" class="badge {% if status_filter == 'rejected' %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none">Rejected</a>
+        <a href="?status=all" class="badge {% if status_filter == 'all' %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none">All</a>
+      </div>
     </div>
   </div>
   <div class="cl-card-body p-0">
@@ -44,5 +52,6 @@
       </table>
     </div>
   </div>
+  <div class="cl-card-footer">{% include "includes/pagination.html" %}</div>
 </div>
 {% endblock %}

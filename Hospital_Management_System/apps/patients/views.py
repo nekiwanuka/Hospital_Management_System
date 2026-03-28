@@ -49,7 +49,7 @@ def index(request):
             | Q(phone__icontains=query)
         )
 
-    paginator = Paginator(queryset, 5)
+    paginator = Paginator(queryset, 15)
     page_obj = paginator.get_page(request.GET.get("page"))
     return render(
         request,

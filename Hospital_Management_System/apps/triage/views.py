@@ -1,5 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db.models import Q
 from django.shortcuts import redirect, render
 
 from apps.core.permissions import (
@@ -24,7 +25,21 @@ def index(request):
             "-date"
         ),
     )
-    paginator = Paginator(queryset, 5)
+
+    query = request.GET.get("q", "").strip()
+    if query:
+        queryset = queryset.filter(
+            Q(patient__first_name__icontains=query)
+            | Q(patient__last_name__icontains=query)
+            | Q(patient__patient_id__icontains=query)
+            | Q(visit_number__icontains=query)
+        )
+
+    outcome = request.GET.get("outcome", "").strip()
+    if outcome:
+        queryset = queryset.filter(outcome=outcome)
+
+    paginator = Paginator(queryset, 15)
     page_obj = paginator.get_page(request.GET.get("page"))
     return render(
         request,
@@ -33,6 +48,8 @@ def index(request):
             "records": page_obj.object_list,
             "page_obj": page_obj,
             "eligible_visits": eligible_visits,
+            "query": query,
+            "outcome": outcome,
         },
     )
 

@@ -6,6 +6,11 @@
 <div class="cl-page-header">
   <div><h1>Pharmacy</h1></div>
   <div class="d-flex gap-2">
+    <form method="get" class="d-flex gap-2">
+      <input type="text" name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="Search medicines...">
+      <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-search"></i></button>
+      {% if query %}<a href="{% url 'pharmacy:index' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg"></i></a>{% endif %}
+    </form>
     <a href="{% url 'pharmacy:create_medicine' %}" class="btn btn-outline-success btn-sm"><i class="bi bi-box-seam"></i> Request Stock</a>
     <a href="{% url 'pharmacy:dispense' %}" class="btn btn-primary btn-sm"><i class="bi bi-capsule"></i> Dispense</a>
     <a href="{% url 'pharmacy:dispense_walkin' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-person"></i> Walk-In</a>

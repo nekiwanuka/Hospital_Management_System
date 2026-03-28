@@ -1,0 +1,9 @@
+<!-- Reusable search & filter bar -->
+<form method="get" class="d-flex flex-wrap gap-2 mb-3">
+  <div class="input-group input-group-sm" style="max-width:300px;">
+    <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="{{ search_placeholder|default:'Search...' }}">
+    <button type="submit" class="btn btn-outline-primary"><i class="bi bi-search"></i></button>
+    {% if query %}<a href="{{ request.path }}{% if extra_params %}?{{ extra_params }}{% endif %}" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i></a>{% endif %}
+  </div>
+  {% block filters %}{% endblock %}
+</form>

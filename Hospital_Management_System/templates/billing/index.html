@@ -114,7 +114,7 @@
             <td><strong>{{ inv.invoice_number }}</strong></td>
             <td>{{ inv.patient.first_name }} {{ inv.patient.last_name }}</td>
             <td>{{ inv.total_amount }}</td>
-            <td><span class="badge bg-{% if inv.payment_status == 'paid' %}success{% elif inv.payment_status == 'partial' %}warning{% else %}danger{% endif %}">{{ inv.get_payment_status_display }}</span></td>
+            <td><span class="badge bg-{% if inv.payment_status == 'paid' %}success{% elif inv.payment_status == 'post_payment' %}info{% elif inv.payment_status == 'partial' %}warning{% else %}danger{% endif %}">{{ inv.get_payment_status_display }}</span></td>
             <td>{{ inv.created_at|date:"d M Y H:i" }}</td>
             <td><a href="{% url 'billing:detail' inv.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
           </tr>

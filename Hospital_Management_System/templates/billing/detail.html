@@ -23,13 +23,48 @@
         <dl class="row mb-0">
           <dt class="col-sm-4">Patient</dt><dd class="col-sm-8"><a href="{% url 'patients:detail' invoice.patient.pk %}">{{ invoice.patient.first_name }} {{ invoice.patient.last_name }}</a></dd>
           <dt class="col-sm-4">Total Amount</dt><dd class="col-sm-8"><strong>{{ invoice.total_amount }}</strong></dd>
-          <dt class="col-sm-4">Payment Status</dt><dd class="col-sm-8"><span class="badge bg-{% if invoice.payment_status == 'paid' %}success{% elif invoice.payment_status == 'partial' %}warning{% else %}danger{% endif %}">{{ invoice.get_payment_status_display }}</span></dd>
+          <dt class="col-sm-4">Payment Status</dt><dd class="col-sm-8"><span class="badge bg-{% if invoice.payment_status == 'paid' %}success{% elif invoice.payment_status == 'post_payment' %}info{% elif invoice.payment_status == 'partial' %}warning{% else %}danger{% endif %}">{{ invoice.get_payment_status_display }}</span></dd>
           <dt class="col-sm-4">Payment Method</dt><dd class="col-sm-8">{{ invoice.get_payment_method_display|default:"—" }}</dd>
           <dt class="col-sm-4">Cashier</dt><dd class="col-sm-8">{{ invoice.cashier|default:"—" }}</dd>
           <dt class="col-sm-4">Branch</dt><dd class="col-sm-8">{{ invoice.branch|default:"—" }}</dd>
         </dl>
       </div>
     </div>
+  </div>
+  <div class="col-md-6">
+    {% if invoice.payment_status != 'paid' %}
+    <div class="cl-card">
+      <div class="cl-card-header"><h2 class="cl-card-title">Payment Actions</h2></div>
+      <div class="cl-card-body">
+        <form method="post" action="{% url 'billing:update_payment' invoice.pk %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Payment Method</label>
+            <select name="payment_method" class="form-select form-select-sm">
+              <option value="cash">Cash</option>
+              <option value="mobile_money">Mobile Money</option>
+              <option value="insurance">Insurance</option>
+            </select>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <button type="submit" name="payment_status" value="paid" class="btn btn-success btn-sm"><i class="bi bi-check-circle"></i> Pay Now</button>
+            <button type="submit" name="payment_status" value="post_payment" class="btn btn-warning btn-sm"><i class="bi bi-clock-history"></i> Post Payment</button>
+            {% if not partial_approval_pending %}
+            <button type="submit" name="payment_status" value="partial" class="btn btn-outline-warning btn-sm" onclick="var r=prompt('Reason for partial payment:');if(!r){event.preventDefault();return;}this.form.querySelector('[name=status_reason]').value=r;"><i class="bi bi-pie-chart"></i> Request Partial</button>
+            {% else %}
+            <span class="badge bg-info align-self-center">Partial approval pending</span>
+            {% endif %}
+            <input type="hidden" name="status_reason" value="">
+          </div>
+        </form>
+        {% if invoice.payment_status == 'post_payment' %}
+        <div class="alert alert-warning mt-3 mb-0 py-2">
+          <i class="bi bi-exclamation-triangle"></i> This invoice has deferred payment. The patient may proceed, but payment is still outstanding.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
   </div>
 </div>
 
@@ -48,7 +83,7 @@
             <td>{{ line.description }}</td>
             <td>{{ line.amount }}</td>
             <td>{{ line.paid_amount }}</td>
-            <td><span class="badge bg-{% if line.payment_status == 'paid' %}success{% elif line.payment_status == 'partial' %}warning{% else %}danger{% endif %}">{{ line.get_payment_status_display }}</span></td>
+            <td><span class="badge bg-{% if line.payment_status == 'paid' %}success{% elif line.payment_status == 'post_payment' %}info{% elif line.payment_status == 'partial' %}warning{% else %}danger{% endif %}">{{ line.get_payment_status_display }}</span></td>
             <td>
               {% if line.payment_status != 'paid' %}
               <form method="post" action="{% url 'billing:pay_line_item' invoice.pk line.pk %}" class="d-inline">

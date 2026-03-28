@@ -1,5 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -31,12 +32,33 @@ def index(request):
             "-admission_date"
         ),
     )
-    paginator = Paginator(queryset, 5)
+
+    query = request.GET.get("q", "").strip()
+    if query:
+        queryset = queryset.filter(
+            Q(patient__first_name__icontains=query)
+            | Q(patient__last_name__icontains=query)
+            | Q(patient__patient_id__icontains=query)
+        )
+
+    status = request.GET.get("status", "").strip()
+    if status:
+        queryset = queryset.filter(status=status)
+
+    paginator = Paginator(queryset, 15)
     page_obj = paginator.get_page(request.GET.get("page"))
     return render(
         request,
         "admission/index.html",
-        {"admissions": page_obj.object_list, "page_obj": page_obj},
+        {
+            "admissions": page_obj.object_list,
+            "page_obj": page_obj,
+            "query": query,
+            "status": status,
+            "status_choices": (
+                Admission.STATUS_CHOICES if hasattr(Admission, "STATUS_CHOICES") else []
+            ),
+        },
     )
 
 

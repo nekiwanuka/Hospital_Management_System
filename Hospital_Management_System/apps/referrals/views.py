@@ -20,7 +20,7 @@ from apps.visits.services import transition_visit
 def index(request):
     cleared_referral_ids = InvoiceLineItem.objects.filter(
         source_model="referral",
-        invoice__payment_status="paid",
+        invoice__payment_status__in=["paid", "post_payment"],
     ).values_list("source_id", flat=True)
     queryset = branch_queryset_for_user(
         request.user,
@@ -28,12 +28,26 @@ def index(request):
         .filter(Q(visit__isnull=True) | Q(pk__in=cleared_referral_ids))
         .order_by("-referral_date"),
     )
-    paginator = Paginator(queryset, 5)
+
+    query = request.GET.get("q", "").strip()
+    if query:
+        queryset = queryset.filter(
+            Q(patient__first_name__icontains=query)
+            | Q(patient__last_name__icontains=query)
+            | Q(patient__patient_id__icontains=query)
+            | Q(facility_name__icontains=query)
+        )
+
+    paginator = Paginator(queryset, 15)
     page_obj = paginator.get_page(request.GET.get("page"))
     return render(
         request,
         "referrals/index.html",
-        {"referrals": page_obj.object_list, "page_obj": page_obj},
+        {
+            "referrals": page_obj.object_list,
+            "page_obj": page_obj,
+            "query": query,
+        },
     )
 
 

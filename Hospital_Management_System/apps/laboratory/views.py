@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.db.models import Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -41,7 +42,7 @@ def _is_lab_request_payment_cleared(lab_request):
     return InvoiceLineItem.objects.filter(
         source_model="lab",
         source_id=lab_request.pk,
-        invoice__payment_status="paid",
+        invoice__payment_status__in=["paid", "post_payment"],
     ).exists()
 
 
@@ -150,7 +151,7 @@ def _build_lab_result_pdf_bytes(lab_request, payment_cleared):
 def index(request):
     cleared_lab_ids = InvoiceLineItem.objects.filter(
         source_model="lab",
-        invoice__payment_status="paid",
+        invoice__payment_status__in=["paid", "post_payment"],
     ).values_list("source_id", flat=True)
 
     queryset = branch_queryset_for_user(
@@ -159,7 +160,21 @@ def index(request):
         .filter(pk__in=cleared_lab_ids)
         .order_by("-date"),
     )
-    paginator = Paginator(queryset, 5)
+
+    query = request.GET.get("q", "").strip()
+    if query:
+        queryset = queryset.filter(
+            Q(patient__first_name__icontains=query)
+            | Q(patient__last_name__icontains=query)
+            | Q(patient__patient_id__icontains=query)
+            | Q(test_type__icontains=query)
+        )
+
+    status = request.GET.get("status", "").strip()
+    if status:
+        queryset = queryset.filter(status=status)
+
+    paginator = Paginator(queryset, 15)
     page_obj = paginator.get_page(request.GET.get("page"))
     recent_store_requests = branch_queryset_for_user(
         request.user,
@@ -176,6 +191,8 @@ def index(request):
             "lab_tests": [label for value, label in LAB_TEST_CHOICES if value],
             "result_feed_mode": False,
             "recent_store_requests": recent_store_requests,
+            "query": query,
+            "status": status,
         },
     )
 
@@ -186,7 +203,7 @@ def index(request):
 def result_feed_queue(request):
     cleared_lab_ids = InvoiceLineItem.objects.filter(
         source_model="lab",
-        invoice__payment_status="paid",
+        invoice__payment_status__in=["paid", "post_payment"],
     ).values_list("source_id", flat=True)
 
     queryset = branch_queryset_for_user(
@@ -196,7 +213,17 @@ def result_feed_queue(request):
         .exclude(status="reviewed")
         .order_by("date"),
     )
-    paginator = Paginator(queryset, 5)
+
+    query = request.GET.get("q", "").strip()
+    if query:
+        queryset = queryset.filter(
+            Q(patient__first_name__icontains=query)
+            | Q(patient__last_name__icontains=query)
+            | Q(patient__patient_id__icontains=query)
+            | Q(test_type__icontains=query)
+        )
+
+    paginator = Paginator(queryset, 15)
     page_obj = paginator.get_page(request.GET.get("page"))
     recent_store_requests = branch_queryset_for_user(
         request.user,
@@ -213,6 +240,7 @@ def result_feed_queue(request):
             "lab_tests": [label for value, label in LAB_TEST_CHOICES if value],
             "result_feed_mode": True,
             "recent_store_requests": recent_store_requests,
+            "query": query,
         },
     )
 

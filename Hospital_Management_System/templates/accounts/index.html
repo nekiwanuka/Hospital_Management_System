@@ -8,7 +8,14 @@
     <h1>Users</h1>
     <p>Manage system users and permissions</p>
   </div>
-  <a href="{% url 'accounts:create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New User</a>
+  <div class="d-flex gap-2">
+    <form method="get" class="d-flex gap-2">
+      <input type="text" name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="Search users...">
+      <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-search"></i></button>
+      {% if query %}<a href="{% url 'accounts:index' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg"></i></a>{% endif %}
+    </form>
+    <a href="{% url 'accounts:create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New User</a>
+  </div>
 </div>
 
 <div class="cl-card">

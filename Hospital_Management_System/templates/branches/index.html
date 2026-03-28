@@ -5,6 +5,13 @@
 {% block content %}
 <div class="cl-page-header">
   <div><h1>Branches</h1></div>
+  <div class="d-flex gap-2">
+    <form method="get" class="d-flex gap-2">
+      <input type="text" name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="Search branches...">
+      <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-search"></i></button>
+      {% if query %}<a href="{% url 'branches:index' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg"></i></a>{% endif %}
+    </form>
+  </div>
 </div>
 
 <div class="cl-card">

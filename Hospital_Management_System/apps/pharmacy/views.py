@@ -38,7 +38,7 @@ def _paid_dispense_filter(user):
     invoice line item is paid, or records with no visit at all."""
     cleared_pharmacy_ids = InvoiceLineItem.objects.filter(
         source_model="pharmacy",
-        invoice__payment_status="paid",
+        invoice__payment_status__in=["paid", "post_payment"],
     ).values_list("source_id", flat=True)
     return Q(visit__isnull=True) | Q(pk__in=cleared_pharmacy_ids)
 
@@ -47,7 +47,7 @@ def _is_pharmacy_request_payment_cleared(pharmacy_request):
     return InvoiceLineItem.objects.filter(
         source_model="pharmacy_request",
         source_id=pharmacy_request.pk,
-        invoice__payment_status="paid",
+        invoice__payment_status__in=["paid", "post_payment"],
     ).exists()
 
 
@@ -58,9 +58,16 @@ def index(request):
     if request.user.branch_id:
         sync_branch_medicine_catalog(request.user.branch)
 
-    medicines = branch_queryset_for_user(
+    query = request.GET.get("q", "").strip()
+
+    medicines_qs = branch_queryset_for_user(
         request.user, available_medicines_queryset().order_by("name")
-    )[:50]
+    )
+    if query:
+        medicines_qs = medicines_qs.filter(
+            Q(name__icontains=query) | Q(generic_name__icontains=query)
+        )
+    medicines = medicines_qs[:50]
 
     low_stock = branch_queryset_for_user(
         request.user,
@@ -108,6 +115,7 @@ def index(request):
             "expiring": expiring,
             "expired": expired,
             "recent_dispenses": recent_dispenses,
+            "query": query,
             "recent_store_requests": recent_store_requests,
         },
     )
@@ -459,10 +467,24 @@ def prescriptions(request):
         .filter(_paid_dispense_filter(request.user))
         .order_by("-dispensed_at"),
     )
-    paginator = Paginator(queryset, 5)
+
+    query = request.GET.get("q", "").strip()
+    if query:
+        queryset = queryset.filter(
+            Q(patient__first_name__icontains=query)
+            | Q(patient__last_name__icontains=query)
+            | Q(patient__patient_id__icontains=query)
+            | Q(medicine__name__icontains=query)
+        )
+
+    paginator = Paginator(queryset, 15)
     page_obj = paginator.get_page(request.GET.get("page"))
     return render(
         request,
         "pharmacy/prescriptions.html",
-        {"records": page_obj.object_list, "page_obj": page_obj},
+        {
+            "records": page_obj.object_list,
+            "page_obj": page_obj,
+            "query": query,
+        },
     )

@@ -1,5 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db.models import Q
 from django.http import Http404
 from django.contrib import messages
 from django.shortcuts import redirect, render
@@ -44,7 +45,16 @@ def index(request):
     if status:
         queryset = queryset.filter(status=status)
 
-    paginator = Paginator(queryset, 5)
+    query = request.GET.get("q", "").strip()
+    if query:
+        queryset = queryset.filter(
+            Q(visit_number__icontains=query)
+            | Q(patient__first_name__icontains=query)
+            | Q(patient__last_name__icontains=query)
+            | Q(patient__patient_id__icontains=query)
+        )
+
+    paginator = Paginator(queryset, 15)
     page_obj = paginator.get_page(request.GET.get("page"))
     return render(
         request,
@@ -53,6 +63,7 @@ def index(request):
             "visits": page_obj.object_list,
             "page_obj": page_obj,
             "status": status,
+            "query": query,
             "status_choices": Visit.STATUS_CHOICES,
         },
     )

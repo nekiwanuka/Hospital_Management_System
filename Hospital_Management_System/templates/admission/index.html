@@ -5,7 +5,14 @@
 {% block content %}
 <div class="cl-page-header">
   <div><h1>Admissions</h1></div>
-  <a href="{% url 'admission:create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> New Admission</a>
+  <div class="d-flex gap-2">
+    <form method="get" class="d-flex gap-2">
+      <input type="text" name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="Search admissions...">
+      <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-search"></i></button>
+      {% if query %}<a href="{% url 'admission:index' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg"></i></a>{% endif %}
+    </form>
+    <a href="{% url 'admission:create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> New Admission</a>
+  </div>
 </div>
 
 <div class="cl-card">

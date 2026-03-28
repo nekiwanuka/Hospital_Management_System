@@ -69,7 +69,7 @@ def _is_imaging_request_payment_cleared(imaging_request):
     return InvoiceLineItem.objects.filter(
         source_model="radiology",
         source_id=imaging_request.pk,
-        invoice__payment_status="paid",
+        invoice__payment_status__in=["paid", "post_payment"],
     ).exists()
 
 
@@ -190,7 +190,7 @@ def _notify_requesting_doctor(imaging_request, event_type):
 def _base_worklist_queryset(user):
     cleared_radiology_ids = InvoiceLineItem.objects.filter(
         source_model="radiology",
-        invoice__payment_status="paid",
+        invoice__payment_status__in=["paid", "post_payment"],
     ).values_list("source_id", flat=True)
 
     return branch_queryset_for_user(
@@ -320,7 +320,7 @@ def _render_dashboard(request, imaging_type=None, title="Radiology Dashboard"):
     if status_filter:
         filtered = filtered.filter(status=status_filter)
 
-    paginator = Paginator(filtered, 5)
+    paginator = Paginator(filtered, 15)
     page_obj = paginator.get_page(request.GET.get("page"))
     recent_store_requests = branch_queryset_for_user(
         request.user,
@@ -850,7 +850,7 @@ def notification_inbox(request):
         filter_value = "unread"
         filtered_notifications = notifications.filter(is_read=False)
 
-    paginator = Paginator(filtered_notifications, 5)
+    paginator = Paginator(filtered_notifications, 15)
     page_obj = paginator.get_page(request.GET.get("page"))
 
     return render(

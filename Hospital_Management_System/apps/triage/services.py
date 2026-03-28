@@ -18,7 +18,9 @@ def get_triage_eligible_visits(user):
     for visit in visits:
         payment_cleared = branch_queryset_for_user(
             user,
-            Invoice.objects.filter(visit=visit, payment_status="paid"),
+            Invoice.objects.filter(
+                visit=visit, payment_status__in=["paid", "post_payment"]
+            ),
         ).exists()
 
         review_privilege = None

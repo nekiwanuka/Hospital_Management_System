@@ -9,7 +9,12 @@ class Invoice(BranchScopedModel):
         ("mobile_money", "Mobile Money"),
         ("insurance", "Insurance"),
     ]
-    PAYMENT_STATUS = [("pending", "Pending"), ("paid", "Paid"), ("partial", "Partial")]
+    PAYMENT_STATUS = [
+        ("pending", "Pending"),
+        ("paid", "Paid"),
+        ("partial", "Partial"),
+        ("post_payment", "Post Payment"),
+    ]
 
     invoice_number = models.CharField(max_length=40, unique=True)
     patient = models.ForeignKey("patients.Patient", on_delete=models.PROTECT)

@@ -1,5 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.core.permissions import module_permission_required, role_required
@@ -14,12 +15,25 @@ def index(request):
         queryset = Branch.objects.order_by("branch_name")
     else:
         queryset = Branch.objects.filter(id=request.user.branch_id)
-    paginator = Paginator(queryset, 5)
+
+    query = request.GET.get("q", "").strip()
+    if query:
+        queryset = queryset.filter(
+            Q(branch_name__icontains=query)
+            | Q(location__icontains=query)
+            | Q(contact_number__icontains=query)
+        )
+
+    paginator = Paginator(queryset, 15)
     page_obj = paginator.get_page(request.GET.get("page"))
     return render(
         request,
         "branches/index.html",
-        {"branches": page_obj.object_list, "page_obj": page_obj},
+        {
+            "branches": page_obj.object_list,
+            "page_obj": page_obj,
+            "query": query,
+        },
     )
 
 

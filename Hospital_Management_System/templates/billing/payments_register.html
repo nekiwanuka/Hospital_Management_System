@@ -12,10 +12,13 @@
   <div class="cl-card-header">
     <h2 class="cl-card-title">All Payments</h2>
     <form method="get" class="ms-auto d-flex gap-2">
+      <input type="text" name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="Search payments...">
       <select name="cashier" class="form-select form-select-sm" onchange="this.form.submit()">
         <option value="">All Cashiers</option>
         {% for c in cashiers %}<option value="{{ c.pk }}" {% if cashier_filter == c.pk|stringformat:"d" %}selected{% endif %}>{{ c.get_full_name|default:c.username }}</option>{% endfor %}
       </select>
+      <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-search"></i></button>
+      {% if query or cashier_filter %}<a href="{% url 'billing:payments_register' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg"></i></a>{% endif %}
     </form>
   </div>
   <div class="cl-card-body p-0">

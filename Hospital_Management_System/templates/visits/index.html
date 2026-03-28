@@ -7,12 +7,15 @@
   <div><h1>Visit Queue</h1><p>All patient visits</p></div>
   <div class="d-flex gap-2">
     <form method="get" class="d-flex gap-2">
+      <input type="text" name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="Search visits...">
       <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
         <option value="">All Statuses</option>
         {% for val, label in status_choices %}
         <option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
+      <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-search"></i></button>
+      {% if query or status %}<a href="{% url 'visits:index' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg"></i></a>{% endif %}
     </form>
     <a href="{% url 'visits:create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> New Visit</a>
   </div>

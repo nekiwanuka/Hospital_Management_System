@@ -1010,7 +1010,7 @@ def update_payment_status(request, pk):
     previous_status = invoice.payment_status
     new_status = request.POST.get("payment_status", "").strip().lower()
     reason = (request.POST.get("status_reason") or "").strip()
-    allowed_statuses = {"pending", "paid", "partial"}
+    allowed_statuses = {"pending", "paid", "partial", "post_payment"}
     if new_status not in allowed_statuses:
         return _redirect_with_return_to(reverse("billing:detail", args=[pk]), return_to)
 
@@ -1163,6 +1163,8 @@ def update_payment_status(request, pk):
                 invoice.line_items.filter(payment_status="pending").update(
                     payment_status="partial"
                 )
+            elif new_status == "post_payment":
+                pass  # No payments recorded; bill accumulates, patient proceeds
 
             _log_financial_event(
                 request,
@@ -1184,7 +1186,7 @@ def update_payment_status(request, pk):
         return _redirect_with_return_to(reverse("billing:detail", args=[pk]), return_to)
 
     if invoice.visit:
-        if new_status == "paid":
+        if new_status in ("paid", "post_payment"):
             pending_lab_request = LabRequest.objects.filter(
                 visit=invoice.visit,
                 status="requested",
@@ -1229,6 +1231,11 @@ def update_payment_status(request, pk):
     elif new_status == "paid":
         return _redirect_with_return_to(
             reverse("billing:receipt", args=[pk]), return_to
+        )
+    elif new_status == "post_payment":
+        messages.success(
+            request,
+            "Invoice marked as Post Payment. Patient may proceed; payment is deferred.",
         )
     return _redirect_with_return_to(reverse("billing:detail", args=[pk]), return_to)
 
@@ -1386,6 +1393,14 @@ def payments_register(request):
     if cashier_filter:
         payments = payments.filter(received_by_id=cashier_filter)
 
+    query = request.GET.get("q", "").strip()
+    if query:
+        payments = payments.filter(
+            Q(line_item__invoice__invoice_number__icontains=query)
+            | Q(line_item__invoice__patient__first_name__icontains=query)
+            | Q(line_item__invoice__patient__last_name__icontains=query)
+        )
+
     page_obj = Paginator(payments, 25).get_page(request.GET.get("page"))
     cashiers = branch_queryset_for_user(
         request.user,
@@ -1401,6 +1416,7 @@ def payments_register(request):
             "cashier_filter": cashier_filter,
             "cashiers": cashiers,
             "return_to": return_to,
+            "query": query,
         },
     )
 
@@ -1420,12 +1436,24 @@ def approval_requests(request):
         queryset = queryset.filter(status=status_filter)
     else:
         status_filter = "all"
+
+    query = request.GET.get("q", "").strip()
+    if query:
+        queryset = queryset.filter(
+            Q(invoice__invoice_number__icontains=query)
+            | Q(requested_by__username__icontains=query)
+            | Q(reason__icontains=query)
+        )
+
+    page_obj = Paginator(queryset, 20).get_page(request.GET.get("page"))
     return render(
         request,
         "billing/approval_requests.html",
         {
-            "approval_requests": queryset[:200],
+            "approval_requests": page_obj.object_list,
+            "page_obj": page_obj,
             "status_filter": status_filter,
+            "query": query,
         },
     )
 
@@ -1603,12 +1631,22 @@ def sequence_anomalies(request):
         anomalies = anomalies.filter(is_resolved=True)
     else:
         status_filter = "all"
+
+    query = request.GET.get("q", "").strip()
+    if query:
+        anomalies = anomalies.filter(
+            Q(anomaly_type__icontains=query) | Q(description__icontains=query)
+        )
+
+    page_obj = Paginator(anomalies, 20).get_page(request.GET.get("page"))
     return render(
         request,
         "billing/sequence_anomalies.html",
         {
-            "anomalies": anomalies[:200],
+            "anomalies": page_obj.object_list,
+            "page_obj": page_obj,
             "status_filter": status_filter,
+            "query": query,
         },
     )
 

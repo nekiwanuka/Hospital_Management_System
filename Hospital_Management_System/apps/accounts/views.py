@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -23,12 +24,32 @@ class ClinicLogoutView(LogoutView):
 @module_permission_required("accounts", "view")
 def users_index(request):
     queryset = User.objects.select_related("branch").order_by("username")
-    paginator = Paginator(queryset, 5)
+
+    query = request.GET.get("q", "").strip()
+    if query:
+        queryset = queryset.filter(
+            Q(username__icontains=query)
+            | Q(first_name__icontains=query)
+            | Q(last_name__icontains=query)
+            | Q(email__icontains=query)
+        )
+
+    role = request.GET.get("role", "").strip()
+    if role:
+        queryset = queryset.filter(role=role)
+
+    paginator = Paginator(queryset, 15)
     page_obj = paginator.get_page(request.GET.get("page"))
     return render(
         request,
         "accounts/index.html",
-        {"users": page_obj.object_list, "page_obj": page_obj},
+        {
+            "users": page_obj.object_list,
+            "page_obj": page_obj,
+            "query": query,
+            "role_filter": role,
+            "role_choices": User.ROLE_CHOICES if hasattr(User, "ROLE_CHOICES") else [],
+        },
     )
 
 
