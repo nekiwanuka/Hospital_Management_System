@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Users — {{ clinic_name }}{% endblock %}
+{% block header_title %}User Management{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div>
+    <h1>Users</h1>
+    <p>Manage system users and permissions</p>
+  </div>
+  <a href="{% url 'accounts:create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New User</a>
+</div>
+
+<div class="cl-card">
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Full Name</th>
+            <th>Role</th>
+            <th>Branch</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td><strong>{{ u.username }}</strong></td>
+            <td>{{ u.get_full_name|default:"—" }}</td>
+            <td><span class="badge bg-primary bg-opacity-10 text-primary">{{ u.get_role_display }}</span></td>
+            <td>{{ u.branch|default:"—" }}</td>
+            <td>
+              {% if u.is_active %}<span class="badge bg-success">Active</span>
+              {% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}
+            </td>
+            <td><a href="{% url 'accounts:edit' u.pk %}" class="btn btn-sm btn-outline-primary">Edit</a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-center text-muted py-4">No users found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="cl-card-footer">{% include "includes/pagination.html" %}</div>
+</div>
+{% endblock %}

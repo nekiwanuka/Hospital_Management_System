@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}{{ imaging_request.request_identifier }} — {{ clinic_name }}{% endblock %}
+{% block header_title %}Radiology Detail{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>{{ imaging_request.request_identifier }}</h1></div>
+  <div class="d-flex gap-2">
+    {% if return_to %}<a href="{{ return_to }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>{% endif %}
+    <a href="{% url 'radiology:index' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-list"></i> Worklist</a>
+    <a href="{% url 'radiology:viewer' imaging_request.pk %}" class="btn btn-outline-info btn-sm"><i class="bi bi-eye"></i> Viewer</a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Request Info -->
+  <div class="col-md-8">
+    <div class="cl-card mb-3">
+      <div class="cl-card-header"><h2 class="cl-card-title">Request Information</h2></div>
+      <div class="cl-card-body">
+        <div class="row">
+          <div class="col-sm-6"><strong>Patient:</strong> {% if imaging_request.patient %}{{ imaging_request.patient.first_name }} {{ imaging_request.patient.last_name }}{% else %}—{% endif %}</div>
+          <div class="col-sm-6"><strong>Type:</strong> {{ imaging_request.get_imaging_type_display }}</div>
+          <div class="col-sm-6"><strong>Examination:</strong> {{ imaging_request.specific_examination|default:"—" }}</div>
+          <div class="col-sm-6"><strong>Body Region:</strong> {{ imaging_request.get_body_region_display|default:"—" }}</div>
+          <div class="col-sm-6"><strong>Priority:</strong> {% if imaging_request.priority == 'urgent' %}<span class="badge bg-danger">Urgent</span>{% else %}{{ imaging_request.get_priority_display }}{% endif %}</div>
+          <div class="col-sm-6"><strong>Status:</strong> <span class="badge bg-{% if imaging_request.status == 'completed' %}success{% elif imaging_request.status == 'scanning' %}primary{% elif imaging_request.status == 'reporting' %}info{% else %}warning{% endif %}">{{ imaging_request.get_status_display }}</span></div>
+          <div class="col-sm-6"><strong>Requested By:</strong> {{ imaging_request.requested_by.get_full_name|default:"—" }}</div>
+          <div class="col-sm-6"><strong>Date:</strong> {{ imaging_request.date_requested|date:"d M Y H:i" }}</div>
+          <div class="col-sm-6"><strong>Payment:</strong> {% if payment_cleared %}<span class="badge bg-success">Cleared</span>{% else %}<span class="badge bg-danger">Pending</span>{% endif %}</div>
+        </div>
+        {% if imaging_request.clinical_notes %}<div class="mt-3"><strong>Clinical Notes:</strong><p class="mt-1">{{ imaging_request.clinical_notes }}</p></div>{% endif %}
+      </div>
+    </div>
+
+    <!-- Result / Report -->
+    {% if result %}
+    <div class="cl-card mb-3">
+      <div class="cl-card-header"><h2 class="cl-card-title">Report</h2></div>
+      <div class="cl-card-body">
+        {% if result.examination %}<p><strong>Examination:</strong> {{ result.examination }}</p>{% endif %}
+        {% if result.clinical_information %}<p><strong>Clinical Information:</strong> {{ result.clinical_information }}</p>{% endif %}
+        {% if result.findings %}<p><strong>Findings:</strong><br>{{ result.findings|linebreaksbr }}</p>{% endif %}
+        {% if result.impression %}<p><strong>Impression:</strong><br>{{ result.impression|linebreaksbr }}</p>{% endif %}
+        {% if result.technician %}<p><strong>{{ unit_config.technician_role_label }}:</strong> {{ result.technician.get_full_name }}</p>{% endif %}
+        {% if result.radiologist %}<p><strong>{{ unit_config.radiologist_role_label }}:</strong> {{ result.radiologist.get_full_name }}</p>{% endif %}
+        {% if result.image_file %}<p><strong>Report File:</strong> <a href="{{ result.image_file.url }}" target="_blank">Download</a></p>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Consumables -->
+    {% if consumables_recorded %}
+    <div class="cl-card mb-3">
+      <div class="cl-card-header">
+        <h2 class="cl-card-title">Consumables Used</h2>
+        {% if can_correct_consumables %}<a href="{% url 'radiology:correct_consumables' imaging_request.pk %}" class="btn btn-outline-warning btn-sm"><i class="bi bi-pencil-square"></i> Correct</a>{% endif %}
+      </div>
+      <div class="cl-card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Item</th><th>Qty</th><th>Unit Cost</th><th>Total</th></tr></thead>
+          <tbody>{% for row in consumption_rows %}<tr><td>{{ row.item_name }}</td><td>{{ row.total_quantity }}</td><td>{{ row.unit_cost }}</td><td>{{ row.total_cost }}</td></tr>{% endfor %}</tbody>
+          <tfoot><tr><th colspan="3" class="text-end">Total:</th><th>{{ consumption_total_cost }}</th></tr></tfoot>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Attachments / Images -->
+    {% if attachments %}
+    <div class="cl-card mb-3">
+      <div class="cl-card-header"><h2 class="cl-card-title">Images</h2></div>
+      <div class="cl-card-body">
+        <div class="row g-2">
+          {% for att in attachments %}
+          <div class="col-6 col-md-4"><a href="{{ att.image_file.url }}" target="_blank"><img src="{{ att.image_file.url }}" class="img-fluid rounded" alt="{{ att.description|default:'Scan image' }}"></a><small class="d-block text-muted mt-1">{{ att.description|default:"" }} — {{ att.upload_date|date:"d M Y" }}</small></div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Notifications -->
+    {% if notifications %}
+    <div class="cl-card mb-3">
+      <div class="cl-card-header"><h2 class="cl-card-title">Notifications</h2></div>
+      <div class="cl-card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Event</th><th>Message</th><th>Recipient</th><th>Read</th><th>Date</th></tr></thead>
+          <tbody>{% for n in notifications %}<tr><td>{{ n.get_event_type_display }}</td><td>{{ n.message }}</td><td>{{ n.recipient.get_full_name }}</td><td>{% if n.is_read %}<i class="bi bi-check-circle text-success"></i>{% else %}<i class="bi bi-circle text-muted"></i>{% endif %}</td><td>{{ n.created_at|date:"d M H:i" }}</td></tr>{% endfor %}</tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Sidebar: Workflow + Previous -->
+  <div class="col-md-4">
+    {% if can_record_result and payment_cleared %}
+    <div class="cl-card mb-3">
+      <div class="cl-card-header"><h2 class="cl-card-title">Workflow Actions</h2></div>
+      <div class="cl-card-body d-grid gap-2">
+        {% if not consumables_recorded %}
+        <a href="{% url 'radiology:record_consumables' imaging_request.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-clipboard-data"></i> Record Consumables</a>
+        {% endif %}
+        <a href="{% url 'radiology:upload_images' imaging_request.pk %}" class="btn btn-outline-info btn-sm"><i class="bi bi-upload"></i> Upload Images</a>
+        <a href="{% url 'radiology:upload_result' imaging_request.pk %}" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-text"></i> {{ unit_config.capture_findings_short_label }}</a>
+        {% if imaging_request.status != 'completed' %}
+          {% if imaging_request.status == 'requested' %}<form method="post" action="{% url 'radiology:update_workflow' imaging_request.pk 'schedule' %}">{% csrf_token %}<button class="btn btn-outline-warning btn-sm w-100"><i class="bi bi-calendar"></i> Schedule</button></form>{% endif %}
+          {% if imaging_request.status == 'scheduled' %}<form method="post" action="{% url 'radiology:update_workflow' imaging_request.pk 'patient_arrived' %}">{% csrf_token %}<button class="btn btn-outline-info btn-sm w-100"><i class="bi bi-person-check"></i> Patient Arrived</button></form>{% endif %}
+          {% if imaging_request.status == 'patient_arrived' %}<form method="post" action="{% url 'radiology:update_workflow' imaging_request.pk 'start_scan' %}">{% csrf_token %}<button class="btn btn-primary btn-sm w-100"><i class="bi bi-camera-reels"></i> Start Scan</button></form>{% endif %}
+          {% if imaging_request.status == 'scanning' %}<form method="post" action="{% url 'radiology:update_workflow' imaging_request.pk 'start_reporting' %}">{% csrf_token %}<button class="btn btn-info btn-sm w-100"><i class="bi bi-file-earmark-text"></i> Start Reporting</button></form>{% endif %}
+          {% if imaging_request.status == 'reporting' %}<form method="post" action="{% url 'radiology:update_workflow' imaging_request.pk 'mark_completed' %}">{% csrf_token %}<button class="btn btn-success btn-sm w-100"><i class="bi bi-check-circle"></i> Mark Completed</button></form>{% endif %}
+        {% endif %}
+        <form method="post" action="{% url 'radiology:notify_requesting_doctor' imaging_request.pk %}">{% csrf_token %}<button class="btn btn-outline-dark btn-sm w-100"><i class="bi bi-bell"></i> Notify Doctor</button></form>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if previous_scans %}
+    <div class="cl-card mb-3">
+      <div class="cl-card-header"><h2 class="cl-card-title">Previous Scans</h2></div>
+      <div class="cl-card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for ps in previous_scans %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <a href="{% url 'radiology:detail' ps.pk %}">{{ ps.request_identifier }}</a>
+            <small class="text-muted">{{ ps.date_requested|date:"d M Y" }}</small>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% if latest_previous_scan %}
+      <div class="cl-card-footer"><a href="{% url 'radiology:compare_with_previous' imaging_request.pk %}" class="btn btn-outline-primary btn-sm w-100"><i class="bi bi-arrows-angle-expand"></i> Compare With Previous</a></div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Queue Entry -->
+    {% if queue_entry %}
+    <div class="cl-card">
+      <div class="cl-card-header"><h2 class="cl-card-title">Queue Timeline</h2></div>
+      <div class="cl-card-body">
+        {% if queue_entry.scheduled_for %}<p><i class="bi bi-calendar"></i> Scheduled: {{ queue_entry.scheduled_for|date:"d M H:i" }}</p>{% endif %}
+        {% if queue_entry.patient_arrived_at %}<p><i class="bi bi-person-check"></i> Arrived: {{ queue_entry.patient_arrived_at|date:"d M H:i" }}</p>{% endif %}
+        {% if queue_entry.scan_started_at %}<p><i class="bi bi-camera-reels"></i> Scan: {{ queue_entry.scan_started_at|date:"d M H:i" }}</p>{% endif %}
+        {% if queue_entry.reporting_started_at %}<p><i class="bi bi-file-earmark-text"></i> Reporting: {{ queue_entry.reporting_started_at|date:"d M H:i" }}</p>{% endif %}
+        {% if queue_entry.completed_at %}<p><i class="bi bi-check-circle text-success"></i> Completed: {{ queue_entry.completed_at|date:"d M H:i" }}</p>{% endif %}
+        {% if queue_entry.assigned_staff %}<p><strong>Staff:</strong> {{ queue_entry.assigned_staff.get_full_name }}</p>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

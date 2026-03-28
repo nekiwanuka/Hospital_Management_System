@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Review Approval Request — {{ clinic_name }}{% endblock %}
+{% block header_title %}Review Approval Request{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Review Approval Request</h1></div>
+  <a href="{% url 'billing:approval_requests' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="cl-card">
+      <div class="cl-card-header"><h2 class="cl-card-title">Request Details</h2></div>
+      <div class="cl-card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-4">Type</dt><dd class="col-sm-8">{{ approval_request.get_approval_type_display }}</dd>
+          <dt class="col-sm-4">Requested By</dt><dd class="col-sm-8">{{ approval_request.requested_by.get_full_name|default:approval_request.requested_by.username }}</dd>
+          <dt class="col-sm-4">Date</dt><dd class="col-sm-8">{{ approval_request.created_at|date:"d M Y H:i" }}</dd>
+          <dt class="col-sm-4">Reason</dt><dd class="col-sm-8">{{ approval_request.reason|default:"—" }}</dd>
+          <dt class="col-sm-4">Status</dt><dd class="col-sm-8"><span class="badge bg-{% if approval_request.status == 'pending' %}warning{% elif approval_request.status == 'approved' %}success{% else %}danger{% endif %}">{{ approval_request.get_status_display }}</span></dd>
+          {% if approval_request.invoice %}<dt class="col-sm-4">Invoice</dt><dd class="col-sm-8"><a href="{% url 'billing:detail' approval_request.invoice.pk %}">{{ approval_request.invoice.invoice_number }}</a></dd>{% endif %}
+          {% if approval_request.cashier_shift %}<dt class="col-sm-4">Shift</dt><dd class="col-sm-8">#{{ approval_request.cashier_shift.pk }} — {{ approval_request.cashier_shift.opened_by.get_full_name|default:approval_request.cashier_shift.opened_by.username }}</dd>{% endif %}
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  {% if approval_request.status == 'pending' %}
+  <div class="col-lg-6">
+    <div class="cl-card">
+      <div class="cl-card-header"><h2 class="cl-card-title">Decision</h2></div>
+      <div class="cl-card-body">
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="reviewer_notes" class="form-label">Notes</label>
+            <textarea name="reviewer_notes" id="reviewer_notes" class="form-control" rows="3"></textarea>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" name="action" value="approve" class="btn btn-success"><i class="bi bi-check-lg"></i> Approve</button>
+            <button type="submit" name="action" value="reject" class="btn btn-danger"><i class="bi bi-x-lg"></i> Reject</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

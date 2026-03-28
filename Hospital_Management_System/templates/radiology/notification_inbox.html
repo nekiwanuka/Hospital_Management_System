@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Radiology Notifications — {{ clinic_name }}{% endblock %}
+{% block header_title %}Radiology Notifications{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Radiology Notifications</h1><small class="text-muted">{{ unread_count }} unread of {{ total_count }}</small></div>
+  <div class="d-flex gap-2">
+    <a href="?filter=unread" class="btn btn-sm {% if filter_value == 'unread' %}btn-primary{% else %}btn-outline-primary{% endif %}">Unread</a>
+    <a href="?filter=all" class="btn btn-sm {% if filter_value == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">All</a>
+    {% if unread_count > 0 %}
+    <form method="post">{% csrf_token %}<button type="submit" class="btn btn-outline-success btn-sm"><i class="bi bi-check-all"></i> Mark All Read</button></form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="cl-card">
+  <div class="cl-card-body p-0">
+    <div class="list-group list-group-flush">
+      {% for n in notifications %}
+      <div class="list-group-item {% if not n.is_read %}list-group-item-warning{% endif %}">
+        <div class="d-flex justify-content-between">
+          <div>
+            <strong>{{ n.get_event_type_display }}</strong>
+            <p class="mb-1">{{ n.message }}</p>
+            {% if n.imaging_request %}<a href="{% url 'radiology:detail' n.imaging_request.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-eye"></i> View Request</a>{% endif %}
+          </div>
+          <div class="text-end">
+            <small class="text-muted">{{ n.created_at|date:"d M Y H:i" }}</small>
+            {% if not n.is_read %}
+            <form method="post" action="{% url 'radiology:mark_notification_read' n.pk %}" class="mt-1">{% csrf_token %}<button class="btn btn-outline-success btn-sm"><i class="bi bi-check"></i></button></form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="list-group-item text-center text-muted py-4">No notifications.</div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="cl-card-footer">{% include "includes/pagination.html" %}</div>
+</div>
+{% endblock %}

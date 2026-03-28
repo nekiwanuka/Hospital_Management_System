@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Medical Store — {{ selected_store_label|default:"All Stores" }} — {{ clinic_name }}{% endblock %}
+{% block header_title %}Medical Store{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>{{ selected_store_label|default:"Medical Store" }}</h1></div>
+  <div class="d-flex gap-2">
+    {% if selected_store_entry_url %}<a href="{{ selected_store_entry_url }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> New Entry</a>{% endif %}
+  </div>
+</div>
+
+<!-- Store Navigation -->
+<div class="d-flex flex-wrap gap-1 mb-3">
+  {% for code, label in store_navigation %}
+  <a href="{% if code == 'all' %}{% url 'inventory:medical_store_dashboard' %}{% else %}{% url 'inventory:medical_store_dashboard_by_store' code %}{% endif %}" class="badge {% if selected_store == code %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none py-2 px-3">{{ label }}</a>
+  {% endfor %}
+</div>
+
+<!-- Snapshot Metrics -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-md-3">
+    <div class="cl-stat"><div class="cl-stat-icon primary"><i class="bi bi-box-seam"></i></div><div class="cl-stat-label">Total Units</div><div class="cl-stat-value">{{ medical_store_snapshot.total_units }}</div></div>
+  </div>
+  <div class="col-sm-6 col-md-3">
+    <div class="cl-stat"><div class="cl-stat-icon warning"><i class="bi bi-exclamation-triangle"></i></div><div class="cl-stat-label">Low Stock</div><div class="cl-stat-value">{{ medical_store_snapshot.low_stock_count }}</div></div>
+  </div>
+  <div class="col-sm-6 col-md-3">
+    <div class="cl-stat"><div class="cl-stat-icon info"><i class="bi bi-clock-history"></i></div><div class="cl-stat-label">Expiring</div><div class="cl-stat-value">{{ medical_store_snapshot.expiring_count }}</div></div>
+  </div>
+  <div class="col-sm-6 col-md-3">
+    <div class="cl-stat"><div class="cl-stat-icon success"><i class="bi bi-currency-dollar"></i></div><div class="cl-stat-label">Retail Value</div><div class="cl-stat-value">{{ medical_store_snapshot.total_retail_value }}</div></div>
+  </div>
+</div>
+
+<!-- Stock Requests -->
+{% if store_requests %}
+<div class="cl-card mb-4">
+  <div class="cl-card-header">
+    <h2 class="cl-card-title">Stock Requests</h2>
+    <div class="ms-auto d-flex gap-1">
+      <span class="badge bg-warning">Pending: {{ request_summary.pending }}</span>
+      <span class="badge bg-success">Approved: {{ request_summary.approved }}</span>
+      <span class="badge bg-info">Fulfilled: {{ request_summary.fulfilled }}</span>
+    </div>
+  </div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Item</th><th>Qty</th><th>Requested By</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>
+          {% for sr in store_requests %}
+          <tr>
+            <td>{% if sr.item %}{{ sr.item.item_name }}{% elif sr.stock_item %}{{ sr.stock_item }}{% else %}—{% endif %}</td>
+            <td>{{ sr.quantity_requested }}</td>
+            <td>{{ sr.requested_by|default:"—" }}</td>
+            <td><span class="badge bg-{% if sr.status == 'pending' %}warning{% elif sr.status == 'approved' %}success{% elif sr.status == 'fulfilled' %}info{% else %}danger{% endif %}">{{ sr.get_status_display }}</span></td>
+            <td>{{ sr.created_at|date:"d M H:i" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Stock Search -->
+<div class="cl-card mb-3">
+  <div class="cl-card-body">
+    <form method="get" class="row g-2 align-items-end">
+      {% if selected_store != 'all' %}<input type="hidden" name="store" value="{{ selected_store }}">{% endif %}
+      <div class="col-md-3"><label class="form-label">Item</label><input type="text" name="item" value="{{ stock_filters.item }}" class="form-control form-control-sm" placeholder="Item name..."></div>
+      <div class="col-md-3"><label class="form-label">Batch</label><input type="text" name="batch" value="{{ stock_filters.batch }}" class="form-control form-control-sm" placeholder="Batch #..."></div>
+      <div class="col-md-3"><label class="form-label">Supplier</label><input type="text" name="supplier" value="{{ stock_filters.supplier }}" class="form-control form-control-sm" placeholder="Supplier..."></div>
+      <div class="col-md-3"><button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-search"></i> Search</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- Current Stock Batches -->
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title">Current Stock</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Item</th><th>Batch #</th><th>Qty</th><th>Unit Cost</th><th>Sell Price</th><th>Expiry</th><th>Supplier</th></tr></thead>
+        <tbody>
+          {% for b in current_stock_batches %}
+          <tr>
+            <td>{{ b.item.item_name }}</td>
+            <td>{{ b.batch_number }}</td>
+            <td>{{ b.quantity_remaining }}</td>
+            <td>{{ b.unit_cost }}</td>
+            <td>{{ b.selling_price_per_unit }}</td>
+            <td>{{ b.exp_date|date:"d M Y" }}</td>
+            <td>{{ b.supplier|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-center text-muted py-4">No stock records found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Low Stock -->
+{% if low_stock_items %}
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-exclamation-triangle text-warning"></i> Low Stock Items</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Item</th><th>On Hand</th><th>Reorder Level</th><th>Category</th></tr></thead>
+        <tbody>{% for item in low_stock_items %}<tr><td>{{ item.item_name }}</td><td><strong class="text-danger">{{ item.quantity_on_hand }}</strong></td><td>{{ item.reorder_level }}</td><td>{{ item.category|default:"—" }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Expiring Batches -->
+{% if expiring_batches %}
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-clock text-info"></i> Expiring Soon</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Item</th><th>Batch</th><th>Qty</th><th>Expiry</th></tr></thead>
+        <tbody>{% for b in expiring_batches %}<tr><td>{{ b.item.item_name }}</td><td>{{ b.batch_number }}</td><td>{{ b.quantity_remaining }}</td><td class="text-warning">{{ b.exp_date|date:"d M Y" }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Expired Batches -->
+{% if expired_batches %}
+<div class="cl-card">
+  <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-x-circle text-danger"></i> Expired</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Item</th><th>Batch</th><th>Qty</th><th>Expired</th></tr></thead>
+        <tbody>{% for b in expired_batches %}<tr><td>{{ b.item.item_name }}</td><td>{{ b.batch_number }}</td><td>{{ b.quantity_remaining }}</td><td class="text-danger">{{ b.exp_date|date:"d M Y" }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

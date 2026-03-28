@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Module Permissions — {{ clinic_name }}{% endblock %}
+{% block header_title %}Module Permissions{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Module Permissions</h1></div>
+  <a href="{% url 'permissions:create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Grant Permission</a>
+</div>
+
+<div class="cl-card">
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>User</th><th>Module</th><th>View</th><th>Create</th><th>Update</th><th>Delete</th><th>Granted By</th><th></th></tr></thead>
+        <tbody>
+          {% for p in permissions %}
+          <tr>
+            <td>{{ p.user.username }}</td>
+            <td>{{ p.module_name }}</td>
+            <td>{% if p.can_view %}<i class="bi bi-check text-success"></i>{% else %}<i class="bi bi-x text-danger"></i>{% endif %}</td>
+            <td>{% if p.can_create %}<i class="bi bi-check text-success"></i>{% else %}<i class="bi bi-x text-danger"></i>{% endif %}</td>
+            <td>{% if p.can_update %}<i class="bi bi-check text-success"></i>{% else %}<i class="bi bi-x text-danger"></i>{% endif %}</td>
+            <td>{% if p.can_delete %}<i class="bi bi-check text-success"></i>{% else %}<i class="bi bi-x text-danger"></i>{% endif %}</td>
+            <td>{{ p.granted_by.username|default:"—" }}</td>
+            <td>
+              <a href="{% url 'permissions:update' p.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i></a>
+              <a href="{% url 'permissions:delete' p.pk %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="8" class="text-center text-muted py-4">No explicit permissions granted.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

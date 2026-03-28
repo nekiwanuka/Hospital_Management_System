@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Administration — {{ clinic_name }}{% endblock %}
+{% block header_title %}Administration{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Administration</h1></div>
+  {% if can_manage_settings %}
+  <a href="{% url 'settingsapp:edit' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-gear"></i> Edit Settings</a>
+  {% endif %}
+</div>
+
+<!-- Tabs -->
+<ul class="nav nav-tabs mb-4">
+  <li class="nav-item"><a class="nav-link {% if active_tab == 'general' %}active{% endif %}" href="?tab=general">General</a></li>
+  <li class="nav-item"><a class="nav-link {% if active_tab == 'branches' %}active{% endif %}" href="?tab=branches">Branches</a></li>
+  <li class="nav-item"><a class="nav-link {% if active_tab == 'users' %}active{% endif %}" href="?tab=users">Users</a></li>
+  {% if is_sys_admin %}<li class="nav-item"><a class="nav-link {% if active_tab == 'permissions' %}active{% endif %}" href="?tab=permissions">Permissions</a></li>{% endif %}
+</ul>
+
+<!-- General -->
+{% if active_tab == 'general' %}
+<div class="cl-card">
+  <div class="cl-card-header"><h2 class="cl-card-title">System Settings</h2></div>
+  <div class="cl-card-body">
+    {% if settings_obj %}
+    <div class="row">
+      <div class="col-sm-6"><strong>Clinic Name:</strong> {{ settings_obj.clinic_name }}</div>
+      <div class="col-sm-6"><strong>Currency:</strong> {{ settings_obj.currency|default:"UGX" }}</div>
+      <div class="col-sm-6"><strong>Phone:</strong> {{ settings_obj.clinic_phone|default:"—" }}</div>
+      <div class="col-sm-6"><strong>Email:</strong> {{ settings_obj.clinic_email|default:"—" }}</div>
+      <div class="col-sm-12"><strong>Address:</strong> {{ settings_obj.clinic_address|default:"—" }}</div>
+    </div>
+    {% if settings_obj.logo %}<div class="mt-3"><img src="{{ settings_obj.logo.url }}" alt="Logo" class="img-fluid" style="max-height:80px;"></div>{% endif %}
+    {% else %}
+    <p class="text-muted">No settings configured.</p>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Branches -->
+{% if active_tab == 'branches' %}
+<div class="cl-card">
+  <div class="cl-card-header">
+    <h2 class="cl-card-title">Branches</h2>
+    {% if is_sys_admin %}<a href="{% url 'branches:index' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-list"></i> Manage</a>{% endif %}
+  </div>
+  <div class="cl-card-body p-0">
+    <table class="table table-sm">
+      <thead><tr><th>Name</th><th>Code</th><th>City</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for b in branches %}
+        <tr><td>{{ b.branch_name }}</td><td>{{ b.branch_code }}</td><td>{{ b.city|default:"—" }}</td><td><span class="badge bg-{% if b.status == 'active' %}success{% else %}secondary{% endif %}">{{ b.get_status_display }}</span></td></tr>
+        {% empty %}
+        <tr><td colspan="4" class="text-center text-muted py-4">No branches.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Users -->
+{% if active_tab == 'users' %}
+<div class="cl-card">
+  <div class="cl-card-header">
+    <h2 class="cl-card-title">Users</h2>
+    {% if is_sys_admin %}<a href="{% url 'accounts:index' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-people"></i> Manage</a>{% endif %}
+  </div>
+  <div class="cl-card-body p-0">
+    <table class="table table-sm">
+      <thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Branch</th><th>Active</th></tr></thead>
+      <tbody>
+        {% for u in users %}
+        <tr><td>{{ u.username }}</td><td>{{ u.get_full_name }}</td><td>{{ u.get_role_display }}</td><td>{{ u.branch.branch_name|default:"—" }}</td><td>{% if u.is_active %}<i class="bi bi-check-circle text-success"></i>{% else %}<i class="bi bi-x-circle text-danger"></i>{% endif %}</td></tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-muted py-4">No users.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Permissions -->
+{% if active_tab == 'permissions' and is_sys_admin %}
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title">Module Permissions</h2></div>
+  <div class="cl-card-body p-0">
+    <table class="table table-sm">
+      <thead><tr><th>User</th><th>Module</th><th>Can View</th><th>Can Update</th><th>Can Delete</th><th>Granted By</th></tr></thead>
+      <tbody>
+        {% for p in permissions %}
+        <tr><td>{{ p.user.username }}</td><td>{{ p.module_name }}</td><td>{% if p.can_view %}<i class="bi bi-check text-success"></i>{% else %}<i class="bi bi-x text-danger"></i>{% endif %}</td><td>{% if p.can_update %}<i class="bi bi-check text-success"></i>{% else %}<i class="bi bi-x text-danger"></i>{% endif %}</td><td>{% if p.can_delete %}<i class="bi bi-check text-success"></i>{% else %}<i class="bi bi-x text-danger"></i>{% endif %}</td><td>{{ p.granted_by.username|default:"—" }}</td></tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-4">No explicit permissions.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Role Defaults Matrix -->
+<div class="cl-card">
+  <div class="cl-card-header"><h2 class="cl-card-title">Role Default Modules</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Role</th>{% for code, label in module_choices %}<th class="text-center"><small>{{ label }}</small></th>{% endfor %}</tr></thead>
+        <tbody>
+          {% for role_code, role_label, defaults in role_defaults %}
+          <tr><td><strong>{{ role_label }}</strong></td>{% for code, label in module_choices %}<td class="text-center">{% if code in defaults %}<i class="bi bi-check-circle text-success"></i>{% else %}<i class="bi bi-x-circle text-secondary"></i>{% endif %}</td>{% endfor %}</tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Compare Scans — {{ clinic_name }}{% endblock %}
+{% block header_title %}Compare Scans{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Compare Scans</h1></div>
+  <div class="d-flex gap-2">
+    {% if return_to %}<a href="{{ return_to }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>{% endif %}
+    <a href="{% url 'radiology:detail' current_request.pk %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-info-circle"></i> Current Details</a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Current Scan -->
+  <div class="col-md-6">
+    <div class="cl-card">
+      <div class="cl-card-header"><h2 class="cl-card-title">Current — {{ current_request.request_identifier }}</h2><small class="text-muted">{{ current_request.date_requested|date:"d M Y" }}</small></div>
+      <div class="cl-card-body">
+        {% if current_attachments %}
+        {% for att in current_attachments %}
+          {% if att.image_file %}<a href="{{ att.image_file.url }}" target="_blank"><img src="{{ att.image_file.url }}" class="img-fluid rounded mb-2" alt="Current scan"></a>{% endif %}
+        {% endfor %}
+        {% else %}<p class="text-muted">No images</p>{% endif %}
+        {% if current_request.result %}
+          {% if current_request.result.findings %}<p><strong>Findings:</strong><br>{{ current_request.result.findings|linebreaksbr }}</p>{% endif %}
+          {% if current_request.result.impression %}<p><strong>Impression:</strong><br>{{ current_request.result.impression|linebreaksbr }}</p>{% endif %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Previous Scan -->
+  <div class="col-md-6">
+    <div class="cl-card">
+      <div class="cl-card-header"><h2 class="cl-card-title">Previous — {{ previous_request.request_identifier }}</h2><small class="text-muted">{{ previous_request.date_requested|date:"d M Y" }}</small></div>
+      <div class="cl-card-body">
+        {% if previous_attachments %}
+        {% for att in previous_attachments %}
+          {% if att.image_file %}<a href="{{ att.image_file.url }}" target="_blank"><img src="{{ att.image_file.url }}" class="img-fluid rounded mb-2" alt="Previous scan"></a>{% endif %}
+        {% endfor %}
+        {% else %}<p class="text-muted">No images</p>{% endif %}
+        {% if previous_request.result %}
+          {% if previous_request.result.findings %}<p><strong>Findings:</strong><br>{{ previous_request.result.findings|linebreaksbr }}</p>{% endif %}
+          {% if previous_request.result.impression %}<p><strong>Impression:</strong><br>{{ previous_request.result.impression|linebreaksbr }}</p>{% endif %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

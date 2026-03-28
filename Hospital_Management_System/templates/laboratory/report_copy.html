@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Lab Report — {{ lab_request.test_type }}</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:13px;color:#333;margin:0;padding:20px}
+    .header{text-align:center;margin-bottom:20px;border-bottom:2px solid #333;padding-bottom:10px}
+    .header h1{margin:0;font-size:20px} .header p{margin:2px 0}
+    table{width:100%;border-collapse:collapse;margin-bottom:15px}
+    table th,table td{border:1px solid #ddd;padding:6px 8px;text-align:left}
+    table th{background:#f5f5f5}
+    .footer{text-align:center;font-size:11px;color:#999;margin-top:30px}
+    @media print{body{margin:0;padding:10px}.no-print{display:none}}
+  </style>
+</head>
+<body>
+  <div class="no-print" style="margin-bottom:15px">
+    <button onclick="window.print()" style="padding:8px 16px;cursor:pointer">Print</button>
+    <a href="{% url 'laboratory:detail' lab_request.pk %}" style="margin-left:10px">Back</a>
+  </div>
+
+  <div class="header">
+    <h1>{{ clinic_name|default:"Hospital" }}</h1>
+    <p>Laboratory Result Report</p>
+  </div>
+
+  <table style="border:none">
+    <tr style="border:none">
+      <td style="border:none;width:50%">
+        <strong>Patient:</strong> {{ lab_request.patient.first_name }} {{ lab_request.patient.last_name }}<br>
+        <strong>Test:</strong> {{ lab_request.test_type }}<br>
+        <strong>Date:</strong> {{ lab_request.date|date:"d M Y" }}
+      </td>
+      <td style="border:none;width:50%;text-align:right">
+        <strong>Status:</strong> {{ lab_request.get_status_display }}<br>
+        <strong>Requested By:</strong> {{ lab_request.requested_by.get_full_name|default:lab_request.requested_by.username }}<br>
+        <strong>Technician:</strong> {{ lab_request.technician|default:"—" }}
+      </td>
+    </tr>
+  </table>
+
+  <h3>Results</h3>
+  <pre style="white-space:pre-wrap;border:1px solid #ddd;padding:10px;background:#fafafa">{{ lab_request.results|default:"No results uploaded yet." }}</pre>
+
+  {% if lab_request.comments %}
+  <h3>Remarks</h3>
+  <p>{{ lab_request.comments }}</p>
+  {% endif %}
+
+  <div style="margin-top:40px">
+    <p>Lab Signature: ____________________________</p>
+    <p>Doctor Acknowledgement: ____________________________</p>
+  </div>
+
+  <div class="footer"><p>{{ clinic_name|default:"Hospital" }}</p></div>
+</body>
+</html>

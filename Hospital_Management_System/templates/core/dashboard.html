@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — {{ clinic_name }}{% endblock %}
+{% block header_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div>
+    <h1>Welcome, {{ user.get_full_name|default:user.username }}</h1>
+    <p>{{ clinic_name }} — {{ user.get_role_display }}</p>
+  </div>
+</div>
+
+{% if is_director %}
+<div class="alert alert-info"><i class="bi bi-info-circle"></i> You have Director access. <a href="{% url 'core:director_dashboard' %}">View Director Dashboard</a></div>
+{% endif %}
+
+{% if is_system_admin %}
+<div class="alert alert-info"><i class="bi bi-info-circle"></i> You have System Admin access. <a href="{% url 'core:system_admin_dashboard' %}">View Admin Dashboard</a></div>
+{% endif %}
+
+<div class="row g-3 mb-4">
+  {% if user_modules.patients %}
+  <div class="col-6 col-md-4 col-xl-3">
+    <a href="{% url 'patients:index' %}" class="text-decoration-none">
+      <div class="cl-stat">
+        <div class="cl-stat-icon primary"><i class="bi bi-people"></i></div>
+        <div><div class="cl-stat-label">Patients</div><div class="cl-stat-value">View</div></div>
+      </div>
+    </a>
+  </div>
+  {% endif %}
+  {% if user_modules.visits %}
+  <div class="col-6 col-md-4 col-xl-3">
+    <a href="{% url 'visits:index' %}" class="text-decoration-none">
+      <div class="cl-stat">
+        <div class="cl-stat-icon info"><i class="bi bi-clipboard2-pulse"></i></div>
+        <div><div class="cl-stat-label">Visits Queue</div><div class="cl-stat-value">View</div></div>
+      </div>
+    </a>
+  </div>
+  {% endif %}
+  {% if user_modules.billing %}
+  <div class="col-6 col-md-4 col-xl-3">
+    <a href="{% url 'billing:index' %}" class="text-decoration-none">
+      <div class="cl-stat">
+        <div class="cl-stat-icon success"><i class="bi bi-receipt"></i></div>
+        <div><div class="cl-stat-label">Billing</div><div class="cl-stat-value">View</div></div>
+      </div>
+    </a>
+  </div>
+  {% endif %}
+  {% if user_modules.laboratory %}
+  <div class="col-6 col-md-4 col-xl-3">
+    <a href="{% url 'laboratory:index' %}" class="text-decoration-none">
+      <div class="cl-stat">
+        <div class="cl-stat-icon warning"><i class="bi bi-droplet"></i></div>
+        <div><div class="cl-stat-label">Laboratory</div><div class="cl-stat-value">View</div></div>
+      </div>
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+{% if exception_counts %}
+<div class="cl-card">
+  <div class="cl-card-header"><h2 class="cl-card-title">Pending Actions</h2></div>
+  <div class="cl-card-body">
+    <div class="row g-3">
+      {% for label, count in exception_counts.items %}
+      {% if count %}
+      <div class="col-md-4">
+        <div class="cl-stat">
+          <div class="cl-stat-icon warning"><i class="bi bi-exclamation-circle"></i></div>
+          <div><div class="cl-stat-label">{{ label }}</div><div class="cl-stat-value">{{ count }}</div></div>
+        </div>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

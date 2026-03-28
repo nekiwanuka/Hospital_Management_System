@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Admission — {{ admission.patient.first_name }} {{ admission.patient.last_name }} — {{ clinic_name }}{% endblock %}
+{% block header_title %}Admission Detail{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div>
+    <h1>{{ admission.patient.first_name }} {{ admission.patient.last_name }}</h1>
+    <p>Admitted {{ admission.admission_date|date:"d M Y H:i" }} &bull; {{ admission.ward|default:"No ward" }}</p>
+  </div>
+  <div class="d-flex gap-2">
+    {% if not admission.discharge_date %}<a href="{% url 'admission:discharge' admission.pk %}" class="btn btn-warning btn-sm"><i class="bi bi-box-arrow-right"></i> Discharge</a>{% endif %}
+    <a href="{% url 'admission:index' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="cl-card">
+      <div class="cl-card-header"><h2 class="cl-card-title">Admission Info</h2></div>
+      <div class="cl-card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-4">Patient</dt><dd class="col-sm-8"><a href="{% url 'patients:detail' admission.patient.pk %}">{{ admission.patient.first_name }} {{ admission.patient.last_name }}</a></dd>
+          <dt class="col-sm-4">Doctor</dt><dd class="col-sm-8">{{ admission.doctor|default:"—" }}</dd>
+          <dt class="col-sm-4">Ward</dt><dd class="col-sm-8">{{ admission.ward|default:"—" }}</dd>
+          <dt class="col-sm-4">Reason</dt><dd class="col-sm-8">{{ admission.reason|default:"—" }}</dd>
+          <dt class="col-sm-4">Status</dt><dd class="col-sm-8">{% if admission.discharge_date %}<span class="badge bg-secondary">Discharged {{ admission.discharge_date|date:"d M Y" }}</span>{% else %}<span class="badge bg-success">Active</span>{% endif %}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if consultations %}
+<div class="cl-card mb-3">
+  <div class="cl-card-header"><h2 class="cl-card-title">Consultations</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Date</th><th>Doctor</th><th>Diagnosis</th></tr></thead>
+        <tbody>{% for c in consultations %}<tr><td>{{ c.created_at|date:"d M H:i" }}</td><td>{{ c.doctor|default:"—" }}</td><td>{{ c.diagnosis|truncatechars:60|default:"—" }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if triage_records %}
+<div class="cl-card mb-3">
+  <div class="cl-card-header"><h2 class="cl-card-title">Triage Records</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Date</th><th>BP</th><th>Temp</th><th>Pulse</th><th>Weight</th></tr></thead>
+        <tbody>{% for t in triage_records %}<tr><td>{{ t.date|date:"d M H:i" }}</td><td>{{ t.blood_pressure|default:"—" }}</td><td>{{ t.temperature|default:"—" }}</td><td>{{ t.pulse_rate|default:"—" }}</td><td>{{ t.weight|default:"—" }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if lab_results %}
+<div class="cl-card mb-3">
+  <div class="cl-card-header"><h2 class="cl-card-title">Lab Results</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Test</th><th>Status</th><th>Date</th><th>Results</th></tr></thead>
+        <tbody>{% for lr in lab_results %}<tr><td>{{ lr.test_type }}</td><td><span class="badge bg-{% if lr.status == 'completed' %}success{% else %}secondary{% endif %}">{{ lr.get_status_display }}</span></td><td>{{ lr.date|date:"d M H:i" }}</td><td>{{ lr.results|truncatechars:80|default:"—" }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if radiology_results %}
+<div class="cl-card mb-3">
+  <div class="cl-card-header"><h2 class="cl-card-title">Radiology</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Type</th><th>Status</th><th>Findings</th></tr></thead>
+        <tbody>{% for ir in radiology_results %}<tr><td>{{ ir.get_imaging_type_display }}</td><td><span class="badge bg-secondary">{{ ir.get_status_display }}</span></td><td>{% if ir.result %}{{ ir.result.findings|truncatechars:80 }}{% else %}Pending{% endif %}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if pharmacy_requests or pharmacy_dispensed %}
+<div class="cl-card mb-3">
+  <div class="cl-card-header"><h2 class="cl-card-title">Pharmacy</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Medicine</th><th>Qty</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for pr in pharmacy_requests %}<tr><td>{{ pr.medicine.name }}</td><td>{{ pr.quantity }}</td><td><span class="badge bg-warning">{{ pr.get_status_display }}</span></td></tr>{% endfor %}
+          {% for d in pharmacy_dispensed %}<tr><td>{{ d.medicine.name }}</td><td>{{ d.quantity }}</td><td><span class="badge bg-success">Dispensed</span></td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if nursing_notes %}
+<div class="cl-card mb-3">
+  <div class="cl-card-header"><h2 class="cl-card-title">Nursing Notes</h2></div>
+  <div class="cl-card-body">
+    {% for note in nursing_notes %}
+    <div class="border-bottom pb-2 mb-2">
+      <div class="d-flex justify-content-between"><strong>{{ note.nurse.get_full_name|default:note.nurse.username }}</strong><small class="text-muted">{{ note.created_at|date:"d M Y H:i" }}</small></div>
+      <p class="mb-0">{{ note.note }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

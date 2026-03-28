@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Laboratory — {{ clinic_name }}{% endblock %}
+{% block header_title %}Laboratory{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div>
+    <h1>{% if result_feed_mode %}Result Feed Queue{% else %}Laboratory{% endif %}</h1>
+  </div>
+  <div class="d-flex gap-2">
+    {% if result_feed_mode %}
+    <a href="{% url 'laboratory:index' %}" class="btn btn-outline-secondary btn-sm">All Requests</a>
+    {% else %}
+    <a href="{% url 'laboratory:result_feed_queue' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-funnel"></i> Result Feed Queue</a>
+    {% endif %}
+    <a href="{% url 'laboratory:request_medical_store_stock' %}" class="btn btn-outline-success btn-sm"><i class="bi bi-box-seam"></i> Request Stock</a>
+  </div>
+</div>
+
+<!-- Recent Store Requests -->
+{% if recent_store_requests %}
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title">Recent Store Requests</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Item</th><th>Qty</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>
+          {% for sr in recent_store_requests %}
+          <tr>
+            <td>{% if sr.item %}{{ sr.item.item_name }}{% else %}{{ sr.medicine_name }}{% endif %}</td>
+            <td>{{ sr.quantity_requested }}</td>
+            <td><span class="badge bg-{% if sr.status == 'pending' %}warning{% elif sr.status == 'fulfilled' %}success{% else %}secondary{% endif %}">{{ sr.get_status_display }}</span></td>
+            <td>{{ sr.created_at|date:"d M H:i" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Lab Requests -->
+<div class="cl-card">
+  <div class="cl-card-header"><h2 class="cl-card-title">Lab Requests</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Patient</th><th>Test</th><th>Status</th><th>Requested By</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for req in requests %}
+          <tr>
+            <td>{{ req.patient.first_name }} {{ req.patient.last_name }}</td>
+            <td>{{ req.test_type }}</td>
+            <td><span class="badge bg-{% if req.status == 'completed' %}success{% elif req.status == 'reviewed' %}info{% else %}warning{% endif %}">{{ req.get_status_display }}</span></td>
+            <td>{{ req.requested_by.get_full_name|default:req.requested_by.username }}</td>
+            <td>{{ req.date|date:"d M Y H:i" }}</td>
+            <td>
+              <a href="{% url 'laboratory:detail' req.pk %}" class="btn btn-sm btn-outline-primary">View</a>
+              {% if req.status != 'completed' and req.status != 'reviewed' %}
+              <a href="{% url 'laboratory:update_result' req.pk %}" class="btn btn-sm btn-outline-success">Results</a>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-center text-muted py-4">No lab requests found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="cl-card-footer">{% include "includes/pagination.html" %}</div>
+</div>
+{% endblock %}

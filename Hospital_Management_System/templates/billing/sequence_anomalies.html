@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Sequence Anomalies — {{ clinic_name }}{% endblock %}
+{% block header_title %}Sequence Anomalies{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Sequence Anomalies</h1></div>
+  <a href="{% url 'billing:index' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+
+<div class="cl-card">
+  <div class="cl-card-header">
+    <h2 class="cl-card-title">Detected Anomalies</h2>
+    <div class="ms-auto d-flex gap-1">
+      <a href="?status=open" class="badge {% if status_filter == 'open' %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none">Open</a>
+      <a href="?status=resolved" class="badge {% if status_filter == 'resolved' %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none">Resolved</a>
+      <a href="?status=all" class="badge {% if status_filter == 'all' %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none">All</a>
+    </div>
+  </div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Date</th><th>Type</th><th>Expected</th><th>Found</th><th>Description</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for a in anomalies %}
+          <tr>
+            <td>{{ a.anomaly_date|date:"d M Y" }}</td>
+            <td><span class="badge bg-info">{{ a.get_anomaly_type_display }}</span></td>
+            <td>{{ a.expected_value|default:"—" }}</td>
+            <td>{{ a.found_value|default:"—" }}</td>
+            <td>{{ a.description|truncatechars:80 }}</td>
+            <td>{% if a.is_resolved %}<span class="badge bg-success">Resolved</span>{% else %}<span class="badge bg-danger">Open</span>{% endif %}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-center text-muted py-4">No anomalies detected.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

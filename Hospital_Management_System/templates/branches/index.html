@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Branches — {{ clinic_name }}{% endblock %}
+{% block header_title %}Branches{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Branches</h1></div>
+</div>
+
+<div class="cl-card">
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Name</th><th>Location</th><th>Contact</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for b in branches %}
+          <tr>
+            <td><strong>{{ b.branch_name }}</strong></td>
+            <td>{{ b.location|default:"—" }}</td>
+            <td>{{ b.contact|default:"—" }}</td>
+            <td>{% if b.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="text-center text-muted py-4">No branches found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="cl-card-footer">{% include "includes/pagination.html" %}</div>
+</div>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Admissions — {{ clinic_name }}{% endblock %}
+{% block header_title %}Admissions{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Admissions</h1></div>
+  <a href="{% url 'admission:create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> New Admission</a>
+</div>
+
+<div class="cl-card">
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Patient</th><th>Doctor</th><th>Ward</th><th>Admitted</th><th>Discharged</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for a in admissions %}
+          <tr>
+            <td><a href="{% url 'patients:detail' a.patient.pk %}">{{ a.patient.first_name }} {{ a.patient.last_name }}</a></td>
+            <td>{{ a.doctor|default:"—" }}</td>
+            <td>{{ a.ward|default:"—" }}</td>
+            <td>{{ a.admission_date|date:"d M Y H:i" }}</td>
+            <td>{% if a.discharge_date %}{{ a.discharge_date|date:"d M Y H:i" }}{% else %}<span class="badge bg-success">Active</span>{% endif %}</td>
+            <td><a href="{% url 'admission:detail' a.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-center text-muted py-4">No admissions found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="cl-card-footer">{% include "includes/pagination.html" %}</div>
+</div>
+{% endblock %}

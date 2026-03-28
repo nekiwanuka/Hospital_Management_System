@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Consultation — {{ clinic_name }}{% endblock %}
+{% block header_title %}Consultation{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Doctor Workbench</h1><p>Patient consultation and clinical workflow</p></div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'consultation:start_next' %}" class="btn btn-primary btn-sm"><i class="bi bi-skip-forward"></i> Next Patient</a>
+  </div>
+</div>
+
+<!-- Panel tabs -->
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item"><a class="nav-link {% if selected_panel == 'all' %}active{% endif %}" href="?panel=all">All</a></li>
+  <li class="nav-item"><a class="nav-link {% if selected_panel == 'active' %}active{% endif %}" href="?panel=active">Active Cases</a></li>
+  <li class="nav-item"><a class="nav-link {% if selected_panel == 'admitted' %}active{% endif %}" href="?panel=admitted">Admitted</a></li>
+  <li class="nav-item"><a class="nav-link {% if selected_panel == 'archive' %}active{% endif %}" href="?panel=archive">Archive</a></li>
+</ul>
+
+{% if selected_panel == 'all' or selected_panel == 'active' %}
+<!-- Waiting Queue -->
+{% if waiting_queue %}
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-hourglass-split"></i> Waiting Queue</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Patient</th><th>Check-in</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for v in waiting_queue %}
+          <tr>
+            <td><strong>{{ v.patient.first_name }} {{ v.patient.last_name }}</strong></td>
+            <td>{{ v.check_in_time|date:"d M H:i" }}</td>
+            <td><span class="badge bg-warning text-dark">{{ v.get_status_display }}</span></td>
+            <td><a href="{% url 'consultation:start' v.pk %}?panel={{ selected_panel }}" class="btn btn-sm btn-primary"><i class="bi bi-play"></i> Start</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Active Cases -->
+{% if active_cases %}
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-activity"></i> Active Cases</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Patient</th><th>Status</th><th>Lab</th><th>Rad</th><th>Rx</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for v in active_cases %}
+          <tr>
+            <td><strong>{{ v.patient.first_name }} {{ v.patient.last_name }}</strong></td>
+            <td><span class="badge bg-info">{{ v.get_status_display }}</span></td>
+            <td>{% if v.waiting_lab_results %}<i class="bi bi-clock text-warning"></i>{% else %}<i class="bi bi-check text-success"></i>{% endif %}</td>
+            <td>{% if v.waiting_radiology_results %}<i class="bi bi-clock text-warning"></i>{% else %}<i class="bi bi-check text-success"></i>{% endif %}</td>
+            <td>{% if v.waiting_pharmacy_results %}<i class="bi bi-clock text-warning"></i>{% else %}<i class="bi bi-check text-success"></i>{% endif %}</td>
+            <td><a href="{% url 'consultation:start' v.pk %}?panel={{ selected_panel }}" class="btn btn-sm btn-outline-primary">Resume</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+
+{% if selected_panel == 'all' or selected_panel == 'admitted' %}
+{% if admitted_patients %}
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-building"></i> Admitted Patients</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Patient</th><th>Check-in</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for v in admitted_patients %}
+          <tr>
+            <td><strong>{{ v.patient.first_name }} {{ v.patient.last_name }}</strong></td>
+            <td>{{ v.check_in_time|date:"d M Y H:i" }}</td>
+            <td><a href="{% url 'consultation:start' v.pk %}?panel={{ selected_panel }}" class="btn btn-sm btn-outline-primary">View</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+
+{% if selected_panel == 'all' or selected_panel == 'archive' %}
+{% if cleared_archive %}
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-archive"></i> Cleared / Completed</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Patient</th><th>Check-out</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for v in cleared_archive %}
+          <tr>
+            <td>{{ v.patient.first_name }} {{ v.patient.last_name }}</td>
+            <td>{{ v.check_out_time|date:"d M Y H:i" }}</td>
+            <td><a href="{% url 'consultation:start' v.pk %}?panel={{ selected_panel }}" class="btn btn-sm btn-outline-secondary">Review</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+
+{% if consultations %}
+<div class="cl-card">
+  <div class="cl-card-header"><h2 class="cl-card-title">Recent Consultations</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Date</th><th>Patient</th><th>Diagnosis</th><th>Doctor</th></tr></thead>
+        <tbody>
+          {% for c in consultations %}
+          <tr><td>{{ c.created_at|date:"d M Y" }}</td><td>{{ c.patient }}</td><td>{{ c.diagnosis|truncatechars:60|default:"—" }}</td><td>{{ c.doctor }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

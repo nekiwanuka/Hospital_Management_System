@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Approval Requests — {{ clinic_name }}{% endblock %}
+{% block header_title %}Approval Requests{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Approval Requests</h1></div>
+  <a href="{% url 'billing:index' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+
+<div class="cl-card">
+  <div class="cl-card-header">
+    <h2 class="cl-card-title">Requests</h2>
+    <div class="ms-auto d-flex gap-1">
+      <a href="?status=pending" class="badge {% if status_filter == 'pending' %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none">Pending</a>
+      <a href="?status=approved" class="badge {% if status_filter == 'approved' %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none">Approved</a>
+      <a href="?status=rejected" class="badge {% if status_filter == 'rejected' %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none">Rejected</a>
+      <a href="?status=all" class="badge {% if status_filter == 'all' %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none">All</a>
+    </div>
+  </div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Type</th><th>Invoice / Shift</th><th>Requested By</th><th>Reason</th><th>Status</th><th>Date</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for ar in approval_requests %}
+          <tr>
+            <td><span class="badge bg-info">{{ ar.get_approval_type_display }}</span></td>
+            <td>{% if ar.invoice %}{{ ar.invoice.invoice_number }}{% elif ar.cashier_shift %}Shift #{{ ar.cashier_shift.pk }}{% else %}—{% endif %}</td>
+            <td>{{ ar.requested_by.get_full_name|default:ar.requested_by.username }}</td>
+            <td>{{ ar.reason|truncatechars:60 }}</td>
+            <td><span class="badge bg-{% if ar.status == 'approved' %}success{% elif ar.status == 'rejected' %}danger{% elif ar.status == 'pending' %}warning{% else %}secondary{% endif %}">{{ ar.get_status_display }}</span></td>
+            <td>{{ ar.created_at|date:"d M Y H:i" }}</td>
+            <td>
+              {% if ar.status == 'pending' %}
+              <a href="{% url 'billing:review_approval_request' ar.pk %}" class="btn btn-sm btn-outline-primary">Review</a>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-center text-muted py-4">No approval requests found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

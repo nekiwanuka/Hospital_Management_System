@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Emergency — {{ clinic_name }}{% endblock %}
+{% block header_title %}Emergency{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Emergency Cases</h1></div>
+  <a href="{% url 'emergency:create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> New Case</a>
+</div>
+
+<div class="cl-card">
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Patient</th><th>Severity</th><th>Chief Complaint</th><th>Date</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for case in cases %}
+          <tr>
+            <td>{{ case.patient.first_name }} {{ case.patient.last_name }}</td>
+            <td><span class="badge bg-{% if case.severity == 'critical' %}danger{% elif case.severity == 'high' %}warning{% else %}info{% endif %}">{{ case.get_severity_display }}</span></td>
+            <td>{{ case.chief_complaint|truncatechars:60|default:"—" }}</td>
+            <td>{{ case.created_at|date:"d M Y H:i" }}</td>
+            <td><span class="badge bg-secondary">{{ case.get_status_display }}</span></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-center text-muted py-4">No emergency cases.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="cl-card-footer">{% include "includes/pagination.html" %}</div>
+</div>
+{% endblock %}

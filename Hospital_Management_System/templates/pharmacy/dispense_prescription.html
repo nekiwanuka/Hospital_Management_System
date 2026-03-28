@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }} — {{ clinic_name }}{% endblock %}
+{% block header_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>{{ page_title }}</h1></div>
+  <a href="{% url 'pharmacy:index' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+
+<!-- Visit Selection -->
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title">Select Visit</h2></div>
+  <div class="cl-card-body">
+    <form method="get" class="d-flex gap-2 align-items-end">
+      {% for field in visit_form %}
+      <div class="flex-grow-1">
+        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+        {{ field }}
+      </div>
+      {% endfor %}
+      <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search"></i> Load</button>
+    </form>
+  </div>
+</div>
+
+{% if selected_visit %}
+<div class="alert alert-info">
+  <strong>Patient:</strong> {{ selected_visit.patient.first_name }} {{ selected_visit.patient.last_name }} — Visit {{ selected_visit.visit_number }}
+</div>
+
+{% if pending_requests %}
+<div class="cl-card">
+  <div class="cl-card-header"><h2 class="cl-card-title">Pending Prescriptions</h2></div>
+  <div class="cl-card-body">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="visit_id" value="{{ selected_visit.pk }}">
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th><input type="checkbox" id="select-all"></th><th>Medicine</th><th>Qty</th><th>Prescribed By</th><th>Payment</th><th>Notes</th></tr></thead>
+          <tbody>
+            {% for pr in pending_requests %}
+            <tr>
+              <td><input type="checkbox" name="dispense_ids" value="{{ pr.pk }}" {% if pr.payment_cleared %}checked{% endif %}></td>
+              <td>{{ pr.medicine.name }}</td>
+              <td>{{ pr.quantity }}</td>
+              <td>{{ pr.requested_by.get_full_name|default:pr.requested_by.username }}</td>
+              <td>{% if pr.payment_cleared %}<span class="badge bg-success">Cleared</span>{% else %}<span class="badge bg-danger">Pending</span>{% endif %}</td>
+              <td>{{ pr.notes|truncatechars:40|default:"—" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <button type="submit" class="btn btn-primary"><i class="bi bi-capsule"></i> Dispense Selected</button>
+    </form>
+  </div>
+</div>
+{% else %}
+<div class="alert alert-warning">No pending prescriptions for this visit.</div>
+{% endif %}
+{% endif %}
+
+<script>
+document.getElementById('select-all')?.addEventListener('change',function(){
+  document.querySelectorAll('input[name="dispense_ids"]').forEach(cb=>cb.checked=this.checked);
+});
+</script>
+{% endblock %}

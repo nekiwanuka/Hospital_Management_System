@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Record Consumables — {{ clinic_name }}{% endblock %}
+{% block header_title %}Record Consumables{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div>
+    <h1>Record Lab Consumables</h1>
+    <p>{{ lab_request.patient.first_name }} {{ lab_request.patient.last_name }} — {{ lab_request.test_type }}</p>
+  </div>
+  <a href="{% url 'laboratory:detail' lab_request.pk %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+
+{% if consumption_rows %}
+<div class="cl-card mb-3">
+  <div class="cl-card-header"><h2 class="cl-card-title">Previously Recorded</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Item</th><th>Qty</th><th>Unit Cost</th><th>Total</th></tr></thead>
+        <tbody>
+          {% for row in consumption_rows %}<tr><td>{{ row.item_name }}</td><td>{{ row.quantity }}</td><td>{{ row.unit_cost }}</td><td>{{ row.total_cost }}</td></tr>{% endfor %}
+          <tr class="table-secondary"><td colspan="3"><strong>Total Cost</strong></td><td><strong>{{ consumption_total_cost }}</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="cl-card">
+  <div class="cl-card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {{ formset.management_form }}
+      {% for form in formset %}
+      <div class="row g-2 mb-2 align-items-end">
+        {% for field in form %}
+        <div class="col"><label class="form-label">{{ field.label }}</label>{{ field }}</div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+      {% if formset.non_form_errors %}<div class="alert alert-danger">{% for e in formset.non_form_errors %}{{ e }}<br>{% endfor %}</div>{% endif %}
+      <button type="submit" class="btn btn-primary mt-3"><i class="bi bi-check-lg"></i> Save Consumables</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

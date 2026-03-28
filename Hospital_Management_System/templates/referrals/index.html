@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Referrals — {{ clinic_name }}{% endblock %}
+{% block header_title %}Referrals{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Referrals</h1></div>
+  <a href="{% url 'referrals:create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> New Referral</a>
+</div>
+
+<div class="cl-card">
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Patient</th><th>Facility</th><th>Referring Doctor</th><th>Date</th><th>Reason</th></tr></thead>
+        <tbody>
+          {% for r in referrals %}
+          <tr>
+            <td>{{ r.patient.first_name }} {{ r.patient.last_name }}</td>
+            <td>{{ r.facility_name }}</td>
+            <td>{{ r.referring_doctor|default:"—" }}</td>
+            <td>{{ r.referral_date|date:"d M Y" }}</td>
+            <td>{{ r.reason|truncatechars:60|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-center text-muted py-4">No referrals found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="cl-card-footer">{% include "includes/pagination.html" %}</div>
+</div>
+{% endblock %}

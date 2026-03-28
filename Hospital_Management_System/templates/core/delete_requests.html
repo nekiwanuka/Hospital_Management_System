@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Delete Requests — {{ clinic_name }}{% endblock %}
+{% block header_title %}Delete Requests{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Delete Requests</h1><p>Review and manage record deletion requests</p></div>
+  <div>
+    <form method="get" class="d-flex gap-2">
+      <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">All</option>
+        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+        <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+        <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+        <option value="deleted" {% if status_filter == 'deleted' %}selected{% endif %}>Deleted</option>
+      </select>
+    </form>
+  </div>
+</div>
+
+<div class="cl-card">
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr><th>Date</th><th>Type</th><th>Record</th><th>Requested By</th><th>Status</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          {% for dr in delete_requests %}
+          <tr>
+            <td>{{ dr.created_at|date:"d M Y H:i" }}</td>
+            <td>{{ dr.object_type }}</td>
+            <td>{{ dr.object_label|default:dr.object_id }}</td>
+            <td>{{ dr.requested_by }}</td>
+            <td>
+              {% if dr.status == 'pending' %}<span class="badge bg-warning text-dark">Pending</span>
+              {% elif dr.status == 'approved' %}<span class="badge bg-success">Approved</span>
+              {% elif dr.status == 'rejected' %}<span class="badge bg-danger">Rejected</span>
+              {% else %}<span class="badge bg-secondary">{{ dr.get_status_display }}</span>{% endif %}
+            </td>
+            <td>
+              {% if dr.status == 'pending' or dr.status == 'approved' %}
+              <a href="{% url 'core:review_delete_request' dr.pk %}" class="btn btn-sm btn-outline-primary">Review</a>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-center text-muted py-4">No delete requests found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

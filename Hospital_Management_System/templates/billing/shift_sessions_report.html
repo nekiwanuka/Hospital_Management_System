@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Shift Sessions — {{ clinic_name }}{% endblock %}
+{% block header_title %}Shift Sessions{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Shift Sessions Report</h1></div>
+  <div class="d-flex gap-2">
+    <a href="?export=csv&branch={{ branch_filter }}&status={{ status_filter }}&start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-outline-success btn-sm"><i class="bi bi-download"></i> CSV</a>
+    <a href="{% url 'billing:index' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+  </div>
+</div>
+
+<div class="cl-card mb-3">
+  <div class="cl-card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label">Branch</label>
+        <select name="branch" class="form-select form-select-sm">
+          <option value="">All Branches</option>
+          {% for b in branches %}<option value="{{ b.pk }}" {% if branch_filter == b.pk|stringformat:"d" %}selected{% endif %}>{{ b.branch_name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Status</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All</option>
+          <option value="open" {% if status_filter == 'open' %}selected{% endif %}>Open</option>
+          <option value="pending_approval" {% if status_filter == 'pending_approval' %}selected{% endif %}>Pending</option>
+          <option value="closed" {% if status_filter == 'closed' %}selected{% endif %}>Closed</option>
+        </select>
+      </div>
+      <div class="col-md-2"><label class="form-label">From</label><input type="date" name="start_date" value="{{ start_date }}" class="form-control form-control-sm"></div>
+      <div class="col-md-2"><label class="form-label">To</label><input type="date" name="end_date" value="{{ end_date }}" class="form-control form-control-sm"></div>
+      <div class="col-md-2"><button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel"></i> Filter</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="cl-card">
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>ID</th><th>Branch</th><th>Opened By</th><th>Opened</th><th>Closed</th><th>Status</th><th>Float</th><th>Expected</th><th>Declared</th><th>Variance</th></tr></thead>
+        <tbody>
+          {% for s in sessions %}
+          <tr>
+            <td>{{ s.pk }}</td>
+            <td>{{ s.branch.branch_name }}</td>
+            <td>{{ s.opened_by.get_full_name|default:s.opened_by.username }}</td>
+            <td>{{ s.created_at|date:"d M H:i" }}</td>
+            <td>{% if s.closed_at %}{{ s.closed_at|date:"d M H:i" }}{% else %}—{% endif %}</td>
+            <td><span class="badge bg-{% if s.status == 'open' %}success{% elif s.status == 'pending_approval' %}warning{% else %}secondary{% endif %}">{{ s.get_status_display }}</span></td>
+            <td>{{ s.opening_float }}</td>
+            <td>{{ s.expected_cash_total }}</td>
+            <td>{{ s.declared_cash_total|default:"—" }}</td>
+            <td>{% if s.variance_amount %}<span class="{% if s.variance_amount < 0 %}text-danger{% else %}text-success{% endif %}">{{ s.variance_amount }}</span>{% else %}—{% endif %}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="10" class="text-center text-muted py-4">No shift sessions found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="cl-card-footer">{% include "includes/pagination.html" %}</div>
+</div>
+{% endblock %}

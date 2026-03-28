@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }} — {{ clinic_name }}{% endblock %}
+{% block header_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>{{ page_title }}</h1></div>
+  <a href="{% url 'admission:index' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+
+<div class="row g-3">
+  <div class="{% if patient_history %}col-lg-7{% else %}col-12{% endif %}">
+    <div class="cl-card">
+      <div class="cl-card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {% for field in form %}
+          <div class="mb-3">
+            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+            {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+          </div>
+          {% endfor %}
+          {% if form.non_field_errors %}<div class="alert alert-danger">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>{% endif %}
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> {{ submit_label }}</button>
+            <a href="{% url 'admission:index' %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {% if patient_history %}
+  <div class="col-lg-5">
+    <div class="cl-card mb-3">
+      <div class="cl-card-header"><h2 class="cl-card-title">Patient History — {{ patient_history.patient.first_name }} {{ patient_history.patient.last_name }}</h2></div>
+      <div class="cl-card-body">
+        {% if patient_history.admissions %}
+        <h6>Previous Admissions</h6>
+        <ul class="list-unstyled">{% for a in patient_history.admissions %}<li>{{ a.admission_date|date:"d M Y" }} — {{ a.ward|default:"—" }} {% if a.discharge_date %}<span class="badge bg-secondary">Discharged</span>{% else %}<span class="badge bg-success">Active</span>{% endif %}</li>{% endfor %}</ul>
+        {% endif %}
+
+        {% if patient_history.consultations %}
+        <h6>Recent Consultations</h6>
+        <ul class="list-unstyled">{% for c in patient_history.consultations %}<li>{{ c.created_at|date:"d M Y" }} — {{ c.diagnosis|truncatechars:50|default:"—" }}</li>{% endfor %}</ul>
+        {% endif %}
+
+        {% if patient_history.triage_records %}
+        <h6>Recent Triage</h6>
+        <ul class="list-unstyled">{% for t in patient_history.triage_records %}<li>{{ t.date|date:"d M Y" }} — BP: {{ t.blood_pressure|default:"—" }}, Temp: {{ t.temperature|default:"—" }}</li>{% endfor %}</ul>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

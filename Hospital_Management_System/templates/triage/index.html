@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Triage — {{ clinic_name }}{% endblock %}
+{% block header_title %}Triage{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Triage</h1><p>Vital signs and patient assessment</p></div>
+</div>
+
+{% if eligible_visits %}
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title">Eligible Visits (Waiting Triage)</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Visit #</th><th>Patient</th><th>Check-in</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for v in eligible_visits %}
+          <tr>
+            <td>{{ v.visit_number }}</td>
+            <td>{{ v.patient.first_name }} {{ v.patient.last_name }}</td>
+            <td>{{ v.check_in_time|date:"d M Y H:i" }}</td>
+            <td><a href="{% url 'triage:create' %}?visit={{ v.pk }}" class="btn btn-sm btn-primary">Triage</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="cl-card">
+  <div class="cl-card-header"><h2 class="cl-card-title">Triage Records</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Date</th><th>Patient</th><th>BP</th><th>Temp</th><th>Pulse</th><th>Outcome</th><th>Officer</th></tr></thead>
+        <tbody>
+          {% for r in records %}
+          <tr>
+            <td>{{ r.date|date:"d M Y H:i" }}</td>
+            <td>{{ r.patient.first_name }} {{ r.patient.last_name }}</td>
+            <td>{{ r.blood_pressure|default:"—" }}</td>
+            <td>{{ r.temperature|default:"—" }}</td>
+            <td>{{ r.pulse_rate|default:"—" }}</td>
+            <td><span class="badge bg-secondary">{{ r.get_outcome_display|default:"—" }}</span></td>
+            <td>{{ r.triage_officer|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-center text-muted py-4">No triage records found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="cl-card-footer">{% include "includes/pagination.html" %}</div>
+</div>
+{% endblock %}

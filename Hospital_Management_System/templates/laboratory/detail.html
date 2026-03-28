@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Lab Request — {{ lab_request.test_type }} — {{ clinic_name }}{% endblock %}
+{% block header_title %}Lab Request Detail{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div>
+    <h1>{{ lab_request.test_type }}</h1>
+    <p>{{ lab_request.patient.first_name }} {{ lab_request.patient.last_name }}</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'laboratory:print_result' lab_request.pk %}" class="btn btn-outline-secondary btn-sm" target="_blank"><i class="bi bi-printer"></i> Print</a>
+    {% if payment_cleared and not consumables_recorded %}
+    <a href="{% url 'laboratory:record_consumables' lab_request.pk %}" class="btn btn-outline-success btn-sm"><i class="bi bi-box"></i> Record Consumables</a>
+    {% endif %}
+    {% if can_correct_consumables and consumables_recorded %}
+    <a href="{% url 'laboratory:correct_consumables' lab_request.pk %}" class="btn btn-outline-warning btn-sm"><i class="bi bi-pencil"></i> Correct Consumables</a>
+    {% endif %}
+    {% if payment_cleared and lab_request.status != 'completed' and lab_request.status != 'reviewed' and consumables_recorded %}
+    <a href="{% url 'laboratory:update_result' lab_request.pk %}" class="btn btn-primary btn-sm"><i class="bi bi-upload"></i> Upload Results</a>
+    {% endif %}
+    <a href="{% url 'laboratory:index' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="cl-card">
+      <div class="cl-card-header"><h2 class="cl-card-title">Request Info</h2></div>
+      <div class="cl-card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-5">Patient</dt><dd class="col-sm-7"><a href="{% url 'patients:detail' lab_request.patient.pk %}">{{ lab_request.patient.first_name }} {{ lab_request.patient.last_name }}</a></dd>
+          <dt class="col-sm-5">Test Type</dt><dd class="col-sm-7">{{ lab_request.test_type }}</dd>
+          <dt class="col-sm-5">Status</dt><dd class="col-sm-7"><span class="badge bg-{% if lab_request.status == 'completed' %}success{% elif lab_request.status == 'reviewed' %}info{% else %}warning{% endif %}">{{ lab_request.get_status_display }}</span></dd>
+          <dt class="col-sm-5">Requested By</dt><dd class="col-sm-7">{{ lab_request.requested_by.get_full_name|default:lab_request.requested_by.username }}</dd>
+          <dt class="col-sm-5">Technician</dt><dd class="col-sm-7">{{ lab_request.technician|default:"—" }}</dd>
+          <dt class="col-sm-5">Date</dt><dd class="col-sm-7">{{ lab_request.date|date:"d M Y H:i" }}</dd>
+          <dt class="col-sm-5">Sample Collected</dt><dd class="col-sm-7">{% if lab_request.sample_collected %}<i class="bi bi-check-lg text-success"></i>{% else %}<i class="bi bi-x-lg text-danger"></i>{% endif %}</dd>
+          <dt class="col-sm-5">Payment</dt><dd class="col-sm-7">{% if payment_cleared %}<span class="badge bg-success">Cleared</span>{% else %}<span class="badge bg-danger">Pending</span>{% endif %}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if lab_request.results %}
+<div class="cl-card mb-3">
+  <div class="cl-card-header"><h2 class="cl-card-title">Results</h2></div>
+  <div class="cl-card-body"><pre style="white-space:pre-wrap" class="mb-0">{{ lab_request.results }}</pre></div>
+</div>
+{% endif %}
+
+{% if lab_request.comments %}
+<div class="cl-card mb-3">
+  <div class="cl-card-header"><h2 class="cl-card-title">Remarks</h2></div>
+  <div class="cl-card-body"><p class="mb-0">{{ lab_request.comments }}</p></div>
+</div>
+{% endif %}
+
+{% if consumption_rows %}
+<div class="cl-card">
+  <div class="cl-card-header"><h2 class="cl-card-title">Consumables</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Item</th><th>Qty</th><th>Unit Cost</th><th>Total</th></tr></thead>
+        <tbody>
+          {% for row in consumption_rows %}<tr><td>{{ row.item_name }}</td><td>{{ row.quantity }}</td><td>{{ row.unit_cost }}</td><td>{{ row.total_cost }}</td></tr>{% endfor %}
+          <tr class="table-secondary"><td colspan="3"><strong>Total Cost</strong></td><td><strong>{{ consumption_total_cost }}</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

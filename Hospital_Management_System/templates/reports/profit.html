@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Profit Report — {{ clinic_name }}{% endblock %}
+{% block header_title %}Profit Report{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Gross Profit Report</h1></div>
+  <a href="{% url 'reports:index' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Reports</a>
+</div>
+
+<!-- Filters -->
+<div class="cl-card mb-4">
+  <div class="cl-card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-2"><label class="form-label">From</label><input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+      <div class="col-md-2"><label class="form-label">To</label><input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+      <div class="col-md-3">
+        <label class="form-label">Branch</label>
+        <select name="branch" class="form-select form-select-sm">
+          <option value="">All Branches</option>
+          {% for b in branch_options %}<option value="{{ b.pk }}" {% if selected_branch == b.pk %}selected{% endif %}>{{ b.branch_name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Department</label>
+        <select name="department" class="form-select form-select-sm">
+          <option value="">All Departments</option>
+          {% for key, label in gross_profit_department_options.items %}<option value="{{ key }}" {% if selected_department == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2"><button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-filter"></i> Filter</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-4"><div class="cl-stat"><div class="cl-stat-icon success"><i class="bi bi-cash-stack"></i></div><div class="cl-stat-label">Total Sales</div><div class="cl-stat-value">{{ totals.total_sales }}</div></div></div>
+  <div class="col-sm-4"><div class="cl-stat"><div class="cl-stat-icon warning"><i class="bi bi-box-seam"></i></div><div class="cl-stat-label">Total Cost</div><div class="cl-stat-value">{{ totals.total_cost }}</div></div></div>
+  <div class="col-sm-4"><div class="cl-stat"><div class="cl-stat-icon primary"><i class="bi bi-graph-up-arrow"></i></div><div class="cl-stat-label">Gross Profit</div><div class="cl-stat-value">{{ totals.total_profit }}</div></div></div>
+</div>
+
+<!-- By Department -->
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title">By Department</h2></div>
+  <div class="cl-card-body p-0">
+    <table class="table table-sm">
+      <thead><tr><th>Department</th><th>Transactions</th><th>Sales</th><th>Cost</th><th>Profit</th></tr></thead>
+      <tbody>
+        {% for dr in department_rows %}
+        <tr><td>{{ dr.department|title }}</td><td>{{ dr.transactions }}</td><td>{{ dr.sales }}</td><td>{{ dr.cost }}</td><td>{{ dr.profit }}</td></tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-muted py-4">No data.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- By Service Type -->
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title">By Service Type</h2></div>
+  <div class="cl-card-body p-0">
+    <table class="table table-sm">
+      <thead><tr><th>Service</th><th>Transactions</th><th>Sales</th><th>Cost</th><th>Profit</th></tr></thead>
+      <tbody>
+        {% for sr in service_rows %}
+        <tr><td>{{ sr.service_type }}</td><td>{{ sr.transactions }}</td><td>{{ sr.sales }}</td><td>{{ sr.cost }}</td><td>{{ sr.profit }}</td></tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-muted py-4">No data.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Low Stock Alerts -->
+{% if low_stock_alerts %}
+<div class="cl-card">
+  <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-exclamation-triangle text-warning"></i> Low Stock Alerts</h2></div>
+  <div class="cl-card-body p-0">
+    <table class="table table-sm">
+      <thead><tr><th>Item</th><th>Department</th><th>Qty On Hand</th><th>Reorder Level</th></tr></thead>
+      <tbody>{% for item in low_stock_alerts %}<tr><td>{{ item.item_name }}</td><td>{{ item.mapped_department|title }}</td><td class="text-danger"><strong>{{ item.total_quantity }}</strong></td><td>{{ item.reorder_level }}</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

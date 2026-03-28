@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Nurse Station — {{ clinic_name }}{% endblock %}
+{% block header_title %}Nurse Station{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Nurse Station</h1><p>Active admissions and nursing notes</p></div>
+</div>
+
+{% if my_patients %}
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title">My Patients</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Patient</th><th>Ward</th><th>Doctor</th><th>Admitted</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for a in my_patients %}
+          <tr>
+            <td><a href="{% url 'patients:detail' a.patient.pk %}">{{ a.patient.first_name }} {{ a.patient.last_name }}</a></td>
+            <td>{{ a.ward|default:"—" }}</td>
+            <td>{{ a.doctor|default:"—" }}</td>
+            <td>{{ a.admission_date|date:"d M Y" }}</td>
+            <td><a href="{% url 'admission:detail' a.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if other_patients %}
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title">Other Patients</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Patient</th><th>Ward</th><th>Doctor</th><th>Nurse</th><th>Admitted</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for a in other_patients %}
+          <tr>
+            <td><a href="{% url 'patients:detail' a.patient.pk %}">{{ a.patient.first_name }} {{ a.patient.last_name }}</a></td>
+            <td>{{ a.ward|default:"—" }}</td>
+            <td>{{ a.doctor|default:"—" }}</td>
+            <td>{{ a.nurse|default:"—" }}</td>
+            <td>{{ a.admission_date|date:"d M Y" }}</td>
+            <td><a href="{% url 'admission:detail' a.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if recent_notes %}
+<div class="cl-card">
+  <div class="cl-card-header"><h2 class="cl-card-title">Recent Nursing Notes</h2></div>
+  <div class="cl-card-body">
+    {% for note in recent_notes %}
+    <div class="border-bottom pb-2 mb-2">
+      <div class="d-flex justify-content-between">
+        <div><strong>{{ note.admission.patient.first_name }} {{ note.admission.patient.last_name }}</strong> — {{ note.nurse.get_full_name|default:note.nurse.username }}</div>
+        <small class="text-muted">{{ note.created_at|date:"d M Y H:i" }}</small>
+      </div>
+      <p class="mb-0">{{ note.note|truncatechars:150 }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}{{ patient.first_name }} {{ patient.last_name }} — {{ clinic_name }}{% endblock %}
+{% block header_title %}Patient Detail{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div>
+    <h1>{{ patient.first_name }} {{ patient.last_name }}</h1>
+    <p>{{ patient.patient_id }} &bull; {{ patient.get_gender_display|default:"—" }} &bull; DOB: {{ patient.date_of_birth|date:"d M Y"|default:"—" }}</p>
+  </div>
+  <div class="d-flex gap-2">
+    {% if return_to %}<a href="{{ return_to }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>{% endif %}
+    {% if can_edit_patient %}<a href="{% url 'patients:edit' patient.pk %}" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> Edit</a>{% endif %}
+    {% if can_initiate_visit %}<a href="{% url 'visits:create' %}?patient={{ patient.pk }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Visit</a>{% endif %}
+  </div>
+</div>
+
+{% if not history_only %}
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="cl-card">
+      <div class="cl-card-header"><h2 class="cl-card-title">Demographics</h2></div>
+      <div class="cl-card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-4">Phone</dt><dd class="col-sm-8">{{ patient.phone|default:"—" }}</dd>
+          <dt class="col-sm-4">Address</dt><dd class="col-sm-8">{{ patient.address|default:"—" }}</dd>
+          <dt class="col-sm-4">Blood Group</dt><dd class="col-sm-8">{{ patient.blood_group|default:"—" }}</dd>
+          <dt class="col-sm-4">Allergies</dt><dd class="col-sm-8">{{ patient.allergies|default:"None recorded" }}</dd>
+          <dt class="col-sm-4">Next of Kin</dt><dd class="col-sm-8">{{ patient.next_of_kin|default:"—" }} {% if patient.next_of_kin_phone %}({{ patient.next_of_kin_phone }}){% endif %}</dd>
+          <dt class="col-sm-4">Branch</dt><dd class="col-sm-8">{{ patient.branch|default:"—" }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Medical History -->
+{% if medical_history.triage_records %}
+<div class="cl-card mb-3">
+  <div class="cl-card-header"><h2 class="cl-card-title">Triage Records</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Date</th><th>BP</th><th>Temperature</th><th>Pulse</th><th>Weight</th><th>Outcome</th></tr></thead>
+        <tbody>
+          {% for r in medical_history.triage_records %}
+          <tr><td>{{ r.date|date:"d M Y H:i" }}</td><td>{{ r.blood_pressure|default:"—" }}</td><td>{{ r.temperature|default:"—" }}</td><td>{{ r.pulse_rate|default:"—" }}</td><td>{{ r.weight|default:"—" }}</td><td><span class="badge bg-secondary">{{ r.get_outcome_display|default:"—" }}</span></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if medical_history.consultations %}
+<div class="cl-card mb-3">
+  <div class="cl-card-header"><h2 class="cl-card-title">Consultations</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Date</th><th>Doctor</th><th>Diagnosis</th><th>Follow-up</th></tr></thead>
+        <tbody>
+          {% for c in medical_history.consultations %}
+          <tr><td>{{ c.created_at|date:"d M Y" }}</td><td>{{ c.doctor.get_full_name|default:c.doctor.username }}</td><td>{{ c.diagnosis|truncatechars:80|default:"—" }}</td><td>{{ c.follow_up_date|date:"d M Y"|default:"—" }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if medical_history.lab_requests %}
+<div class="cl-card mb-3">
+  <div class="cl-card-header"><h2 class="cl-card-title">Lab Results</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Date</th><th>Test</th><th>Status</th><th>Results</th></tr></thead>
+        <tbody>
+          {% for l in medical_history.lab_requests %}
+          <tr><td>{{ l.date|date:"d M Y" }}</td><td>{{ l.test_type }}</td><td><span class="badge bg-{% if l.status == 'completed' or l.status == 'reviewed' %}success{% elif l.status == 'processing' %}info{% else %}warning{% endif %}">{{ l.get_status_display }}</span></td><td>{{ l.results|truncatechars:60|default:"—" }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if medical_history.radiology_requests %}
+<div class="cl-card mb-3">
+  <div class="cl-card-header"><h2 class="cl-card-title">Radiology</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Date</th><th>Type</th><th>Status</th><th>Priority</th></tr></thead>
+        <tbody>
+          {% for r in medical_history.radiology_requests %}
+          <tr><td>{{ r.date_requested|date:"d M Y" }}</td><td>{{ r.get_imaging_type_display }}</td><td><span class="badge bg-secondary">{{ r.get_status_display }}</span></td><td>{{ r.get_priority_display|default:"—" }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if medical_history.invoices %}
+<div class="cl-card mb-3">
+  <div class="cl-card-header"><h2 class="cl-card-title">Billing History</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Date</th><th>Invoice #</th><th>Total</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for inv in medical_history.invoices %}
+          <tr><td>{{ inv.created_at|date:"d M Y" }}</td><td><a href="{% url 'billing:detail' inv.pk %}">{{ inv.invoice_number }}</a></td><td>{{ inv.total_amount }}</td><td><span class="badge bg-{% if inv.payment_status == 'paid' %}success{% elif inv.payment_status == 'partial' %}warning{% else %}danger{% endif %}">{{ inv.get_payment_status_display }}</span></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if medical_history.admissions %}
+<div class="cl-card mb-3">
+  <div class="cl-card-header"><h2 class="cl-card-title">Admissions</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Date</th><th>Ward</th><th>Reason</th><th>Discharge</th></tr></thead>
+        <tbody>
+          {% for a in medical_history.admissions %}
+          <tr><td>{{ a.admission_date|date:"d M Y" }}</td><td>{{ a.ward|default:"—" }}</td><td>{{ a.reason|truncatechars:60|default:"—" }}</td><td>{{ a.discharge_date|date:"d M Y"|default:"Current" }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if medical_history.referrals %}
+<div class="cl-card mb-3">
+  <div class="cl-card-header"><h2 class="cl-card-title">Referrals</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Date</th><th>Facility</th><th>Reason</th></tr></thead>
+        <tbody>
+          {% for ref in medical_history.referrals %}
+          <tr><td>{{ ref.referral_date|date:"d M Y" }}</td><td>{{ ref.facility_name }}</td><td>{{ ref.reason|truncatechars:80|default:"—" }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

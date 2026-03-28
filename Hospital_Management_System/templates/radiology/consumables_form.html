@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Record Consumables — {{ clinic_name }}{% endblock %}
+{% block header_title %}Record Consumables{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Record Consumables — {{ imaging_request.request_identifier }}</h1></div>
+  <a href="{% url 'radiology:detail' imaging_request.pk %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+
+<div class="alert alert-info">
+  <strong>Patient:</strong> {{ imaging_request.patient.first_name }} {{ imaging_request.patient.last_name }} |
+  <strong>{{ unit_config.unit_name }}:</strong> {{ imaging_request.specific_examination|default:imaging_request.get_imaging_type_display }}
+</div>
+
+<div class="cl-card">
+  <div class="cl-card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {{ formset.management_form }}
+      <div class="table-responsive">
+        <table class="table table-sm">
+          <thead><tr><th>Item</th><th>Quantity</th></tr></thead>
+          <tbody>
+            {% for form in formset %}
+            <tr>
+              {% for field in form %}<td>{{ field }}{% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</td>{% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if formset.non_form_errors %}<div class="alert alert-danger">{% for e in formset.non_form_errors %}{{ e }}<br>{% endfor %}</div>{% endif %}
+      <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Save Consumables</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

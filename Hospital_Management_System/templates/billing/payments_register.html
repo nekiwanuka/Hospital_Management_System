@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Payments Register — {{ clinic_name }}{% endblock %}
+{% block header_title %}Payments Register{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Payments Register</h1></div>
+  <a href="{% url 'billing:index' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+
+<div class="cl-card">
+  <div class="cl-card-header">
+    <h2 class="cl-card-title">All Payments</h2>
+    <form method="get" class="ms-auto d-flex gap-2">
+      <select name="cashier" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">All Cashiers</option>
+        {% for c in cashiers %}<option value="{{ c.pk }}" {% if cashier_filter == c.pk|stringformat:"d" %}selected{% endif %}>{{ c.get_full_name|default:c.username }}</option>{% endfor %}
+      </select>
+    </form>
+  </div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Date</th><th>Invoice</th><th>Line Item</th><th>Amount</th><th>Method</th><th>Received By</th></tr></thead>
+        <tbody>
+          {% for p in payments %}
+          <tr>
+            <td>{{ p.paid_at|date:"d M Y H:i" }}</td>
+            <td><a href="{% url 'billing:detail' p.line_item.invoice.pk %}">{{ p.line_item.invoice.invoice_number }}</a></td>
+            <td>{{ p.line_item.description|truncatechars:40 }}</td>
+            <td>{{ p.amount_paid }}</td>
+            <td>{{ p.get_payment_method_display }}</td>
+            <td>{{ p.received_by.get_full_name|default:p.received_by.username }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-center text-muted py-4">No payments found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="cl-card-footer">{% include "includes/pagination.html" %}</div>
+</div>
+{% endblock %}

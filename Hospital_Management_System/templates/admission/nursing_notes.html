@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Nursing Notes — {{ clinic_name }}{% endblock %}
+{% block header_title %}Nursing Notes{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Nursing Notes — {{ admission.patient.first_name }} {{ admission.patient.last_name }}</h1></div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'admission:add_nursing_note' admission.pk %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Add Note</a>
+    <a href="{% url 'admission:detail' admission.pk %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+  </div>
+</div>
+
+<div class="cl-card">
+  <div class="cl-card-body p-0">
+    <div class="list-group list-group-flush">
+      {% for note in notes %}
+      <div class="list-group-item">
+        <div class="d-flex justify-content-between">
+          <strong>{{ note.nurse.get_full_name|default:note.nurse.username }}</strong>
+          <small class="text-muted">{{ note.created_at|date:"d M Y H:i" }}</small>
+        </div>
+        <p class="mb-0 mt-1">{{ note.content|linebreaksbr }}</p>
+      </div>
+      {% empty %}
+      <div class="list-group-item text-center text-muted py-4">No nursing notes yet.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

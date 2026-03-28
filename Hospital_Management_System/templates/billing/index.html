@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Billing — {{ clinic_name }}{% endblock %}
+{% block header_title %}Billing{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Billing</h1><p>Invoice management and payment processing</p></div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'billing:create' %}{% if return_to %}?return_to={{ return_to|urlencode }}{% endif %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> New Invoice</a>
+  </div>
+</div>
+
+{% if active_shift %}
+<div class="alert alert-info"><i class="bi bi-clock"></i> Active shift opened at {{ active_shift.created_at|date:"d M Y H:i" }}</div>
+{% endif %}
+
+<!-- Pending Requests -->
+{% if pending_requests %}
+<div class="cl-card mb-4">
+  <div class="cl-card-header">
+    <h2 class="cl-card-title">Pending Service Requests (Unbilled)</h2>
+    <div class="d-flex gap-1 ms-auto">
+      <a href="?request_type=all&status={{ selected_status }}" class="badge {% if selected_request_type == 'all' %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none">All ({{ pending_request_counts.all }})</a>
+      <a href="?request_type=lab&status={{ selected_status }}" class="badge {% if selected_request_type == 'lab' %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none">Lab ({{ pending_request_counts.lab }})</a>
+      <a href="?request_type=radiology&status={{ selected_status }}" class="badge {% if selected_request_type == 'radiology' %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none">Radiology ({{ pending_request_counts.radiology }})</a>
+      <a href="?request_type=pharmacy&status={{ selected_status }}" class="badge {% if selected_request_type == 'pharmacy' %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none">Pharmacy ({{ pending_request_counts.pharmacy }})</a>
+      <a href="?request_type=referral&status={{ selected_status }}" class="badge {% if selected_request_type == 'referral' %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none">Referral ({{ pending_request_counts.referral }})</a>
+    </div>
+  </div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Type</th><th>Patient</th><th>Visit</th><th>Description</th><th>By</th><th>Date</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for req in pending_requests %}
+          <tr>
+            <td><span class="badge bg-secondary">{{ req.request_type_label }}</span></td>
+            <td>{{ req.patient_name }}</td>
+            <td>{{ req.visit_number }}</td>
+            <td>{{ req.description|truncatechars:40 }}</td>
+            <td>{{ req.requested_by }}</td>
+            <td>{{ req.requested_on|date:"d M H:i" }}</td>
+            <td>
+              {% if req.visit_id %}
+              <a href="{% url 'billing:create' %}?visit={{ req.visit_id }}" class="btn btn-sm btn-outline-primary">Invoice</a>
+              {% else %}
+              <a href="{% url 'billing:create' %}?patient={{ req.patient_id }}" class="btn btn-sm btn-outline-primary">Invoice</a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Visits Awaiting Payment -->
+{% if visit_pending_invoices %}
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title">Visits Awaiting Payment</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Patient</th><th>Visit</th><th>Invoice</th><th>Amount</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for item in visit_pending_invoices %}
+          <tr>
+            <td>{{ item.visit.patient.first_name }} {{ item.visit.patient.last_name }}</td>
+            <td>{{ item.visit.visit_number }}</td>
+            <td>{% if item.invoice %}{{ item.invoice.invoice_number }}{% else %}—{% endif %}</td>
+            <td>{% if item.invoice %}{{ item.invoice.total_amount }}{% else %}—{% endif %}</td>
+            <td>
+              {% if item.invoice %}
+              <a href="{% url 'billing:detail' item.invoice.pk %}" class="btn btn-sm btn-outline-success">Pay</a>
+              {% else %}
+              <a href="{% url 'billing:create' %}?visit={{ item.visit.pk }}" class="btn btn-sm btn-outline-primary">Invoice</a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Invoices List -->
+<div class="cl-card">
+  <div class="cl-card-header">
+    <h2 class="cl-card-title">Invoices</h2>
+    <div class="ms-auto d-flex gap-2">
+      <form method="get" class="d-flex gap-2">
+        <input type="text" name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="Search...">
+        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="all" {% if selected_status == 'all' %}selected{% endif %}>All</option>
+          <option value="pending" {% if selected_status == 'pending' %}selected{% endif %}>Pending</option>
+          <option value="paid" {% if selected_status == 'paid' %}selected{% endif %}>Paid</option>
+          <option value="partial" {% if selected_status == 'partial' %}selected{% endif %}>Partial</option>
+        </select>
+        <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-search"></i></button>
+      </form>
+    </div>
+  </div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Invoice #</th><th>Patient</th><th>Amount</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for inv in invoices %}
+          <tr>
+            <td><strong>{{ inv.invoice_number }}</strong></td>
+            <td>{{ inv.patient.first_name }} {{ inv.patient.last_name }}</td>
+            <td>{{ inv.total_amount }}</td>
+            <td><span class="badge bg-{% if inv.payment_status == 'paid' %}success{% elif inv.payment_status == 'partial' %}warning{% else %}danger{% endif %}">{{ inv.get_payment_status_display }}</span></td>
+            <td>{{ inv.created_at|date:"d M Y H:i" }}</td>
+            <td><a href="{% url 'billing:detail' inv.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-center text-muted py-4">No invoices found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="cl-card-footer">{% include "includes/pagination.html" %}</div>
+</div>
+{% endblock %}

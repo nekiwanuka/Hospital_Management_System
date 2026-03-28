@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Reports — {{ clinic_name }}{% endblock %}
+{% block header_title %}Reports{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Reports</h1></div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'reports:profit' %}" class="btn btn-outline-success btn-sm"><i class="bi bi-graph-up-arrow"></i> Profit Report</a>
+    <a href="{% url 'reports:laboratory_profitability' %}" class="btn btn-outline-info btn-sm"><i class="bi bi-droplet"></i> Lab Profitability</a>
+    <a href="{% url 'reports:radiology_profitability' %}" class="btn btn-outline-info btn-sm"><i class="bi bi-camera-reels"></i> Radiology Profitability</a>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="cl-card mb-4">
+  <div class="cl-card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label">Report Type</label>
+        <select name="report" class="form-select form-select-sm">
+          {% for key, label in report_types.items %}<option value="{{ key }}" {% if selected_report == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2"><label class="form-label">From</label><input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+      <div class="col-md-2"><label class="form-label">To</label><input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+      {% if selected_report == 'gross_profit' %}
+      <div class="col-md-2">
+        <label class="form-label">Branch</label>
+        <select name="branch" class="form-select form-select-sm">
+          <option value="">All Branches</option>
+          {% for b in branch_options %}<option value="{{ b.pk }}" {% if selected_branch == b.pk %}selected{% endif %}>{{ b.branch_name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Department</label>
+        <select name="department" class="form-select form-select-sm">
+          <option value="">All</option>
+          {% for key, label in gross_profit_department_options.items %}<option value="{{ key }}" {% if selected_department == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      {% endif %}
+      <div class="col-md-1"><button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-filter"></i></button></div>
+    </form>
+  </div>
+</div>
+
+<!-- Report Data -->
+<div class="cl-card mb-4">
+  <div class="cl-card-header">
+    <h2 class="cl-card-title">{{ selected_report_label }}</h2>
+    <div class="d-flex gap-2">
+      <a href="{% url 'reports:export' %}?report={{ selected_report }}&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}&format=csv{% if selected_branch %}&branch={{ selected_branch }}{% endif %}{% if selected_department %}&department={{ selected_department }}{% endif %}" class="btn btn-outline-success btn-sm"><i class="bi bi-filetype-csv"></i> CSV</a>
+      <a href="{% url 'reports:export' %}?report={{ selected_report }}&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}&format=pdf{% if selected_branch %}&branch={{ selected_branch }}{% endif %}{% if selected_department %}&department={{ selected_department }}{% endif %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-filetype-pdf"></i> PDF</a>
+    </div>
+  </div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr>{% for h in headers %}<th>{{ h|title }}</th>{% endfor %}</tr></thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+          {% empty %}
+          <tr><td colspan="{{ headers|length }}" class="text-center text-muted py-4">No data for selected period.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="cl-card-footer">
+    {% if data_page_obj.has_other_pages %}
+    <nav><ul class="pagination pagination-sm justify-content-center mb-0">
+      {% if data_page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?report={{ selected_report }}&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}&data_page={{ data_page_obj.previous_page_number }}">&laquo;</a></li>{% endif %}
+      {% for num in data_page_obj.paginator.page_range %}<li class="page-item {% if data_page_obj.number == num %}active{% endif %}"><a class="page-link" href="?report={{ selected_report }}&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}&data_page={{ num }}">{{ num }}</a></li>{% endfor %}
+      {% if data_page_obj.has_next %}<li class="page-item"><a class="page-link" href="?report={{ selected_report }}&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}&data_page={{ data_page_obj.next_page_number }}">&raquo;</a></li>{% endif %}
+    </ul></nav>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Report History -->
+{% if history %}
+<div class="cl-card">
+  <div class="cl-card-header"><h2 class="cl-card-title">Report History</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Type</th><th>Format</th><th>Period</th><th>Rows</th><th>By</th><th>Date</th></tr></thead>
+        <tbody>
+          {% for r in history %}
+          <tr><td>{{ r.get_report_type_display|default:r.report_type }}</td><td>{{ r.export_format|upper }}</td><td>{{ r.date_from|date:"d M" }} — {{ r.date_to|date:"d M Y" }}</td><td>{{ r.row_count }}</td><td>{{ r.generated_by.get_full_name|default:r.generated_by.username }}</td><td>{{ r.generated_at|date:"d M Y H:i" }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="cl-card-footer">
+    {% if history_page_obj.has_other_pages %}
+    <nav><ul class="pagination pagination-sm justify-content-center mb-0">
+      {% if history_page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?report={{ selected_report }}&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}&history_page={{ history_page_obj.previous_page_number }}">&laquo;</a></li>{% endif %}
+      {% for num in history_page_obj.paginator.page_range %}<li class="page-item {% if history_page_obj.number == num %}active{% endif %}"><a class="page-link" href="?report={{ selected_report }}&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}&history_page={{ num }}">{{ num }}</a></li>{% endfor %}
+      {% if history_page_obj.has_next %}<li class="page-item"><a class="page-link" href="?report={{ selected_report }}&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}&history_page={{ history_page_obj.next_page_number }}">&raquo;</a></li>{% endif %}
+    </ul></nav>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Nurse Review — {{ patient.first_name }} {{ patient.last_name }} — {{ clinic_name }}{% endblock %}
+{% block header_title %}Nurse Review{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div>
+    <h1>{{ patient.first_name }} {{ patient.last_name }}</h1>
+    <p>Visit {{ visit.visit_number }} &bull; {{ visit.get_status_display }} (Read-only)</p>
+  </div>
+  <a href="{% url 'consultation:index' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    {% if triage_records %}
+    <div class="cl-card mb-3">
+      <div class="cl-card-header"><h2 class="cl-card-title">Triage</h2></div>
+      <div class="cl-card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm">
+            <thead><tr><th>Date</th><th>BP</th><th>Temp</th><th>Pulse</th><th>Weight</th></tr></thead>
+            <tbody>{% for t in triage_records %}<tr><td>{{ t.date|date:"d M H:i" }}</td><td>{{ t.blood_pressure|default:"—" }}</td><td>{{ t.temperature|default:"—" }}</td><td>{{ t.pulse_rate|default:"—" }}</td><td>{{ t.weight|default:"—" }}</td></tr>{% endfor %}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if consultations %}
+    <div class="cl-card mb-3">
+      <div class="cl-card-header"><h2 class="cl-card-title">Consultations</h2></div>
+      <div class="cl-card-body">
+        {% for c in consultations %}
+        <div class="border-bottom pb-3 mb-3">
+          <div class="d-flex justify-content-between"><strong>{{ c.doctor }}</strong><small class="text-muted">{{ c.created_at|date:"d M Y H:i" }}</small></div>
+          <p class="mb-1"><strong>Symptoms:</strong> {{ c.symptoms|default:"—" }}</p>
+          <p class="mb-1"><strong>Diagnosis:</strong> {{ c.diagnosis|default:"—" }}</p>
+          <p class="mb-1"><strong>Treatment:</strong> {{ c.treatment_plan|default:"—" }}</p>
+          {% if c.follow_up_date %}<p class="mb-0"><strong>Follow-up:</strong> {{ c.follow_up_date|date:"d M Y" }}</p>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if current_visit_lab_results %}
+    <div class="cl-card mb-3">
+      <div class="cl-card-header"><h2 class="cl-card-title">Lab Results</h2></div>
+      <div class="cl-card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm">
+            <thead><tr><th>Test</th><th>Status</th><th>Results</th></tr></thead>
+            <tbody>{% for lr in current_visit_lab_results %}<tr><td>{{ lr.test_type }}</td><td><span class="badge bg-success">{{ lr.get_status_display }}</span></td><td>{{ lr.results|truncatechars:100|default:"—" }}</td></tr>{% endfor %}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if current_visit_radiology_results %}
+    <div class="cl-card mb-3">
+      <div class="cl-card-header"><h2 class="cl-card-title">Radiology</h2></div>
+      <div class="cl-card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm">
+            <thead><tr><th>Type</th><th>Status</th><th>Findings</th></tr></thead>
+            <tbody>{% for ir in current_visit_radiology_results %}<tr><td>{{ ir.get_imaging_type_display }}</td><td><span class="badge bg-secondary">{{ ir.get_status_display }}</span></td><td>{% if ir.result %}{{ ir.result.findings|truncatechars:100 }}{% else %}Pending{% endif %}</td></tr>{% endfor %}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if current_visit_pharmacy_requests or current_visit_pharmacy_records %}
+    <div class="cl-card mb-3">
+      <div class="cl-card-header"><h2 class="cl-card-title">Pharmacy</h2></div>
+      <div class="cl-card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm">
+            <thead><tr><th>Medicine</th><th>Qty</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for pr in current_visit_pharmacy_requests %}<tr><td>{{ pr.medicine.name }}</td><td>{{ pr.quantity }}</td><td><span class="badge bg-warning">{{ pr.get_status_display }}</span></td></tr>{% endfor %}
+              {% for d in current_visit_pharmacy_records %}<tr><td>{{ d.medicine.name }}</td><td>{{ d.quantity }}</td><td><span class="badge bg-success">Dispensed</span></td></tr>{% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-4">
+    {% if admissions %}
+    <div class="cl-card mb-3">
+      <div class="cl-card-header"><h2 class="cl-card-title">Admissions</h2></div>
+      <div class="cl-card-body">
+        {% for a in admissions %}
+        <p><strong>{{ a.admission_date|date:"d M Y" }}</strong> — {{ a.ward|default:"—" }}<br><small>{{ a.reason|truncatechars:60|default:"—" }}</small></p>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if referrals %}
+    <div class="cl-card mb-3">
+      <div class="cl-card-header"><h2 class="cl-card-title">Referrals</h2></div>
+      <div class="cl-card-body">
+        {% for r in referrals %}
+        <p><strong>{{ r.facility_name }}</strong><br><small>{{ r.reason|truncatechars:60|default:"—" }}</small></p>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

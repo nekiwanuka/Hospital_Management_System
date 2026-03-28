@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Visit {{ visit.visit_number }} — {{ clinic_name }}{% endblock %}
+{% block header_title %}Visit Detail{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div>
+    <h1>Visit {{ visit.visit_number }}</h1>
+    <p>{{ visit.patient.first_name }} {{ visit.patient.last_name }} &bull; {{ visit.check_in_time|date:"d M Y H:i" }}</p>
+  </div>
+  <a href="{% url 'visits:index' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="cl-card">
+      <div class="cl-card-header"><h2 class="cl-card-title">Visit Info</h2></div>
+      <div class="cl-card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-4">Patient</dt><dd class="col-sm-8"><a href="{% url 'patients:detail' visit.patient.pk %}">{{ visit.patient.first_name }} {{ visit.patient.last_name }}</a></dd>
+          <dt class="col-sm-4">Status</dt><dd class="col-sm-8"><span class="badge bg-{% if visit.status == 'completed' %}success{% elif visit.status == 'billing_queue' %}warning{% else %}info{% endif %}">{{ visit.get_status_display }}</span></dd>
+          <dt class="col-sm-4">Type</dt><dd class="col-sm-8">{{ visit.get_visit_type_display|default:"—" }}</dd>
+          <dt class="col-sm-4">Check-in</dt><dd class="col-sm-8">{{ visit.check_in_time|date:"d M Y H:i" }}</dd>
+          <dt class="col-sm-4">Check-out</dt><dd class="col-sm-8">{{ visit.check_out_time|date:"d M Y H:i"|default:"—" }}</dd>
+          <dt class="col-sm-4">Branch</dt><dd class="col-sm-8">{{ visit.branch|default:"—" }}</dd>
+          <dt class="col-sm-4">Created By</dt><dd class="col-sm-8">{{ visit.created_by|default:"—" }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  {% if is_review_no_payment %}
+  <div class="col-md-6">
+    <div class="alert alert-info"><i class="bi bi-info-circle"></i> Review visit — no payment required. Valid until {{ review_valid_until|date:"d M Y" }}.</div>
+  </div>
+  {% endif %}
+</div>
+
+{% if visit.events.all %}
+<div class="cl-card">
+  <div class="cl-card-header"><h2 class="cl-card-title">Visit Timeline</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Time</th><th>From</th><th>To</th><th>By</th><th>Notes</th></tr></thead>
+        <tbody>
+          {% for event in visit.events.all %}
+          <tr><td>{{ event.created_at|date:"d M H:i" }}</td><td>{{ event.from_status|default:"—" }}</td><td>{{ event.to_status }}</td><td>{{ event.moved_by|default:"System" }}</td><td class="text-muted">{{ event.notes|truncatechars:60|default:"" }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

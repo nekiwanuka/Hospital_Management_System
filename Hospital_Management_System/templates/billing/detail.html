@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Invoice {{ invoice.invoice_number }} — {{ clinic_name }}{% endblock %}
+{% block header_title %}Invoice Detail{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div>
+    <h1>{{ invoice.invoice_number }}</h1>
+    <p>{{ invoice.patient.first_name }} {{ invoice.patient.last_name }} &bull; {{ invoice.created_at|date:"d M Y H:i" }}</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'billing:invoice_document' invoice.pk %}" class="btn btn-outline-secondary btn-sm" target="_blank"><i class="bi bi-printer"></i> Print</a>
+    <a href="{% url 'billing:quotation_document' invoice.pk %}" class="btn btn-outline-secondary btn-sm" target="_blank"><i class="bi bi-file-text"></i> Quotation</a>
+    <a href="{% if return_to %}{{ return_to }}{% else %}{% url 'billing:index' %}{% endif %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="cl-card">
+      <div class="cl-card-header"><h2 class="cl-card-title">Invoice Info</h2></div>
+      <div class="cl-card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-4">Patient</dt><dd class="col-sm-8"><a href="{% url 'patients:detail' invoice.patient.pk %}">{{ invoice.patient.first_name }} {{ invoice.patient.last_name }}</a></dd>
+          <dt class="col-sm-4">Total Amount</dt><dd class="col-sm-8"><strong>{{ invoice.total_amount }}</strong></dd>
+          <dt class="col-sm-4">Payment Status</dt><dd class="col-sm-8"><span class="badge bg-{% if invoice.payment_status == 'paid' %}success{% elif invoice.payment_status == 'partial' %}warning{% else %}danger{% endif %}">{{ invoice.get_payment_status_display }}</span></dd>
+          <dt class="col-sm-4">Payment Method</dt><dd class="col-sm-8">{{ invoice.get_payment_method_display|default:"—" }}</dd>
+          <dt class="col-sm-4">Cashier</dt><dd class="col-sm-8">{{ invoice.cashier|default:"—" }}</dd>
+          <dt class="col-sm-4">Branch</dt><dd class="col-sm-8">{{ invoice.branch|default:"—" }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Line Items -->
+{% if line_items %}
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title">Line Items</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Service</th><th>Description</th><th>Amount</th><th>Paid</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for line in line_items %}
+          <tr>
+            <td><span class="badge bg-secondary">{{ line.get_service_type_display }}</span></td>
+            <td>{{ line.description }}</td>
+            <td>{{ line.amount }}</td>
+            <td>{{ line.paid_amount }}</td>
+            <td><span class="badge bg-{% if line.payment_status == 'paid' %}success{% elif line.payment_status == 'partial' %}warning{% else %}danger{% endif %}">{{ line.get_payment_status_display }}</span></td>
+            <td>
+              {% if line.payment_status != 'paid' %}
+              <form method="post" action="{% url 'billing:pay_line_item' invoice.pk line.pk %}" class="d-inline">
+                {% csrf_token %}
+                <div class="input-group input-group-sm" style="max-width:220px">
+                  {{ payment_form.amount_paid }}
+                  {{ payment_form.payment_method }}
+                  <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check"></i></button>
+                </div>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Payment History -->
+{% if line_payments %}
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title">Payment History</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Date</th><th>Line Item</th><th>Amount</th><th>Method</th><th>Received By</th></tr></thead>
+        <tbody>
+          {% for p in line_payments %}
+          <tr><td>{{ p.paid_at|date:"d M Y H:i" }}</td><td>{{ p.line_item.description|truncatechars:40 }}</td><td>{{ p.amount_paid }}</td><td>{{ p.get_payment_method_display }}</td><td>{{ p.received_by }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Services detail -->
+{% if invoice.services %}
+<div class="cl-card">
+  <div class="cl-card-header"><h2 class="cl-card-title">Services Summary</h2></div>
+  <div class="cl-card-body"><pre class="mb-0" style="white-space:pre-wrap">{{ invoice.services }}</pre></div>
+</div>
+{% endif %}
+{% endblock %}

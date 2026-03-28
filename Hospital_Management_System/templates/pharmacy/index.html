@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Pharmacy — {{ clinic_name }}{% endblock %}
+{% block header_title %}Pharmacy{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Pharmacy</h1></div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'pharmacy:create_medicine' %}" class="btn btn-outline-success btn-sm"><i class="bi bi-box-seam"></i> Request Stock</a>
+    <a href="{% url 'pharmacy:dispense' %}" class="btn btn-primary btn-sm"><i class="bi bi-capsule"></i> Dispense</a>
+    <a href="{% url 'pharmacy:dispense_walkin' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-person"></i> Walk-In</a>
+    <a href="{% url 'pharmacy:dispense_prescription' %}" class="btn btn-outline-info btn-sm"><i class="bi bi-file-medical"></i> Prescription</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-md-3">
+    <div class="cl-stat"><div class="cl-stat-icon primary"><i class="bi bi-capsule"></i></div><div class="cl-stat-label">Medicines</div><div class="cl-stat-value">{{ medicines|length }}</div></div>
+  </div>
+  <div class="col-sm-6 col-md-3">
+    <div class="cl-stat"><div class="cl-stat-icon warning"><i class="bi bi-exclamation-triangle"></i></div><div class="cl-stat-label">Low Stock</div><div class="cl-stat-value">{{ low_stock|length }}</div></div>
+  </div>
+  <div class="col-sm-6 col-md-3">
+    <div class="cl-stat"><div class="cl-stat-icon info"><i class="bi bi-clock-history"></i></div><div class="cl-stat-label">Expiring</div><div class="cl-stat-value">{{ expiring|length }}</div></div>
+  </div>
+  <div class="col-sm-6 col-md-3">
+    <div class="cl-stat"><div class="cl-stat-icon success"><i class="bi bi-check-circle"></i></div><div class="cl-stat-label">Expired</div><div class="cl-stat-value">{{ expired|length }}</div></div>
+  </div>
+</div>
+
+<!-- Recent Store Requests -->
+{% if recent_store_requests %}
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title">Recent Store Requests</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Item</th><th>Qty</th><th>Status</th><th>By</th><th>Date</th></tr></thead>
+        <tbody>{% for sr in recent_store_requests %}<tr><td>{% if sr.item %}{{ sr.item.item_name }}{% else %}{{ sr.medicine_name }}{% endif %}</td><td>{{ sr.quantity_requested }}</td><td><span class="badge bg-{% if sr.status == 'pending' %}warning{% elif sr.status == 'fulfilled' %}success{% else %}secondary{% endif %}">{{ sr.get_status_display }}</span></td><td>{{ sr.requested_by|default:"—" }}</td><td>{{ sr.created_at|date:"d M H:i" }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Low Stock -->
+{% if low_stock %}
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-exclamation-triangle text-warning"></i> Low Stock</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Name</th><th>Stock</th><th>Price</th></tr></thead>
+        <tbody>{% for m in low_stock %}<tr><td>{{ m.name }}</td><td class="text-danger"><strong>{{ m.stock_quantity }}</strong></td><td>{{ m.current_selling_price }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Medicines Catalog -->
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title">Medicines</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Name</th><th>Stock</th><th>Purchase Price</th><th>Selling Price</th><th>Expiry</th></tr></thead>
+        <tbody>
+          {% for m in medicines %}
+          <tr>
+            <td>{{ m.name }}</td>
+            <td>{{ m.stock_quantity }}</td>
+            <td>{{ m.current_purchase_price }}</td>
+            <td>{{ m.current_selling_price }}</td>
+            <td>{{ m.expiry_date|date:"d M Y"|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-center text-muted py-4">No medicines found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Dispenses -->
+{% if recent_dispenses %}
+<div class="cl-card">
+  <div class="cl-card-header"><h2 class="cl-card-title">Recent Dispenses</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Patient</th><th>Medicine</th><th>Qty</th><th>By</th><th>Date</th></tr></thead>
+        <tbody>
+          {% for d in recent_dispenses %}
+          <tr>
+            <td>{% if d.patient %}{{ d.patient.first_name }} {{ d.patient.last_name }}{% else %}{{ d.walk_in_name|default:"Walk-in" }}{% endif %}</td>
+            <td>{{ d.medicine.name }}</td>
+            <td>{{ d.quantity }}</td>
+            <td>{{ d.dispensed_by|default:"—" }}</td>
+            <td>{{ d.dispensed_at|date:"d M H:i" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

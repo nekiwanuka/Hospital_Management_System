@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}{{ dashboard_title }} — {{ clinic_name }}{% endblock %}
+{% block header_title %}{{ dashboard_title }}{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>{{ dashboard_title }}</h1></div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'radiology:index' %}" class="btn btn-sm {% if imaging_type_filter == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">All</a>
+    <a href="{% url 'radiology:xray' %}" class="btn btn-sm {% if imaging_type_filter == 'xray' %}btn-primary{% else %}btn-outline-primary{% endif %}">X-Ray</a>
+    <a href="{% url 'radiology:ultrasound' %}" class="btn btn-sm {% if imaging_type_filter == 'ultrasound' %}btn-primary{% else %}btn-outline-primary{% endif %}">Ultrasound</a>
+    <a href="{% url 'radiology:result_feed_queue' %}" class="btn btn-sm btn-outline-warning">Reporting Queue</a>
+    <a href="{% url 'radiology:notification_inbox' %}" class="btn btn-sm btn-outline-info"><i class="bi bi-bell"></i> Inbox</a>
+    <a href="{% url 'radiology:request_medical_store_stock' %}" class="btn btn-sm btn-outline-success"><i class="bi bi-box-seam"></i> Request Stock</a>
+  </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-md-2"><div class="cl-stat"><div class="cl-stat-icon warning"><i class="bi bi-hourglass-split"></i></div><div class="cl-stat-label">Pending</div><div class="cl-stat-value">{{ summary.pending_requests }}</div></div></div>
+  <div class="col-sm-6 col-md-2"><div class="cl-stat"><div class="cl-stat-icon info"><i class="bi bi-camera-reels"></i></div><div class="cl-stat-label">{{ unit_config.waiting_scan_label }}</div><div class="cl-stat-value">{{ summary.waiting_scan }}</div></div></div>
+  <div class="col-sm-6 col-md-2"><div class="cl-stat"><div class="cl-stat-icon primary"><i class="bi bi-file-earmark-text"></i></div><div class="cl-stat-label">{{ unit_config.waiting_report_label }}</div><div class="cl-stat-value">{{ summary.waiting_report }}</div></div></div>
+  <div class="col-sm-6 col-md-2"><div class="cl-stat"><div class="cl-stat-icon success"><i class="bi bi-check-circle"></i></div><div class="cl-stat-label">Completed</div><div class="cl-stat-value">{{ summary.completed_scans }}</div></div></div>
+  <div class="col-sm-6 col-md-2"><div class="cl-stat"><div class="cl-stat-icon warning"><i class="bi bi-lightning"></i></div><div class="cl-stat-label">Urgent</div><div class="cl-stat-value">{{ summary.urgent_scans }}</div></div></div>
+  <div class="col-sm-6 col-md-2"><div class="cl-stat"><div class="cl-stat-icon info"><i class="bi bi-arrow-repeat"></i></div><div class="cl-stat-label">In Progress</div><div class="cl-stat-value">{{ summary.scans_in_progress }}</div></div></div>
+</div>
+
+<!-- Search & Filter -->
+<div class="cl-card mb-4">
+  <div class="cl-card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-6"><label class="form-label">Search</label><input type="text" name="q" value="{{ search_query }}" class="form-control form-control-sm" placeholder="Patient name, ID, exam..."></div>
+      <div class="col-md-4"><label class="form-label">Status</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">All Statuses</option>
+          {% for val, label in status_choices %}<option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2"><button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-search"></i> Filter</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- Worklist Table -->
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title">{{ unit_config.unit_name }} Worklist</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>ID</th><th>Patient</th><th>Type</th><th>Examination</th><th>Priority</th><th>Status</th><th>Requested By</th><th>Date</th><th></th></tr></thead>
+        <tbody>
+          {% for ir in requests %}
+          <tr>
+            <td><a href="{% url 'radiology:detail' ir.pk %}">{{ ir.request_identifier }}</a></td>
+            <td>{% if ir.patient %}{{ ir.patient.first_name }} {{ ir.patient.last_name }}{% else %}—{% endif %}</td>
+            <td>{{ ir.get_imaging_type_display }}</td>
+            <td>{{ ir.specific_examination|default:"—" }}</td>
+            <td>{% if ir.priority == 'urgent' %}<span class="badge bg-danger">Urgent</span>{% else %}<span class="badge bg-secondary">{{ ir.get_priority_display }}</span>{% endif %}</td>
+            <td><span class="badge bg-{% if ir.status == 'completed' %}success{% elif ir.status == 'scanning' %}primary{% elif ir.status == 'reporting' %}info{% elif ir.status == 'requested' %}warning{% else %}secondary{% endif %}">{{ ir.get_status_display }}</span></td>
+            <td>{{ ir.requested_by.get_full_name|default:"—" }}</td>
+            <td>{{ ir.date_requested|date:"d M H:i" }}</td>
+            <td><a href="{% url 'radiology:detail' ir.pk %}" class="btn btn-outline-primary btn-sm">View</a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="9" class="text-center text-muted py-4">No imaging requests found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="cl-card-footer">{% include "includes/pagination.html" %}</div>
+</div>
+
+<!-- Recent Store Requests -->
+{% if recent_store_requests %}
+<div class="cl-card">
+  <div class="cl-card-header"><h2 class="cl-card-title">Recent Store Requests</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Item</th><th>Qty</th><th>Status</th><th>By</th><th>Date</th></tr></thead>
+        <tbody>{% for sr in recent_store_requests %}<tr><td>{% if sr.item %}{{ sr.item.item_name }}{% else %}{{ sr.medicine_name }}{% endif %}</td><td>{{ sr.quantity_requested }}</td><td><span class="badge bg-{% if sr.status == 'pending' %}warning{% elif sr.status == 'fulfilled' %}success{% else %}secondary{% endif %}">{{ sr.get_status_display }}</span></td><td>{{ sr.requested_by|default:"—" }}</td><td>{{ sr.created_at|date:"d M H:i" }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

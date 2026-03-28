@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{{ report_title }} — {{ clinic_name }}{% endblock %}
+{% block header_title %}{{ report_title }}{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>{{ report_title }}</h1><small class="text-muted">{{ report_description }}</small></div>
+  <a href="{% url 'reports:index' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Reports</a>
+</div>
+
+<!-- Filters -->
+<div class="cl-card mb-4">
+  <div class="cl-card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3"><label class="form-label">From</label><input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+      <div class="col-md-3"><label class="form-label">To</label><input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+      <div class="col-md-4">
+        <label class="form-label">Branch</label>
+        <select name="branch" class="form-select form-select-sm">
+          <option value="">All Branches</option>
+          {% for b in branch_options %}<option value="{{ b.pk }}" {% if selected_branch == b.pk %}selected{% endif %}>{{ b.branch_name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2"><button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-filter"></i> Filter</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- Summary -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-4"><div class="cl-stat"><div class="cl-stat-icon success"><i class="bi bi-cash-stack"></i></div><div class="cl-stat-label">Total Fee</div><div class="cl-stat-value">{{ totals.total_fee }}</div></div></div>
+  <div class="col-sm-4"><div class="cl-stat"><div class="cl-stat-icon warning"><i class="bi bi-box-seam"></i></div><div class="cl-stat-label">Total Cost</div><div class="cl-stat-value">{{ totals.total_cost }}</div></div></div>
+  <div class="col-sm-4"><div class="cl-stat"><div class="cl-stat-icon primary"><i class="bi bi-graph-up-arrow"></i></div><div class="cl-stat-label">Gross Profit</div><div class="cl-stat-value">{{ totals.total_profit }}</div></div></div>
+</div>
+
+<!-- Detail Table -->
+<div class="cl-card">
+  <div class="cl-card-header"><h2 class="cl-card-title">{{ report_title }} Detail</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Date</th><th>Branch</th><th>Patient</th>
+            {% if department == 'radiology' %}<th>Unit</th>{% endif %}
+            <th>Service</th><th>Status</th><th>Invoice</th><th>Fee</th><th>Cost</th><th>Profit</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td>{{ row.date|date:"d M Y" }}</td>
+            <td>{{ row.branch }}</td>
+            <td>{{ row.patient }}</td>
+            {% if department == 'radiology' %}<td>{{ row.unit }}</td>{% endif %}
+            <td>{{ row.service }}</td>
+            <td>{{ row.status }}</td>
+            <td>{{ row.invoice_number }}</td>
+            <td>{{ row.fee }}</td>
+            <td>{{ row.cost }}</td>
+            <td>{{ row.profit }}</td>
+            <td>{% if row.detail_url %}<a href="{{ row.detail_url }}" class="btn btn-outline-primary btn-sm">View</a>{% endif %}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="{% if department == 'radiology' %}11{% else %}10{% endif %}" class="text-center text-muted py-4">No data for selected period.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="cl-card-footer">{% include "includes/pagination.html" %}</div>
+</div>
+{% endblock %}
