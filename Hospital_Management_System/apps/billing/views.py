@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, Sum
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -2116,3 +2116,38 @@ def receipt_detail(request, receipt_pk):
             "return_to": return_to,
         },
     )
+
+
+@login_required
+@role_required("receptionist", "cashier", "system_admin", "director")
+@module_permission_required("billing", "view")
+def create_invoice(request):
+    # Logic to create an invoice when a request is initiated
+    pass
+
+
+@login_required
+@role_required("receptionist", "cashier", "system_admin", "director")
+@module_permission_required("billing", "update")
+def update_payment(request, invoice_id):
+    invoice = get_object_or_404(Invoice, pk=invoice_id)
+    payment_status = request.POST.get("payment_status")
+    payment_method = request.POST.get("payment_method")
+    transaction_id = request.POST.get("transaction_id", None)
+
+    if payment_method != "cash" and not transaction_id:
+        return JsonResponse(
+            {"error": "Transaction ID is required for non-cash payments."}, status=400
+        )
+
+    if payment_status == "paid":
+        # Generate full payment receipt
+        Receipt.objects.create(invoice=invoice, receipt_type="full")
+    elif payment_status == "partial":
+        # Generate partial payment receipt
+        Receipt.objects.create(invoice=invoice, receipt_type="partial")
+    elif payment_status == "post_payment":
+        # Add payments to post-payable invoice
+        pass
+
+    return redirect("billing:detail", invoice_id=invoice.pk)

@@ -59,6 +59,12 @@
     </a>
   </div>
   {% endif %}
+  <div class="col-6 col-md-4 col-xl-3">
+    <a href="{% url 'billing:invoices' %}" class="btn btn-primary">Invoices</a>
+  </div>
+  <div class="col-6 col-md-4 col-xl-3">
+    <a href="{% url 'billing:receipts' %}" class="btn btn-success">Receipts</a>
+  </div>
 </div>
 
 {% if exception_counts %}
