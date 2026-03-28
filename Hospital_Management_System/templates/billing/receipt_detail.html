@@ -22,7 +22,7 @@
 
   <div class="header">
     <h1>{{ clinic_name|default:"Hospital" }}</h1>
-    <p>RECEIPT — {{ receipt.receipt_number }}</p>
+    <p>{{ receipt.get_receipt_type_display|upper }} RECEIPT — {{ receipt.receipt_number }}</p>
   </div>
 
   <table style="border:none;margin-bottom:15px">
@@ -32,11 +32,17 @@
       <strong>Receipt #:</strong> {{ receipt.receipt_number }}<br>
       <strong>Date:</strong> {{ receipt.created_at|date:"d M Y H:i" }}
     </td><td style="border:none;width:50%;text-align:right">
-      <strong>Amount:</strong> {{ receipt.amount }}<br>
+      <strong>Amount:</strong> {{ receipt.amount_paid }}<br>
+      <strong>Balance:</strong> {{ receipt.balance_due }}<br>
       <strong>Method:</strong> {{ receipt.get_payment_method_display }}<br>
+      <strong>Transaction ID:</strong> {{ receipt.transaction_id|default:"—" }}<br>
       <strong>Cashier:</strong> {{ receipt.received_by|default:"—" }}
     </td></tr>
   </table>
+
+  {% if receipt.receipt_type == 'partial' %}
+  <p><strong>Partial Payment:</strong> This receipt confirms a part payment on the invoice. Outstanding balance is {{ receipt.balance_due }}.</p>
+  {% endif %}
 
   <table>
     <thead><tr><th>#</th><th>Description</th><th style="text-align:right">Amount</th></tr></thead>

@@ -22,7 +22,7 @@
 
   <div class="header">
     <h1>{{ clinic_name|default:"Hospital" }}</h1>
-    <p>RECEIPT</p>
+    <p>{{ receipts.0.get_receipt_type_display|default:"Receipt"|upper }}</p>
   </div>
 
   <table style="border:none;margin-bottom:15px">
@@ -46,8 +46,8 @@
   {% if receipts %}
   <h3>Receipt Records</h3>
   <table>
-    <thead><tr><th>Receipt #</th><th>Amount</th><th>Method</th><th>Date</th></tr></thead>
-    <tbody>{% for r in receipts %}<tr><td>{{ r.receipt_number }}</td><td>{{ r.amount }}</td><td>{{ r.get_payment_method_display }}</td><td>{{ r.created_at|date:"d M Y H:i" }}</td></tr>{% endfor %}</tbody>
+    <thead><tr><th>Receipt #</th><th>Type</th><th>Amount</th><th>Balance</th><th>Method</th><th>Transaction ID</th><th>Date</th></tr></thead>
+    <tbody>{% for r in receipts %}<tr><td>{{ r.receipt_number }}</td><td>{{ r.get_receipt_type_display }}</td><td>{{ r.amount_paid }}</td><td>{{ r.balance_due }}</td><td>{{ r.get_payment_method_display }}</td><td>{{ r.transaction_id|default:"—" }}</td><td>{{ r.created_at|date:"d M Y H:i" }}</td></tr>{% endfor %}</tbody>
   </table>
   {% endif %}
 

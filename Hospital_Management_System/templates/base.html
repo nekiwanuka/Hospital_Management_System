@@ -12,6 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="{% static 'css/clinic.css' %}" rel="stylesheet">
   <style>
+    {% if system_settings %}
     :root {
       --cl-primary: {{ system_settings.primary_color|default:"#0d6efd" }};
       --cl-primary-dark: {{ system_settings.primary_color|default:"#0a58ca" }};
@@ -27,6 +28,23 @@
       --cl-ink: {{ system_settings.text_color|default:"#1e293b" }};
       --cl-sidebar-font-size: {{ system_settings.sidebar_text_size|default:"0.81"|unlocalize }}rem;
     }
+    {% else %}
+    :root {
+      --cl-primary: #0d6efd;
+      --cl-primary-dark: #0a58ca;
+      --cl-info: #0891b2;
+      --cl-sidebar-bg: #1e293b;
+      --cl-sidebar-hover: #334155;
+      --cl-sidebar-active: #0d6efd;
+      --cl-sidebar-heading: #cbd5e1;
+      --cl-sidebar-text: #94a3b8;
+      --cl-sidebar-text-active: #ffffff;
+      --cl-body-bg: #f1f5f9;
+      --cl-card-bg: #ffffff;
+      --cl-ink: #1e293b;
+      --cl-sidebar-font-size: 0.81rem;
+    }
+    {% endif %}
   </style>
   {% block extra_css %}{% endblock %}
 </head>

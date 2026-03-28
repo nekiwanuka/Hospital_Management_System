@@ -6,8 +6,13 @@ from django.urls import reverse
 from django.utils import timezone
 from decimal import Decimal
 
-from apps.billing.models import ApprovalRequest, CashierShiftSession, Invoice
-from apps.billing.models import InvoiceLineItem
+from apps.billing.models import (
+    ApprovalRequest,
+    CashDrawer,
+    CashierShiftSession,
+    Invoice,
+)
+from apps.billing.models import InvoiceLineItem, InvoiceLinePayment, Receipt
 from apps.branches.models import Branch
 from apps.core.models import AuditLog
 from apps.inventory.models import Batch, Brand, Category, Item, Supplier
@@ -86,10 +91,19 @@ class BillingVisitFlowTests(TestCase):
             patient=self.patient,
             visit=self.visit,
             services="Initial consultation registration",
-            total_amount="0.00",
+            total_amount="50000.00",
             payment_method="cash",
             payment_status="pending",
             cashier=self.cashier,
+        )
+        self.invoice_line = InvoiceLineItem.objects.create(
+            branch=self.branch,
+            invoice=self.invoice,
+            service_type="referral",
+            description="Initial billing charge",
+            amount="50000.00",
+            source_model="referral",
+            source_id=1,
         )
         self.active_shift = CashierShiftSession.objects.create(
             branch=self.branch,
@@ -156,8 +170,9 @@ class BillingVisitFlowTests(TestCase):
             },
         )
 
+        receipt = Receipt.objects.get(invoice=self.invoice)
         self.assertRedirects(
-            response, reverse("billing:receipt", args=[self.invoice.pk])
+            response, reverse("billing:receipt_detail", args=[receipt.pk])
         )
         self.visit.refresh_from_db()
         self.invoice.refresh_from_db()
@@ -200,7 +215,7 @@ class BillingVisitFlowTests(TestCase):
 
         self.assertRedirects(
             response,
-            f"{reverse('billing:receipt', args=[self.invoice.pk])}?return_to=%2Fconsultation%2F%3Fpanel%3Dworkbench",
+            f"{reverse('billing:receipt_detail', args=[Receipt.objects.get(invoice=self.invoice).pk])}?return_to=%2Fconsultation%2F%3Fpanel%3Dworkbench",
         )
 
     def test_invoice_and_quotation_documents_are_viewable(self):
@@ -312,6 +327,100 @@ class BillingVisitFlowTests(TestCase):
                 object_id=str(self.invoice.pk),
             ).exists()
         )
+
+    def test_partial_payment_updates_balance_and_generates_partial_receipt(self):
+        self.client.force_login(self.cashier)
+
+        response = self.client.post(
+            reverse("billing:update_payment", args=[self.invoice.pk]),
+            {
+                "payment_status": "partial",
+                "payment_method": "cash",
+                "amount_paid": "10000.00",
+            },
+        )
+
+        receipt = Receipt.objects.get(invoice=self.invoice)
+        self.assertRedirects(
+            response, reverse("billing:receipt_detail", args=[receipt.pk])
+        )
+        self.invoice.refresh_from_db()
+        self.assertEqual(self.invoice.payment_status, "partial")
+        self.assertEqual(str(self.invoice.balance_due_amount), "40000.00")
+        self.assertEqual(receipt.receipt_type, "partial")
+        self.assertEqual(str(receipt.balance_due), "40000.00")
+
+    def test_non_cash_payment_requires_transaction_id(self):
+        self.client.force_login(self.cashier)
+
+        response = self.client.post(
+            reverse("billing:update_payment", args=[self.invoice.pk]),
+            {
+                "payment_status": "paid",
+                "payment_method": "mobile_money",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response, "Transaction ID is required for non-cash payments."
+        )
+        self.assertFalse(Receipt.objects.filter(invoice=self.invoice).exists())
+
+    def test_post_payment_marks_invoice_without_creating_receipt(self):
+        self.client.force_login(self.cashier)
+
+        response = self.client.post(
+            reverse("billing:update_payment", args=[self.invoice.pk]),
+            {
+                "payment_status": "post_payment",
+                "payment_method": "cash",
+            },
+        )
+
+        self.assertRedirects(
+            response, reverse("billing:detail", args=[self.invoice.pk])
+        )
+        self.invoice.refresh_from_db()
+        self.assertEqual(self.invoice.payment_status, "post_payment")
+        self.assertFalse(Receipt.objects.filter(invoice=self.invoice).exists())
+
+    def test_payment_page_paginates_history_to_three_items(self):
+        self.client.force_login(self.cashier)
+        drawer = CashDrawer.objects.create(
+            branch=self.branch,
+            service_type="referral",
+            drawer_name="Referral Cashier Point",
+        )
+        for index in range(4):
+            InvoiceLinePayment.objects.create(
+                branch=self.branch,
+                line_item=self.invoice_line,
+                drawer=drawer,
+                amount_paid="1000.00",
+                payment_method="cash",
+                received_by=self.cashier,
+            )
+            Receipt.objects.create(
+                branch=self.branch,
+                receipt_number=f"RCPT-{index}",
+                invoice=self.invoice,
+                patient=self.patient,
+                amount_paid="1000.00",
+                total_invoice_amount="50000.00",
+                balance_due="49000.00",
+                payment_method="cash",
+                receipt_type="partial",
+                received_by=self.cashier,
+            )
+
+        response = self.client.get(reverse("billing:detail", args=[self.invoice.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Last 3 transactions per page", count=2)
+        self.assertEqual(len(response.context["line_payments"]), 3)
+        self.assertEqual(len(response.context["receipt_history"]), 3)
 
     def test_shift_close_with_high_variance_creates_approval_request(self):
         self.client.force_login(self.cashier)
@@ -458,7 +567,10 @@ class BillingVisitFlowTests(TestCase):
             {"payment_status": "paid", "payment_method": "cash"},
         )
 
-        self.assertRedirects(response, reverse("billing:receipt", args=[invoice.pk]))
+        receipt = Receipt.objects.get(invoice=invoice)
+        self.assertRedirects(
+            response, reverse("billing:receipt_detail", args=[receipt.pk])
+        )
         line_item.refresh_from_db()
         lab_request.refresh_from_db()
         self.assertEqual(str(line_item.total_cost), "0.00")
@@ -517,7 +629,10 @@ class BillingVisitFlowTests(TestCase):
             {"payment_status": "paid", "payment_method": "cash"},
         )
 
-        self.assertRedirects(response, reverse("billing:receipt", args=[invoice.pk]))
+        receipt = Receipt.objects.get(invoice=invoice)
+        self.assertRedirects(
+            response, reverse("billing:receipt_detail", args=[receipt.pk])
+        )
         line_item.refresh_from_db()
         imaging_request.refresh_from_db()
         self.assertEqual(str(line_item.total_cost), "0.00")

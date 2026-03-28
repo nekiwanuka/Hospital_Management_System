@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from decimal import Decimal
 from apps.core.models import BranchScopedModel
 
 
@@ -43,6 +44,16 @@ class Invoice(BranchScopedModel):
 
     def __str__(self):
         return self.invoice_number
+
+    @property
+    def total_paid_amount(self):
+        total = self.line_items.aggregate(total=models.Sum("paid_amount")).get("total")
+        return total or Decimal("0.00")
+
+    @property
+    def balance_due_amount(self):
+        balance = self.total_amount - self.total_paid_amount
+        return balance if balance > 0 else Decimal("0.00")
 
 
 class InvoiceLineItem(BranchScopedModel):
@@ -91,6 +102,11 @@ class InvoiceLineItem(BranchScopedModel):
     def __str__(self):
         return f"{self.invoice.invoice_number}: {self.description}"
 
+    @property
+    def balance_due_amount(self):
+        balance = self.amount - self.paid_amount
+        return balance if balance > 0 else Decimal("0.00")
+
 
 class CashDrawer(BranchScopedModel):
     service_type = models.CharField(
@@ -135,6 +151,7 @@ class InvoiceLinePayment(BranchScopedModel):
     )
     amount_paid = models.DecimalField(max_digits=12, decimal_places=2)
     payment_method = models.CharField(max_length=20, choices=Invoice.PAYMENT_METHODS)
+    transaction_id = models.CharField(max_length=120, blank=True)
     received_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -214,6 +231,7 @@ class Receipt(BranchScopedModel):
     total_invoice_amount = models.DecimalField(max_digits=12, decimal_places=2)
     balance_due = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     payment_method = models.CharField(max_length=20, choices=Invoice.PAYMENT_METHODS)
+    transaction_id = models.CharField(max_length=120, blank=True)
     receipt_type = models.CharField(
         max_length=20, choices=RECEIPT_TYPES, default="full"
     )

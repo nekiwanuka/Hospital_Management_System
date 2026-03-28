@@ -42,9 +42,9 @@
             <td>{{ req.requested_on|date:"d M H:i" }}</td>
             <td>
               {% if req.visit_id %}
-              <a href="{% url 'billing:create' %}?visit={{ req.visit_id }}" class="btn btn-sm btn-outline-primary">Invoice</a>
+              <a href="{% url 'billing:create' %}?visit={{ req.visit_id }}&autocreate=1" class="btn btn-sm btn-outline-primary">Create &amp; Pay</a>
               {% else %}
-              <a href="{% url 'billing:create' %}?patient={{ req.patient_id }}" class="btn btn-sm btn-outline-primary">Invoice</a>
+              <a href="{% url 'billing:create' %}?patient={{ req.patient_id }}&autocreate=1" class="btn btn-sm btn-outline-primary">Create &amp; Pay</a>
               {% endif %}
             </td>
           </tr>
@@ -99,6 +99,13 @@
           <option value="pending" {% if selected_status == 'pending' %}selected{% endif %}>Pending</option>
           <option value="paid" {% if selected_status == 'paid' %}selected{% endif %}>Paid</option>
           <option value="partial" {% if selected_status == 'partial' %}selected{% endif %}>Partial</option>
+          <option value="post_payment" {% if selected_status == 'post_payment' %}selected{% endif %}>Post Payment</option>
+        </select>
+        <select name="payment_method" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="all" {% if selected_payment_method == 'all' %}selected{% endif %}>All Methods</option>
+          <option value="cash" {% if selected_payment_method == 'cash' %}selected{% endif %}>Cash</option>
+          <option value="mobile_money" {% if selected_payment_method == 'mobile_money' %}selected{% endif %}>Mobile Money</option>
+          <option value="insurance" {% if selected_payment_method == 'insurance' %}selected{% endif %}>Insurance</option>
         </select>
         <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-search"></i></button>
       </form>
@@ -116,7 +123,7 @@
             <td>{{ inv.total_amount }}</td>
             <td><span class="badge bg-{% if inv.payment_status == 'paid' %}success{% elif inv.payment_status == 'post_payment' %}info{% elif inv.payment_status == 'partial' %}warning{% else %}danger{% endif %}">{{ inv.get_payment_status_display }}</span></td>
             <td>{{ inv.created_at|date:"d M Y H:i" }}</td>
-            <td><a href="{% url 'billing:detail' inv.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+            <td><a href="{% url 'billing:detail' inv.pk %}" class="btn btn-sm btn-outline-primary">Payment</a></td>
           </tr>
           {% empty %}
           <tr><td colspan="6" class="text-center text-muted py-4">No invoices found.</td></tr>

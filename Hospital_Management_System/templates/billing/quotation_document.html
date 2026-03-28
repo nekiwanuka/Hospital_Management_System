@@ -31,7 +31,8 @@
       <strong>Ref:</strong> {{ invoice.invoice_number }}<br>
       <strong>Date:</strong> {{ invoice.created_at|date:"d M Y" }}
     </td><td style="border:none;width:50%;text-align:right">
-      <strong>Branch:</strong> {{ invoice.branch|default:"—" }}
+      <strong>Branch:</strong> {{ invoice.branch|default:"—" }}<br>
+      <strong>Cashier:</strong> {{ invoice.cashier|default:"—" }}
     </td></tr>
   </table>
 

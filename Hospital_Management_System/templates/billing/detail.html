@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Invoice {{ invoice.invoice_number }} — {{ clinic_name }}{% endblock %}
-{% block header_title %}Invoice Detail{% endblock %}
+{% block title %}Payment {{ invoice.invoice_number }} — {{ clinic_name }}{% endblock %}
+{% block header_title %}Payment Page{% endblock %}
 
 {% block content %}
 <div class="cl-page-header">
@@ -18,16 +18,23 @@
 <div class="row g-3 mb-4">
   <div class="col-md-6">
     <div class="cl-card">
-      <div class="cl-card-header"><h2 class="cl-card-title">Invoice Info</h2></div>
+      <div class="cl-card-header"><h2 class="cl-card-title">Invoice Summary</h2></div>
       <div class="cl-card-body">
         <dl class="row mb-0">
           <dt class="col-sm-4">Patient</dt><dd class="col-sm-8"><a href="{% url 'patients:detail' invoice.patient.pk %}">{{ invoice.patient.first_name }} {{ invoice.patient.last_name }}</a></dd>
           <dt class="col-sm-4">Total Amount</dt><dd class="col-sm-8"><strong>{{ invoice.total_amount }}</strong></dd>
+          <dt class="col-sm-4">Paid So Far</dt><dd class="col-sm-8">{{ invoice.total_paid_amount }}</dd>
+          <dt class="col-sm-4">Balance</dt><dd class="col-sm-8"><strong>{{ invoice.balance_due_amount }}</strong></dd>
           <dt class="col-sm-4">Payment Status</dt><dd class="col-sm-8"><span class="badge bg-{% if invoice.payment_status == 'paid' %}success{% elif invoice.payment_status == 'post_payment' %}info{% elif invoice.payment_status == 'partial' %}warning{% else %}danger{% endif %}">{{ invoice.get_payment_status_display }}</span></dd>
           <dt class="col-sm-4">Payment Method</dt><dd class="col-sm-8">{{ invoice.get_payment_method_display|default:"—" }}</dd>
           <dt class="col-sm-4">Cashier</dt><dd class="col-sm-8">{{ invoice.cashier|default:"—" }}</dd>
           <dt class="col-sm-4">Branch</dt><dd class="col-sm-8">{{ invoice.branch|default:"—" }}</dd>
         </dl>
+        {% if invoice.visit and invoice.payment_status != 'paid' %}
+        <div class="alert alert-info mt-3 mb-0 py-2">
+          <i class="bi bi-info-circle"></i> After you mark this visit invoice as paid, the patient will be forwarded to triage first before returning to the doctor workflow.
+        </div>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -38,23 +45,32 @@
       <div class="cl-card-body">
         <form method="post" action="{% url 'billing:update_payment' invoice.pk %}">
           {% csrf_token %}
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Payment Method</label>
-            <select name="payment_method" class="form-select form-select-sm">
-              <option value="cash">Cash</option>
-              <option value="mobile_money">Mobile Money</option>
-              <option value="insurance">Insurance</option>
-            </select>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" for="{{ payment_form.payment_status.id_for_label }}">Payment Option</label>
+              {{ payment_form.payment_status }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" for="{{ payment_form.payment_method.id_for_label }}">Payment Method</label>
+              {{ payment_form.payment_method }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" for="{{ payment_form.amount_paid.id_for_label }}">Amount Received</label>
+              {{ payment_form.amount_paid }}
+              <small class="text-muted">Required for partial payment. Full payment uses the full balance automatically.</small>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" for="{{ payment_form.transaction_id.id_for_label }}">Transaction ID</label>
+              {{ payment_form.transaction_id }}
+              <small class="text-muted">Required for all non-cash payments.</small>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" for="{{ payment_form.notes.id_for_label }}">Notes</label>
+              {{ payment_form.notes }}
+            </div>
           </div>
-          <div class="d-flex flex-wrap gap-2">
-            <button type="submit" name="payment_status" value="paid" class="btn btn-success btn-sm"><i class="bi bi-check-circle"></i> Pay Now</button>
-            <button type="submit" name="payment_status" value="post_payment" class="btn btn-warning btn-sm"><i class="bi bi-clock-history"></i> Post Payment</button>
-            {% if not partial_approval_pending %}
-            <button type="submit" name="payment_status" value="partial" class="btn btn-outline-warning btn-sm" onclick="var r=prompt('Reason for partial payment:');if(!r){event.preventDefault();return;}this.form.querySelector('[name=status_reason]').value=r;"><i class="bi bi-pie-chart"></i> Request Partial</button>
-            {% else %}
-            <span class="badge bg-info align-self-center">Partial approval pending</span>
-            {% endif %}
-            <input type="hidden" name="status_reason" value="">
+          <div class="d-flex flex-wrap gap-2 mt-3">
+            <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-cash-coin"></i> Submit Payment</button>
           </div>
         </form>
         {% if invoice.payment_status == 'post_payment' %}
@@ -68,14 +84,13 @@
   </div>
 </div>
 
-<!-- Line Items -->
 {% if line_items %}
 <div class="cl-card mb-4">
   <div class="cl-card-header"><h2 class="cl-card-title">Line Items</h2></div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
       <table class="table">
-        <thead><tr><th>Service</th><th>Description</th><th>Amount</th><th>Paid</th><th>Status</th><th>Action</th></tr></thead>
+        <thead><tr><th>Service</th><th>Description</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Status</th></tr></thead>
         <tbody>
           {% for line in line_items %}
           <tr>
@@ -83,19 +98,8 @@
             <td>{{ line.description }}</td>
             <td>{{ line.amount }}</td>
             <td>{{ line.paid_amount }}</td>
-            <td><span class="badge bg-{% if line.payment_status == 'paid' %}success{% elif line.payment_status == 'post_payment' %}info{% elif line.payment_status == 'partial' %}warning{% else %}danger{% endif %}">{{ line.get_payment_status_display }}</span></td>
-            <td>
-              {% if line.payment_status != 'paid' %}
-              <form method="post" action="{% url 'billing:pay_line_item' invoice.pk line.pk %}" class="d-inline">
-                {% csrf_token %}
-                <div class="input-group input-group-sm" style="max-width:220px">
-                  {{ payment_form.amount_paid }}
-                  {{ payment_form.payment_method }}
-                  <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check"></i></button>
-                </div>
-              </form>
-              {% endif %}
-            </td>
+            <td>{{ line.balance_due_amount }}</td>
+            <td><span class="badge bg-{% if line.payment_status == 'paid' %}success{% elif line.payment_status == 'partial' %}warning{% else %}danger{% endif %}">{{ line.get_payment_status_display }}</span></td>
           </tr>
           {% endfor %}
         </tbody>
@@ -105,26 +109,79 @@
 </div>
 {% endif %}
 
-<!-- Payment History -->
 {% if line_payments %}
 <div class="cl-card mb-4">
-  <div class="cl-card-header"><h2 class="cl-card-title">Payment History</h2></div>
+  <div class="cl-card-header"><h2 class="cl-card-title">Payment History</h2><span class="ms-auto text-muted small">Last 3 transactions per page</span></div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
       <table class="table table-sm">
-        <thead><tr><th>Date</th><th>Line Item</th><th>Amount</th><th>Method</th><th>Received By</th></tr></thead>
+        <thead><tr><th>Date</th><th>Line Item</th><th>Amount</th><th>Method</th><th>Transaction ID</th><th>Received By</th></tr></thead>
         <tbody>
           {% for p in line_payments %}
-          <tr><td>{{ p.paid_at|date:"d M Y H:i" }}</td><td>{{ p.line_item.description|truncatechars:40 }}</td><td>{{ p.amount_paid }}</td><td>{{ p.get_payment_method_display }}</td><td>{{ p.received_by }}</td></tr>
+          <tr><td>{{ p.paid_at|date:"d M Y H:i" }}</td><td>{{ p.line_item.description|truncatechars:40 }}</td><td>{{ p.amount_paid }}</td><td>{{ p.get_payment_method_display }}</td><td>{{ p.transaction_id|default:"—" }}</td><td>{{ p.received_by }}</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+    {% if payment_page_obj.has_other_pages %}
+    <div class="px-3 pb-3 d-flex justify-content-between">
+      <div>
+        {% if payment_page_obj.has_previous %}
+        <a class="btn btn-sm btn-outline-secondary" href="?payment_page={{ payment_page_obj.previous_page_number }}{% if receipt_page_obj.number %}&receipt_page={{ receipt_page_obj.number }}{% endif %}">Previous</a>
+        {% endif %}
+      </div>
+      <span class="text-muted small align-self-center">Page {{ payment_page_obj.number }} of {{ payment_page_obj.paginator.num_pages }}</span>
+      <div>
+        {% if payment_page_obj.has_next %}
+        <a class="btn btn-sm btn-outline-secondary" href="?payment_page={{ payment_page_obj.next_page_number }}{% if receipt_page_obj.number %}&receipt_page={{ receipt_page_obj.number }}{% endif %}">Next</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
   </div>
 </div>
 {% endif %}
 
-<!-- Services detail -->
+{% if receipt_history %}
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title">Receipt History</h2><span class="ms-auto text-muted small">Last 3 transactions per page</span></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead><tr><th>Date</th><th>Receipt</th><th>Type</th><th>Amount</th><th>Balance</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for receipt in receipt_history %}
+          <tr>
+            <td>{{ receipt.created_at|date:"d M Y H:i" }}</td>
+            <td>{{ receipt.receipt_number }}</td>
+            <td>{{ receipt.get_receipt_type_display }}</td>
+            <td>{{ receipt.amount_paid }}</td>
+            <td>{{ receipt.balance_due }}</td>
+            <td><a href="{% url 'billing:receipt_detail' receipt.pk %}" class="btn btn-sm btn-outline-primary" target="_blank">Open</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if receipt_page_obj.has_other_pages %}
+    <div class="px-3 pb-3 d-flex justify-content-between">
+      <div>
+        {% if receipt_page_obj.has_previous %}
+        <a class="btn btn-sm btn-outline-secondary" href="?receipt_page={{ receipt_page_obj.previous_page_number }}{% if payment_page_obj.number %}&payment_page={{ payment_page_obj.number }}{% endif %}">Previous</a>
+        {% endif %}
+      </div>
+      <span class="text-muted small align-self-center">Page {{ receipt_page_obj.number }} of {{ receipt_page_obj.paginator.num_pages }}</span>
+      <div>
+        {% if receipt_page_obj.has_next %}
+        <a class="btn btn-sm btn-outline-secondary" href="?receipt_page={{ receipt_page_obj.next_page_number }}{% if payment_page_obj.number %}&payment_page={{ payment_page_obj.number }}{% endif %}">Next</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
 {% if invoice.services %}
 <div class="cl-card">
   <div class="cl-card-header"><h2 class="cl-card-title">Services Summary</h2></div>

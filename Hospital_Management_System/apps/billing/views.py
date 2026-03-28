@@ -15,7 +15,7 @@ from django.utils.dateparse import parse_date
 from django.utils import timezone
 from urllib.parse import urlencode
 
-from apps.billing.forms import InvoiceForm, LineItemPaymentForm
+from apps.billing.forms import InvoiceForm, InvoicePaymentForm, LineItemPaymentForm
 from apps.billing.models import (
     ApprovalRequest,
     CashierShiftSession,
@@ -184,7 +184,16 @@ def _get_or_create_drawer(branch, service_type):
     return drawer
 
 
-def _apply_line_payment(line_item, amount_paid, payment_method, user):
+def _require_transaction_id(payment_method, transaction_id):
+    transaction_id = (transaction_id or "").strip()
+    if payment_method != "cash" and not transaction_id:
+        raise ValidationError("Transaction ID is required for non-cash payments.")
+    return transaction_id
+
+
+def _apply_line_payment(
+    line_item, amount_paid, payment_method, user, transaction_id=""
+):
     if amount_paid <= 0:
         raise ValidationError("Payment amount must be greater than zero.")
 
@@ -200,6 +209,7 @@ def _apply_line_payment(line_item, amount_paid, payment_method, user):
         drawer=drawer,
         amount_paid=amount_paid,
         payment_method=payment_method,
+        transaction_id=transaction_id,
         received_by=user,
     )
 
@@ -211,6 +221,109 @@ def _apply_line_payment(line_item, amount_paid, payment_method, user):
     else:
         line_item.payment_status = "pending"
     line_item.save(update_fields=["paid_amount", "payment_status", "updated_at"])
+
+
+def _apply_invoice_payment(
+    invoice, amount_paid, payment_method, user, transaction_id=""
+):
+    if amount_paid <= 0:
+        raise ValidationError("Payment amount must be greater than zero.")
+
+    outstanding_total = invoice.balance_due_amount
+    if amount_paid > outstanding_total:
+        raise ValidationError(
+            f"Amount exceeds outstanding balance ({outstanding_total})."
+        )
+
+    remaining_amount = amount_paid
+    for line_item in invoice.line_items.exclude(payment_status="paid").order_by("id"):
+        line_outstanding = line_item.amount - line_item.paid_amount
+        if line_outstanding <= 0:
+            continue
+
+        applied_amount = min(line_outstanding, remaining_amount)
+        _apply_line_payment(
+            line_item,
+            applied_amount,
+            payment_method,
+            user,
+            transaction_id=transaction_id,
+        )
+        remaining_amount -= applied_amount
+        if remaining_amount <= 0:
+            break
+
+
+def _find_open_invoice(branch, patient, visit=None):
+    invoices = Invoice.objects.filter(
+        branch=branch,
+        patient=patient,
+        payment_status__in=["pending", "partial", "post_payment"],
+    )
+    if visit:
+        invoices = invoices.filter(visit=visit)
+    return invoices.order_by("-created_at").first()
+
+
+def _create_invoice_from_lines(
+    request,
+    *,
+    patient,
+    branch,
+    visit=None,
+    payment_method="cash",
+    payment_status="pending",
+):
+    lines = _build_auto_invoice_lines(patient, branch, visit)
+    if not lines:
+        raise ValidationError(
+            "No billable consultation, lab, radiology, referral, or pharmacy requests found for this patient."
+        )
+
+    total_amount = sum((line["amount"] for line in lines), Decimal("0.00"))
+    invoice = Invoice.objects.create(
+        branch=branch,
+        invoice_number=_generate_invoice_number(branch),
+        patient=patient,
+        visit=visit,
+        services="\n".join(
+            f"{line['description']} - {line['amount']}" for line in lines
+        ),
+        total_amount=total_amount,
+        payment_method=payment_method,
+        payment_status=payment_status,
+        cashier=request.user,
+    )
+
+    _log_financial_event(
+        request,
+        action="billing.invoice.create",
+        object_type="invoice",
+        object_id=invoice.pk,
+        after={
+            "invoice_number": invoice.invoice_number,
+            "payment_status": invoice.payment_status,
+            "payment_method": invoice.payment_method,
+            "total_amount": str(invoice.total_amount),
+        },
+    )
+
+    for line in lines:
+        InvoiceLineItem.objects.create(
+            invoice=invoice,
+            branch=invoice.branch,
+            service_type=line["service_type"],
+            description=line["description"],
+            amount=line["amount"],
+            paid_amount=Decimal("0.00"),
+            payment_status="pending",
+            unit_cost=line.get("unit_cost", Decimal("0.00")),
+            total_cost=line.get("total_cost", Decimal("0.00")),
+            profit_amount=line.get("profit_amount", line["amount"]),
+            source_model=line["source_model"],
+            source_id=line["source_id"],
+        )
+    return invoice
 
 
 def _source_billed(source_model: str, source_id: int) -> bool:
@@ -262,7 +375,13 @@ def _generate_receipt_number(branch):
 
 
 def _create_receipt(
-    invoice, amount_paid, payment_method, received_by, receipt_type="full", notes=""
+    invoice,
+    amount_paid,
+    payment_method,
+    received_by,
+    receipt_type="full",
+    notes="",
+    transaction_id="",
 ):
     total_paid = invoice.line_items.aggregate(total=Sum("paid_amount")).get(
         "total"
@@ -277,6 +396,7 @@ def _create_receipt(
         total_invoice_amount=invoice.total_amount,
         balance_due=max(balance_due, Decimal("0.00")),
         payment_method=payment_method,
+        transaction_id=transaction_id,
         receipt_type=receipt_type,
         received_by=received_by,
         notes=notes,
@@ -606,15 +726,21 @@ def index(request):
     query = (request.GET.get("q") or "").strip()
     status = (request.GET.get("status") or "all").strip().lower()
     request_type = (request.GET.get("request_type") or "all").strip().lower()
+    payment_method_filter = (request.GET.get("payment_method") or "all").strip().lower()
 
     queryset = branch_queryset_for_user(
         request.user,
         Invoice.objects.select_related("patient", "cashier").order_by("-created_at"),
     )
-    if status in {"pending", "paid", "partial"}:
+    if status in {"pending", "paid", "partial", "post_payment"}:
         queryset = queryset.filter(payment_status=status)
     else:
         status = "all"
+
+    if payment_method_filter in {choice for choice, _ in Invoice.PAYMENT_METHODS}:
+        queryset = queryset.filter(payment_method=payment_method_filter)
+    else:
+        payment_method_filter = "all"
 
     if query:
         queryset = queryset.filter(
@@ -817,6 +943,7 @@ def index(request):
             "query": query,
             "selected_status": status,
             "selected_request_type": request_type,
+            "selected_payment_method": payment_method_filter,
             "pending_request_counts": pending_request_counts,
             "pending_requests": pending_requests,
             "visit_pending_invoices": visit_pending_invoices,
@@ -848,6 +975,8 @@ def create(request):
     initial = {}
     patient_id = (request.GET.get("patient") or "").strip()
     visit_id = (request.GET.get("visit") or "").strip()
+    fixed_patient = None
+    fixed_visit = None
 
     try:
         if visit_id:
@@ -868,6 +997,39 @@ def create(request):
     except (TypeError, ValueError):
         initial = {}
 
+    if fixed_visit and not fixed_patient:
+        fixed_patient = fixed_visit.patient
+
+    if request.method == "GET" and request.GET.get("autocreate") == "1":
+        if not request.user.branch_id:
+            messages.error(request, "Your user account has no branch assigned.")
+            return _redirect_with_return_to(reverse("billing:index"), return_to)
+        if fixed_patient:
+            existing_invoice = _find_open_invoice(
+                request.user.branch,
+                fixed_patient,
+                fixed_visit,
+            )
+            if existing_invoice:
+                return _redirect_with_return_to(
+                    reverse("billing:detail", args=[existing_invoice.pk]),
+                    return_to,
+                )
+            try:
+                invoice = _create_invoice_from_lines(
+                    request,
+                    patient=fixed_patient,
+                    branch=request.user.branch,
+                    visit=fixed_visit,
+                )
+            except ValidationError as exc:
+                messages.error(request, str(exc))
+                return _redirect_with_return_to(reverse("billing:index"), return_to)
+            return _redirect_with_return_to(
+                reverse("billing:detail", args=[invoice.pk]),
+                return_to,
+            )
+
     if request.method == "POST":
         form = InvoiceForm(request.POST, user=request.user)
         if form.is_valid():
@@ -875,20 +1037,19 @@ def create(request):
                 form.add_error(None, "Your user account has no branch assigned.")
             else:
                 invoice = form.save(commit=False)
-                invoice.branch = request.user.branch
-                invoice.cashier = request.user
-                invoice.invoice_number = _generate_invoice_number(request.user.branch)
                 if invoice.visit and not invoice.patient_id:
                     invoice.patient = invoice.visit.patient
-
-                lines = _build_auto_invoice_lines(
-                    invoice.patient, invoice.branch, invoice.visit
-                )
-                if not lines:
-                    form.add_error(
-                        None,
-                        "No billable consultation, lab, radiology, referral, or pharmacy requests found for this patient.",
+                try:
+                    invoice = _create_invoice_from_lines(
+                        request,
+                        patient=invoice.patient,
+                        branch=request.user.branch,
+                        visit=invoice.visit,
+                        payment_method=invoice.payment_method,
+                        payment_status=invoice.payment_status,
                     )
+                except ValidationError as exc:
+                    form.add_error(None, str(exc))
                     return render(
                         request,
                         "billing/form.html",
@@ -897,42 +1058,6 @@ def create(request):
                             "page_title": "Create Invoice",
                             "submit_label": "Create Invoice",
                         },
-                    )
-
-                total_amount = sum((line["amount"] for line in lines), Decimal("0.00"))
-                invoice.total_amount = total_amount
-                invoice.services = "\n".join(
-                    f"{line['description']} - {line['amount']}" for line in lines
-                )
-                invoice.save()
-
-                _log_financial_event(
-                    request,
-                    action="billing.invoice.create",
-                    object_type="invoice",
-                    object_id=invoice.pk,
-                    after={
-                        "invoice_number": invoice.invoice_number,
-                        "payment_status": invoice.payment_status,
-                        "payment_method": invoice.payment_method,
-                        "total_amount": str(invoice.total_amount),
-                    },
-                )
-
-                for line in lines:
-                    InvoiceLineItem.objects.create(
-                        invoice=invoice,
-                        branch=invoice.branch,
-                        service_type=line["service_type"],
-                        description=line["description"],
-                        amount=line["amount"],
-                        paid_amount=Decimal("0.00"),
-                        payment_status="pending",
-                        unit_cost=line.get("unit_cost", Decimal("0.00")),
-                        total_cost=line.get("total_cost", Decimal("0.00")),
-                        profit_amount=line.get("profit_amount", line["amount"]),
-                        source_model=line["source_model"],
-                        source_id=line["source_id"],
                     )
 
                 return _redirect_with_return_to(
@@ -961,34 +1086,35 @@ def detail(request, pk):
     return_to = _safe_return_url(request)
     invoice = _get_invoice_for_user_or_404(request.user, pk)
     line_items = invoice.line_items.order_by("id")
-    payment_form = LineItemPaymentForm(user=request.user)
+    payment_form = InvoicePaymentForm(
+        initial={
+            "payment_status": "paid",
+            "payment_method": invoice.payment_method or "cash",
+            "amount_paid": invoice.balance_due_amount,
+        }
+    )
     line_payments = (
         InvoiceLinePayment.objects.select_related("received_by", "line_item")
         .filter(line_item__invoice=invoice)
         .order_by("-paid_at")
     )
-    partial_approval_pending = ApprovalRequest.objects.filter(
-        branch=invoice.branch,
-        approval_type="partial_payment",
-        invoice=invoice,
-        status="pending",
-    ).exists()
-    partial_approval_approved = ApprovalRequest.objects.filter(
-        branch=invoice.branch,
-        approval_type="partial_payment",
-        invoice=invoice,
-        status="approved",
-    ).exists()
+    payment_page_obj = Paginator(line_payments, 3).get_page(
+        request.GET.get("payment_page")
+    )
+    receipt_page_obj = Paginator(invoice.receipts.order_by("-created_at"), 3).get_page(
+        request.GET.get("receipt_page")
+    )
     return render(
         request,
         "billing/detail.html",
         {
             "invoice": invoice,
             "line_items": line_items,
-            "line_payments": line_payments,
+            "line_payments": payment_page_obj.object_list,
+            "payment_page_obj": payment_page_obj,
+            "receipt_history": receipt_page_obj.object_list,
+            "receipt_page_obj": receipt_page_obj,
             "payment_form": payment_form,
-            "partial_approval_pending": partial_approval_pending,
-            "partial_approval_approved": partial_approval_approved,
             "delete_object_type": "Invoice",
             "delete_object_id": invoice.pk,
             "delete_object_label": invoice.invoice_number,
@@ -1058,113 +1184,95 @@ def update_payment_status(request, pk):
 
     payment_method = request.POST.get("payment_method", "").strip().lower()
     valid_methods = {choice for choice, _ in Invoice.PAYMENT_METHODS}
+    transaction_id = (request.POST.get("transaction_id") or "").strip()
+    payment_notes = (request.POST.get("notes") or "").strip()
+    payment_form = InvoicePaymentForm(request.POST)
+    if (
+        new_status in {"paid", "partial", "post_payment"}
+        and not payment_form.is_valid()
+    ):
+        for error_list in payment_form.errors.values():
+            for error in error_list:
+                messages.error(request, error)
+        return _redirect_with_return_to(reverse("billing:detail", args=[pk]), return_to)
 
-    # ── Partial payment requires director approval ──
-    if new_status == "partial" and previous_status != "paid":
-        if request.user.role not in {"director", "system_admin"}:
-            if not reason:
-                messages.error(
-                    request,
-                    "A reason is required when requesting partial payment approval.",
-                )
-                return _redirect_with_return_to(
-                    reverse("billing:detail", args=[pk]), return_to
-                )
-            existing = ApprovalRequest.objects.filter(
-                branch=invoice.branch,
-                approval_type="partial_payment",
-                invoice=invoice,
-                status="pending",
-            ).first()
-            if existing:
-                messages.info(
-                    request,
-                    "A pending partial-payment approval request already exists for this invoice.",
-                )
-            else:
-                approval_request = ApprovalRequest.objects.create(
-                    branch=invoice.branch,
-                    approval_type="partial_payment",
-                    invoice=invoice,
-                    requested_by=request.user,
-                    from_status=previous_status,
-                    to_status="partial",
-                    requested_payment_method=payment_method or invoice.payment_method,
-                    reason=reason,
-                )
-                _log_financial_event(
-                    request,
-                    action="billing.approval_request.create",
-                    object_type="approval_request",
-                    object_id=approval_request.pk,
-                    after={
-                        "approval_type": "partial_payment",
-                        "invoice": invoice.invoice_number,
-                        "from_status": previous_status,
-                        "to_status": "partial",
-                    },
-                    reason=reason,
-                )
-                messages.info(
-                    request,
-                    "Partial payment request submitted for director approval.",
-                )
-            return _redirect_with_return_to(
-                reverse("billing:detail", args=[pk]), return_to
-            )
-
-    if request.user.role in {"cashier", "receptionist"} and new_status == "paid":
+    if request.user.role in {"cashier", "receptionist"} and new_status in {
+        "paid",
+        "partial",
+    }:
         shift = _get_open_shift_for_user(request.user)
         if not shift:
             messages.error(
                 request,
-                "Open a cashier shift and capture opening float before marking an invoice as paid.",
+                "Open a cashier shift and capture opening float before posting a payment.",
             )
             return _redirect_with_return_to(
                 reverse("billing:detail", args=[pk]), return_to
             )
 
     rcpt = None
+    amount_to_apply = Decimal("0.00")
     try:
         with transaction.atomic():
             previous_method = invoice.payment_method
             update_fields = ["payment_status", "cashier", "updated_at"]
-            invoice.payment_status = new_status
             invoice.cashier = request.user
 
             if payment_method in valid_methods:
                 invoice.payment_method = payment_method
                 update_fields.append("payment_method")
 
-            invoice.save(update_fields=update_fields)
+            if new_status == "post_payment":
+                invoice.payment_status = "post_payment"
+                invoice.save(update_fields=update_fields)
+            else:
+                _require_transaction_id(invoice.payment_method, transaction_id)
 
-            if new_status == "paid" and previous_status != "paid":
-                for line_item in invoice.line_items.filter(
-                    payment_status__in=["pending", "partial"]
-                ):
-                    outstanding = line_item.amount - line_item.paid_amount
-                    if outstanding <= 0:
-                        continue
-                    _apply_line_payment(
-                        line_item,
-                        outstanding,
-                        invoice.payment_method,
-                        request.user,
-                    )
-                _consume_stock_for_invoice(invoice, consumed_by=request.user)
-                rcpt = _create_receipt(
+                if new_status == "paid":
+                    amount_to_apply = invoice.balance_due_amount
+                    if amount_to_apply <= 0:
+                        raise ValidationError("This invoice is already fully paid.")
+                else:
+                    amount_to_apply = payment_form.cleaned_data["amount_paid"]
+                    if amount_to_apply >= invoice.balance_due_amount:
+                        raise ValidationError(
+                            "Partial payment must be less than the current outstanding balance. Use Full Payment instead."
+                        )
+
+                _apply_invoice_payment(
                     invoice,
-                    invoice.total_amount,
+                    amount_to_apply,
                     invoice.payment_method,
                     request.user,
-                    receipt_type="full",
+                    transaction_id=transaction_id,
                 )
-            elif new_status == "partial":
-                invoice.line_items.filter(payment_status="pending").update(
-                    payment_status="partial"
-                )
-            elif new_status == "post_payment":
-                pass  # No payments recorded; bill accumulates, patient proceeds
+
+                if invoice.balance_due_amount <= 0:
+                    invoice.payment_status = "paid"
+                    invoice.save(update_fields=update_fields)
+                    if previous_status != "paid":
+                        _consume_stock_for_invoice(invoice, consumed_by=request.user)
+                    rcpt = _create_receipt(
+                        invoice,
+                        amount_to_apply,
+                        invoice.payment_method,
+                        request.user,
+                        receipt_type="full",
+                        notes=payment_notes,
+                        transaction_id=transaction_id,
+                    )
+                else:
+                    invoice.payment_status = "partial"
+                    invoice.save(update_fields=update_fields)
+                    rcpt = _create_receipt(
+                        invoice,
+                        amount_to_apply,
+                        invoice.payment_method,
+                        request.user,
+                        receipt_type="partial",
+                        notes=payment_notes,
+                        transaction_id=transaction_id,
+                    )
 
             _log_financial_event(
                 request,
@@ -1178,8 +1286,10 @@ def update_payment_status(request, pk):
                 after={
                     "payment_status": invoice.payment_status,
                     "payment_method": invoice.payment_method,
+                    "amount_paid": str(amount_to_apply),
+                    "transaction_id": transaction_id,
                 },
-                reason=reason,
+                reason=payment_notes or reason,
             )
     except ValidationError as exc:
         messages.error(request, str(exc))
@@ -1224,15 +1334,23 @@ def update_payment_status(request, pk):
         elif invoice.visit.status != "billing_queue":
             transition_visit(invoice.visit, "billing_queue", request.user)
 
-    if new_status == "paid" and rcpt:
+    if invoice.payment_status == "paid" and rcpt:
         return _redirect_with_return_to(
             reverse("billing:receipt_detail", args=[rcpt.pk]), return_to
         )
-    elif new_status == "paid":
+    elif invoice.payment_status == "paid":
         return _redirect_with_return_to(
             reverse("billing:receipt", args=[pk]), return_to
         )
-    elif new_status == "post_payment":
+    elif invoice.payment_status == "partial" and rcpt:
+        messages.success(
+            request,
+            "Partial payment recorded. The invoice balance has been updated.",
+        )
+        return _redirect_with_return_to(
+            reverse("billing:receipt_detail", args=[rcpt.pk]), return_to
+        )
+    elif invoice.payment_status == "post_payment":
         messages.success(
             request,
             "Invoice marked as Post Payment. Patient may proceed; payment is deferred.",
@@ -1262,40 +1380,6 @@ def pay_line_item(request, pk, line_id):
         messages.error(request, "Invalid line payment details.")
         return _redirect_with_return_to(reverse("billing:detail", args=[pk]), return_to)
 
-    # Check if this is a partial line payment (not paying full outstanding)
-    line_outstanding = line_item.amount - line_item.paid_amount
-    amount_to_pay = form.cleaned_data["amount_paid"]
-    is_partial_line = amount_to_pay < line_outstanding
-
-    # Also check if paying this line still leaves the invoice partially paid
-    amounts = invoice.line_items.aggregate(
-        billed_total=Sum("amount"),
-        paid_total=Sum("paid_amount"),
-    )
-    billed_total = amounts.get("billed_total") or Decimal("0.00")
-    current_paid = amounts.get("paid_total") or Decimal("0.00")
-    would_be_fully_paid = (current_paid + amount_to_pay) >= billed_total
-
-    # Partial payments require director approval (unless user IS director)
-    if not would_be_fully_paid and request.user.role not in {
-        "director",
-        "system_admin",
-    }:
-        has_approval = ApprovalRequest.objects.filter(
-            branch=invoice.branch,
-            approval_type="partial_payment",
-            invoice=invoice,
-            status="approved",
-        ).exists()
-        if not has_approval:
-            messages.error(
-                request,
-                "Partial payment requires director approval. Use 'Request Partial Payment' first.",
-            )
-            return _redirect_with_return_to(
-                reverse("billing:detail", args=[pk]), return_to
-            )
-
     if request.user.role in {"cashier", "receptionist"}:
         shift = _get_open_shift_for_user(request.user)
         if not shift:
@@ -1318,6 +1402,7 @@ def pay_line_item(request, pk, line_id):
                 form.cleaned_data["amount_paid"],
                 form.cleaned_data["payment_method"],
                 request.user,
+                transaction_id=form.cleaned_data.get("transaction_id", ""),
             )
 
             amounts = invoice.line_items.aggregate(
@@ -1329,12 +1414,18 @@ def pay_line_item(request, pk, line_id):
 
             if paid_total >= billed_total and billed_total > 0:
                 invoice.payment_status = "paid"
-                invoice.save(update_fields=["payment_status", "updated_at"])
+                invoice.payment_method = form.cleaned_data["payment_method"]
+                invoice.save(
+                    update_fields=["payment_status", "payment_method", "updated_at"]
+                )
                 _consume_stock_for_invoice(invoice, consumed_by=request.user)
                 rcpt_type = "full"
             elif paid_total > 0:
                 invoice.payment_status = "partial"
-                invoice.save(update_fields=["payment_status", "updated_at"])
+                invoice.payment_method = form.cleaned_data["payment_method"]
+                invoice.save(
+                    update_fields=["payment_status", "payment_method", "updated_at"]
+                )
                 rcpt_type = "partial"
             else:
                 rcpt_type = None
@@ -1346,6 +1437,7 @@ def pay_line_item(request, pk, line_id):
                     form.cleaned_data["payment_method"],
                     request.user,
                     receipt_type=rcpt_type,
+                    transaction_id=form.cleaned_data.get("transaction_id", ""),
                 )
 
             _log_financial_event(
@@ -1362,6 +1454,7 @@ def pay_line_item(request, pk, line_id):
                     "payment_status": line_item.payment_status,
                     "amount_paid": str(form.cleaned_data["amount_paid"]),
                     "payment_method": form.cleaned_data["payment_method"],
+                    "transaction_id": form.cleaned_data.get("transaction_id", ""),
                 },
             )
     except ValidationError as exc:
@@ -1987,7 +2080,7 @@ def receipt(request, pk):
     return_to = _safe_return_url(request)
     invoice = _get_invoice_for_user_or_404(request.user, pk)
     line_items = invoice.line_items.all()
-    receipts = invoice.receipts.order_by("-created_at")
+    receipts = invoice.receipts.order_by("-created_at")[:3]
     return render(
         request,
         "billing/receipt.html",
