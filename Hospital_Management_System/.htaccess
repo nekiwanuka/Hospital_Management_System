@@ -2,5 +2,5 @@
 PassengerEnabled On
 PassengerAppRoot "/home/jbeiqmqv/Hospital_Management_System/Hospital_Management_System"
 PassengerBaseURI "/"
-PassengerPython "/home/jbeiqmqv/virtualenv/home/jbeiqmqv/Hospital_Management_System/3.13/bin/python"
+PassengerPython "/home/jbeiqmqv/virtualenv/Hospital_Management_System/3.13/bin/python"
 # DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION END
