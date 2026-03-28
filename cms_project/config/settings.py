@@ -11,7 +11,9 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-secret-key")
 DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in {"1", "true", "yes", "on"}
 ALLOWED_HOSTS = [
     h.strip()
-    for h in os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+    for h in os.getenv(
+        "DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost, https://erp.devtownhosting.com/"
+    ).split(",")
     if h.strip()
 ]
 

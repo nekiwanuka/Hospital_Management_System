@@ -1,26 +1,15 @@
-"""
-Phusion Passenger entry point for cPanel Python hosting.
-cPanel looks for `passenger_wsgi.py` in the application root.
-"""
-
-import os
 import sys
+import os
 
-# ── Point to your project directory ──
-# Adjust this path to match where cPanel places your project.
-# Typically:  /home/<cpanel_user>/HMS/cms_project
-APP_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, APP_DIR)
+# Path to your Django root (where manage.py is)
+project_home = "/home/jbeiqmqv/repositories/Hospital_Management_System/cms_project"
 
-# ── If using a virtualenv created via cPanel's "Setup Python App" ──
-# cPanel auto-activates it, but if you need to force it:
-# VENV = os.path.join(os.path.dirname(APP_DIR), '.venv')
-# VENV_ACTIVATE = os.path.join(VENV, 'bin', 'activate_this.py')
-# if os.path.isfile(VENV_ACTIVATE):
-#     exec(open(VENV_ACTIVATE).read(), {'__file__': VENV_ACTIVATE})
+if project_home not in sys.path:
+    sys.path.insert(0, project_home)
 
+# Django settings module (IMPORTANT)
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
-from django.core.wsgi import get_wsgi_application  # noqa: E402
+from django.core.wsgi import get_wsgi_application
 
 application = get_wsgi_application()
