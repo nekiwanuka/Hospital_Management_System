@@ -1,0 +1,12 @@
+# Force Passenger to restart when this file is touched
+# (create/touch tmp/restart.txt to restart the app)
+PassengerEnabled On
+PassengerAppRoot /home/YOUR_CPANEL_USER/HMS/cms_project
+
+# ── Serve static & media files directly via Apache ──
+RewriteEngine On
+
+# Let Apache serve /static/ and /media/ directly (no Python overhead)
+RewriteCond %{REQUEST_URI} ^/static/ [OR]
+RewriteCond %{REQUEST_URI} ^/media/
+RewriteRule ^(.*)$ - [L]

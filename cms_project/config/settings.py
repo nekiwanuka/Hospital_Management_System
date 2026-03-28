@@ -97,10 +97,24 @@ def _postgres_db(parsed):
     }
 
 
+def _mysql_db(parsed):
+    return {
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": parsed.path.lstrip("/") or "clinicms",
+        "USER": parsed.username or "root",
+        "PASSWORD": parsed.password or "",
+        "HOST": parsed.hostname or "127.0.0.1",
+        "PORT": str(parsed.port or 3306),
+        "OPTIONS": {"charset": "utf8mb4"},
+    }
+
+
 database_url = os.getenv("DATABASE_URL", "sqlite:///db.sqlite3")
 parsed = urlparse(database_url)
 if parsed.scheme.startswith("postgres"):
     DATABASES = {"default": _postgres_db(parsed)}
+elif parsed.scheme.startswith("mysql"):
+    DATABASES = {"default": _mysql_db(parsed)}
 else:
     rel = parsed.path.lstrip("/") if parsed.path else "db.sqlite3"
     DATABASES = {"default": _sqlite_db(rel or "db.sqlite3")}
