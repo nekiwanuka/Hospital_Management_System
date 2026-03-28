@@ -34,8 +34,25 @@ from apps.settingsapp.services import get_lab_fee
 from apps.visits.services import transition_visit
 
 
-def _generate_invoice_number():
-    return f"INV-{timezone.now().strftime('%Y%m%d%H%M%S%f')}"
+def _generate_invoice_number(branch):
+    now = timezone.now()
+    prefix = (branch.branch_name[0] if branch.branch_name else "X").upper()
+    yy = now.strftime("%y")
+    mm = now.strftime("%m")
+    base = f"{prefix}{yy}{mm}"
+    last = (
+        Invoice.objects.filter(invoice_number__startswith=base)
+        .order_by("-invoice_number")
+        .values_list("invoice_number", flat=True)
+        .first()
+    )
+    seq = 1
+    if last:
+        try:
+            seq = int(last.rsplit("-", 1)[-1]) + 1
+        except (ValueError, IndexError):
+            seq = 1
+    return f"{base}-{seq:02d}"
 
 
 def _is_lab_request_payment_cleared(lab_request):
@@ -332,7 +349,7 @@ def create_request(request):
                 service_fee = get_lab_fee(lab_request.test_type)
                 invoice = Invoice.objects.create(
                     branch=lab_request.branch,
-                    invoice_number=_generate_invoice_number(),
+                    invoice_number=_generate_invoice_number(lab_request.branch),
                     patient=lab_request.patient,
                     visit=lab_request.visit,
                     services=f"Lab Test - {lab_request.test_type}",

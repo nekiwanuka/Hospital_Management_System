@@ -46,8 +46,25 @@ from apps.visits.models import Visit
 from apps.visits.services import transition_visit
 
 
-def _generate_invoice_number():
-    return f"INV-{timezone.now().strftime('%Y%m%d%H%M%S%f')}"
+def _generate_invoice_number(branch):
+    now = timezone.now()
+    prefix = (branch.branch_name[0] if branch.branch_name else "X").upper()
+    yy = now.strftime("%y")
+    mm = now.strftime("%m")
+    base = f"{prefix}{yy}{mm}"
+    last = (
+        Invoice.objects.filter(invoice_number__startswith=base)
+        .order_by("-invoice_number")
+        .values_list("invoice_number", flat=True)
+        .first()
+    )
+    seq = 1
+    if last:
+        try:
+            seq = int(last.rsplit("-", 1)[-1]) + 1
+        except (ValueError, IndexError):
+            seq = 1
+    return f"{base}-{seq:02d}"
 
 
 def _safe_return_url(request):
@@ -453,7 +470,7 @@ def _create_invoice_for_request(imaging_request, user):
     )
     invoice = Invoice.objects.create(
         branch=imaging_request.branch,
-        invoice_number=_generate_invoice_number(),
+        invoice_number=_generate_invoice_number(imaging_request.branch),
         patient=imaging_request.patient,
         visit=imaging_request.visit,
         services=f"Radiology - {service_label}",

@@ -19,6 +19,27 @@ from apps.visits.forms import VisitCreateForm
 from apps.visits.models import Visit
 
 
+def _generate_visit_invoice_number(branch):
+    now = timezone.now()
+    prefix = (branch.branch_name[0] if branch.branch_name else "X").upper()
+    yy = now.strftime("%y")
+    mm = now.strftime("%m")
+    base = f"{prefix}{yy}{mm}"
+    last = (
+        Invoice.objects.filter(invoice_number__startswith=base)
+        .order_by("-invoice_number")
+        .values_list("invoice_number", flat=True)
+        .first()
+    )
+    seq = 1
+    if last:
+        try:
+            seq = int(last.rsplit("-", 1)[-1]) + 1
+        except (ValueError, IndexError):
+            seq = 1
+    return f"{base}-{seq:02d}"
+
+
 @login_required
 @role_required(
     "receptionist",
@@ -87,19 +108,52 @@ def create(request):
             if not request.user.branch_id:
                 form.add_error(None, "Your user account has no branch assigned.")
             else:
+                patient = form.cleaned_data["patient"]
+
+                # Check for existing open visit — reuse it
+                open_visit = (
+                    branch_queryset_for_user(
+                        request.user,
+                        Visit.objects.filter(
+                            patient=patient,
+                            status__in=[
+                                "waiting_triage",
+                                "in_triage",
+                                "waiting_doctor",
+                                "lab_requested",
+                                "radiology_requested",
+                                "waiting_pharmacy",
+                                "billing_queue",
+                                "admission_queue",
+                                "admitted",
+                            ],
+                        ),
+                    )
+                    .order_by("-check_in_time")
+                    .first()
+                )
+
+                if open_visit:
+                    messages.info(
+                        request,
+                        f"Patient already has an active visit ({open_visit.visit_number}). Redirecting to it.",
+                    )
+                    return redirect("visits:detail", pk=open_visit.pk)
+
+                # Check for valid follow-up — skip consultation fee
+                latest_follow_up = branch_queryset_for_user(
+                    request.user,
+                    Consultation.objects.filter(
+                        patient=patient,
+                        follow_up_date__isnull=False,
+                    ).order_by("-created_at"),
+                ).first()
+
                 visit = form.save(commit=False)
                 visit.branch = request.user.branch
                 visit.created_by = request.user
                 visit.status = "waiting_triage"
                 visit.save()
-
-                latest_follow_up = branch_queryset_for_user(
-                    request.user,
-                    Consultation.objects.filter(
-                        patient=visit.patient,
-                        follow_up_date__isnull=False,
-                    ).order_by("-created_at"),
-                ).first()
 
                 if (
                     latest_follow_up
@@ -113,11 +167,12 @@ def create(request):
                     return redirect("visits:detail", pk=visit.pk)
 
                 consultation_fee = get_consultation_fee()
+                branch = request.user.branch
 
                 Invoice.objects.create(
-                    branch=visit.branch,
-                    invoice_number=f"INV-{timezone.now().strftime('%Y%m%d%H%M%S%f')}",
-                    patient=visit.patient,
+                    branch=branch,
+                    invoice_number=_generate_visit_invoice_number(branch),
+                    patient=patient,
                     visit=visit,
                     services=f"Initial consultation registration - {consultation_fee}",
                     total_amount=consultation_fee,

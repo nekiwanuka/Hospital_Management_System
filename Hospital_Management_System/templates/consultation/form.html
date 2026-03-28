@@ -149,8 +149,8 @@
 <!-- ── Main work area: Consultation + Actions side by side ── -->
 <div class="row g-2">
   <!-- Consultation Form -->
-  <div class="col-lg-7">
-    <div class="cl-card">
+  <div class="col-lg-5">
+    <div class="cl-card mb-2">
       <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-journal-medical"></i> Record Consultation</h2></div>
       <div class="cl-card-body">
         <form method="post" novalidate>
@@ -171,10 +171,10 @@
   </div>
 
   <!-- Actions column -->
-  <div class="col-lg-5">
+  <div class="col-lg-7">
     <div class="row g-2">
       <!-- Request Lab Test -->
-      <div class="col-sm-6">
+      <div class="col-sm-6 col-md-4">
         <div class="cl-card h-100">
           <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-droplet"></i> Lab Test</h2></div>
           <div class="cl-card-body py-2">
@@ -194,7 +194,7 @@
       </div>
 
       <!-- Request Radiology -->
-      <div class="col-sm-6">
+      <div class="col-sm-6 col-md-4">
         <div class="cl-card h-100">
           <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-x-ray"></i> Radiology</h2></div>
           <div class="cl-card-body py-2">
@@ -214,7 +214,7 @@
       </div>
 
       <!-- Prescribe Medicine -->
-      <div class="col-sm-6">
+      <div class="col-sm-6 col-md-4">
         <div class="cl-card h-100">
           <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-capsule"></i> Prescribe</h2></div>
           <div class="cl-card-body py-2">
@@ -236,7 +236,7 @@
       </div>
 
       <!-- Referral -->
-      <div class="col-sm-6">
+      <div class="col-sm-6 col-md-4">
         <div class="cl-card h-100">
           <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-send"></i> Referral</h2></div>
           <div class="cl-card-body py-2">
@@ -256,7 +256,7 @@
       </div>
 
       <!-- Transfer -->
-      <div class="col-sm-6">
+      <div class="col-sm-6 col-md-4">
         <div class="cl-card h-100">
           <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-arrow-left-right"></i> Transfer</h2></div>
           <div class="cl-card-body py-2">
@@ -276,7 +276,7 @@
       </div>
 
       <!-- Quick Actions -->
-      <div class="col-sm-6">
+      <div class="col-sm-6 col-md-4">
         <div class="cl-card h-100">
           <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-lightning"></i> Actions</h2></div>
           <div class="cl-card-body py-2 d-grid gap-1">
@@ -295,49 +295,47 @@
   </div>
 </div>
 
-<!-- Patient History (collapsed) -->
+<!-- ── Patient History ── -->
 {% if patient_lab_history or patient_radiology_history or patient_pharmacy_history %}
-<details class="mt-4">
-  <summary class="fw-bold mb-2">Patient History (Previous Visits)</summary>
-  {% if patient_lab_history %}
-  <div class="cl-card mb-3">
-    <div class="cl-card-header"><h2 class="cl-card-title">Lab History</h2></div>
-    <div class="cl-card-body p-0">
-      <div class="table-responsive">
-        <table class="table table-sm">
-          <thead><tr><th>Date</th><th>Test</th><th>Results</th></tr></thead>
-          <tbody>{% for lr in patient_lab_history %}<tr><td>{{ lr.date|date:"d M Y" }}</td><td>{{ lr.test_type }}</td><td>{{ lr.results|truncatechars:80|default:"—" }}</td></tr>{% endfor %}</tbody>
-        </table>
+<div class="cl-card mt-2">
+  <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-clock-history"></i> Patient History (Previous Visits)</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="row g-0">
+      {% if patient_lab_history %}
+      <div class="col-md-4 border-end">
+        <h6 class="px-3 py-2 mb-0 bg-light border-bottom"><i class="bi bi-droplet text-success"></i> Lab</h6>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Date</th><th>Test</th><th>Results</th></tr></thead>
+            <tbody>{% for lr in patient_lab_history %}<tr><td>{{ lr.date|date:"d M" }}</td><td>{{ lr.test_type }}</td><td>{{ lr.results|truncatechars:40|default:"—" }}</td></tr>{% endfor %}</tbody>
+          </table>
+        </div>
       </div>
+      {% endif %}
+      {% if patient_radiology_history %}
+      <div class="col-md-4 border-end">
+        <h6 class="px-3 py-2 mb-0 bg-light border-bottom"><i class="bi bi-x-ray text-info"></i> Radiology</h6>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Date</th><th>Type</th><th>Findings</th></tr></thead>
+            <tbody>{% for ir in patient_radiology_history %}<tr><td>{{ ir.date_requested|date:"d M" }}</td><td>{{ ir.get_imaging_type_display }}</td><td>{% if ir.result %}{{ ir.result.findings|truncatechars:40 }}{% else %}—{% endif %}</td></tr>{% endfor %}</tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+      {% if patient_pharmacy_history %}
+      <div class="col-md-4">
+        <h6 class="px-3 py-2 mb-0 bg-light border-bottom"><i class="bi bi-capsule text-warning"></i> Pharmacy</h6>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Date</th><th>Medicine</th><th>Qty</th></tr></thead>
+            <tbody>{% for d in patient_pharmacy_history %}<tr><td>{{ d.dispensed_at|date:"d M" }}</td><td>{{ d.medicine.name }}</td><td>{{ d.quantity }}</td></tr>{% endfor %}</tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
     </div>
   </div>
-  {% endif %}
-  {% if patient_radiology_history %}
-  <div class="cl-card mb-3">
-    <div class="cl-card-header"><h2 class="cl-card-title">Radiology History</h2></div>
-    <div class="cl-card-body p-0">
-      <div class="table-responsive">
-        <table class="table table-sm">
-          <thead><tr><th>Date</th><th>Type</th><th>Findings</th></tr></thead>
-          <tbody>{% for ir in patient_radiology_history %}<tr><td>{{ ir.date_requested|date:"d M Y" }}</td><td>{{ ir.get_imaging_type_display }}</td><td>{% if ir.result %}{{ ir.result.findings|truncatechars:80 }}{% else %}—{% endif %}</td></tr>{% endfor %}</tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-  {% endif %}
-  {% if patient_pharmacy_history %}
-  <div class="cl-card mb-3">
-    <div class="cl-card-header"><h2 class="cl-card-title">Pharmacy History</h2></div>
-    <div class="cl-card-body p-0">
-      <div class="table-responsive">
-        <table class="table table-sm">
-          <thead><tr><th>Date</th><th>Medicine</th><th>Qty</th></tr></thead>
-          <tbody>{% for d in patient_pharmacy_history %}<tr><td>{{ d.dispensed_at|date:"d M Y" }}</td><td>{{ d.medicine.name }}</td><td>{{ d.quantity }}</td></tr>{% endfor %}</tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-  {% endif %}
-</details>
+</div>
 {% endif %}
 {% endblock %}

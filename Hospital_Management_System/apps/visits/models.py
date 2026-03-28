@@ -58,10 +58,13 @@ class Visit(BranchScopedModel):
         return self.check_out_time is None and self.status != "completed"
 
     def _generate_visit_number(self):
-        branch_code = (
-            self.branch.branch_code if self.branch_id and self.branch else "GEN"
-        )[:6]
-        prefix = f"{branch_code}-VIS-"
+        now = timezone.now()
+        letter = "V"
+        if self.branch_id and self.branch and self.branch.branch_name:
+            letter = self.branch.branch_name[0].upper()
+        yy = now.strftime("%y")
+        mm = now.strftime("%m")
+        prefix = f"V{letter}{yy}{mm}-"
         latest = (
             Visit.objects.filter(visit_number__startswith=prefix)
             .order_by("-visit_number")
@@ -71,10 +74,10 @@ class Visit(BranchScopedModel):
         next_num = 1
         if latest:
             try:
-                next_num = int(latest.split("-")[-1]) + 1
+                next_num = int(latest.rsplit("-", 1)[-1]) + 1
             except (ValueError, IndexError):
                 next_num = 1
-        return f"{prefix}{next_num:06d}"
+        return f"{prefix}{next_num:04d}"
 
     def save(self, *args, **kwargs):
         if not self.visit_number:
