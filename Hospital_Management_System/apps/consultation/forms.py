@@ -125,6 +125,18 @@ class ConsultationPharmacyLineForm(forms.Form):
             if isinstance(field.widget, forms.Select):
                 css = "form-select"
             field.widget.attrs["class"] = css
+        self.fields["medicine"].widget.attrs.update(
+            {
+                "class": f"{self.fields['medicine'].widget.attrs.get('class', '')} consult-medicine-select".strip(),
+                "data-role": "medicine-select",
+            }
+        )
+        self.fields["quantity"].widget.attrs.update(
+            {
+                "class": f"{self.fields['quantity'].widget.attrs.get('class', '')} consult-quantity-input".strip(),
+                "placeholder": "Qty",
+            }
+        )
 
 
 class BasePharmacyLineFormSet(forms.BaseFormSet):

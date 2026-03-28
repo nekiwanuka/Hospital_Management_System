@@ -761,7 +761,7 @@ body {
 .consult-workbench-body {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 1rem;
 }
 
 .consult-section-heading {
@@ -789,6 +789,7 @@ body {
     overflow: hidden;
 }
 
+.consult-overview-card,
 .consult-profile-card,
 .consult-history-card,
 .consult-notes-card,
@@ -796,10 +797,15 @@ body {
     box-shadow: var(--cl-shadow-md);
 }
 
+.consult-overview-card {
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+}
+
 .consult-profile-card {
     background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
 }
 
+.consult-overview-card .cl-card-header,
 .consult-profile-card .cl-card-header,
 .consult-history-card .cl-card-header,
 .consult-actions-card .cl-card-header {
@@ -810,6 +816,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    height: 100%;
 }
 
 .consult-profile-row {
@@ -829,6 +836,56 @@ body {
 .consult-allergy-alert {
     background-color: #fff3cd;
     font-size: 0.85rem;
+}
+
+.consult-panel-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--cl-ink);
+}
+
+.consult-triage-panel {
+    background: #f8fafc;
+    border: 1px solid #e8eef5;
+    border-radius: 1rem;
+    padding: 1rem;
+}
+
+.consult-triage-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.consult-metric-chip {
+    background: #ffffff;
+    border: 1px solid #e8eef5;
+    border-radius: 0.9rem;
+    padding: 0.8rem 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.consult-metric-chip span {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--cl-muted);
+}
+
+.consult-metric-chip strong {
+    font-size: 0.95rem;
+    color: var(--cl-ink);
+}
+
+.consult-triage-notes {
+    background: #ffffff;
+    border: 1px solid #e8eef5;
+    border-radius: 0.9rem;
+    padding: 0.9rem 1rem;
+    color: var(--cl-ink);
 }
 
 .consult-history-card .accordion-item {
@@ -921,6 +978,36 @@ body {
     background: #fff;
 }
 
+.consult-pharmacy-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.consult-pharmacy-row {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.95rem;
+    padding: 0.9rem;
+}
+
+.consult-pharmacy-row select,
+.consult-pharmacy-row input {
+    width: 100%;
+}
+
+.consult-pharmacy-row .consult-remove-row {
+    min-height: 38px;
+}
+
+.consult-medicine-select {
+    background-color: #fff;
+}
+
+.consult-medicine-search {
+    background-color: #fff;
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 991.98px) {
     .cl-sidebar {
@@ -952,6 +1039,10 @@ body {
         position: static;
         top: auto;
     }
+
+    .consult-triage-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 767.98px) {
@@ -967,6 +1058,10 @@ body {
     .consult-profile-row {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .consult-triage-metrics {
+        grid-template-columns: 1fr;
     }
 
     .consult-notes-column-primary {

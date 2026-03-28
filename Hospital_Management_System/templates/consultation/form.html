@@ -4,544 +4,674 @@
 
 {% block content %}
 <div class="consult-workbench">
-<section class="consult-hero cl-card border-0">
-  <div class="cl-card-body">
-    <div class="cl-page-header consult-hero-header mb-0">
-      <div>
-        <p class="consult-hero-kicker mb-2">Consultation Workbench</p>
-        <h1>{{ patient.first_name }} {{ patient.last_name }}</h1>
-        <p>Visit {{ visit.visit_number }} &bull; {{ visit.get_status_display }}
-          {% if cashier_cycle_badge %}<span class="badge {{ cashier_cycle_badge.1 }} ms-2">{{ cashier_cycle_badge.0 }}</span>{% endif %}
-        </p>
+  <section class="consult-hero cl-card border-0">
+    <div class="cl-card-body">
+      <div class="cl-page-header consult-hero-header mb-0">
+        <div>
+          <p class="consult-hero-kicker mb-2">Consultation Workbench</p>
+          <h1>{{ patient.first_name }} {{ patient.last_name }}</h1>
+          <p>Visit {{ visit.visit_number }} &bull; {{ visit.get_status_display }}
+            {% if cashier_cycle_badge %}<span class="badge {{ cashier_cycle_badge.1 }} ms-2">{{ cashier_cycle_badge.0 }}</span>{% endif %}
+          </p>
+        </div>
+        <div class="d-flex gap-2 consult-hero-actions">
+          <a href="{% url 'patients:detail' patient.pk %}?history_only=1" class="btn btn-outline-secondary btn-sm" target="_blank"><i class="bi bi-clock-history"></i> History</a>
+          <a href="{% url 'consultation:index' %}{% if selected_panel != 'all' %}?panel={{ selected_panel }}{% endif %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+        </div>
       </div>
-      <div class="d-flex gap-2 consult-hero-actions">
-        <a href="{% url 'patients:detail' patient.pk %}?history_only=1" class="btn btn-outline-secondary btn-sm" target="_blank"><i class="bi bi-clock-history"></i> History</a>
-        <a href="{% url 'consultation:index' %}{% if selected_panel != 'all' %}?panel={{ selected_panel }}{% endif %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
-      </div>
-    </div>
 
-    <div class="consult-summary-grid">
-      <div class="consult-summary-pill">
-        <span class="consult-summary-label">Patient ID</span>
-        <strong>{{ patient.patient_id|default:"—" }}</strong>
-      </div>
-      <div class="consult-summary-pill">
-        <span class="consult-summary-label">Age / Gender</span>
-        <strong>{% if patient.date_of_birth %}{{ patient.get_age }}y{% else %}—{% endif %} • {{ patient.get_gender_display|default:"—" }}</strong>
-      </div>
-      <div class="consult-summary-pill">
-        <span class="consult-summary-label">Lab History</span>
-        <strong>{{ patient_lab_history|length }}</strong>
-      </div>
-      <div class="consult-summary-pill">
-        <span class="consult-summary-label">Radiology</span>
-        <strong>{{ patient_radiology_history|length }}</strong>
-      </div>
-      <div class="consult-summary-pill">
-        <span class="consult-summary-label">Pharmacy</span>
-        <strong>{{ patient_pharmacy_history|length }}</strong>
-      </div>
-      <div class="consult-summary-pill consult-summary-pill-accent">
-        <span class="consult-summary-label">Workflow</span>
-        <strong>{{ visit.get_status_display }}</strong>
-      </div>
-    </div>
-  </div>
-</section>
-  </div>
-<div class="consult-workbench-body">
-
-<!-- ── Current Visit Results (full-width, compact) ── -->
-{% if triage_records or current_visit_lab_results or pending_visit_lab_requests or current_visit_radiology_results or current_visit_pharmacy_requests or current_visit_pharmacy_records %}
-<section class="consult-section mb-3">
-  <div class="consult-section-heading">
-    <div>
-      <h2 class="consult-section-title">Current Visit Activity</h2>
-      <p class="consult-section-subtitle">Everything already requested or completed for this visit.</p>
-    </div>
-  </div>
-<div class="row g-3 consult-current-grid">
-  {% if triage_records %}
-  <div class="col-12">
-    <div class="cl-card consult-panel-card h-100">
-      <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0">Triage</h2></div>
-      <div class="cl-card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-sm mb-0">
-            <thead><tr><th>Date</th><th>BP</th><th>Temp</th><th>Pulse</th><th>Weight</th><th>Symptoms</th></tr></thead>
-            <tbody>
-              {% for t in triage_records %}
-              <tr><td>{{ t.date|date:"d M H:i" }}</td><td>{{ t.blood_pressure|default:"—" }}</td><td>{{ t.temperature|default:"—" }}</td><td>{{ t.pulse_rate|default:"—" }}</td><td>{{ t.weight|default:"—" }}</td><td>{{ t.symptoms|truncatechars:80|default:"—" }}</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
+      <div class="consult-summary-grid">
+        <div class="consult-summary-pill">
+          <span class="consult-summary-label">Patient ID</span>
+          <strong>{{ patient.patient_id|default:"—" }}</strong>
+        </div>
+        <div class="consult-summary-pill">
+          <span class="consult-summary-label">Age / Gender</span>
+          <strong>{% if patient.date_of_birth %}{{ patient.get_age }}y{% else %}—{% endif %} • {{ patient.get_gender_display|default:"—" }}</strong>
+        </div>
+        <div class="consult-summary-pill">
+          <span class="consult-summary-label">Lab History</span>
+          <strong>{{ patient_lab_history|length }}</strong>
+        </div>
+        <div class="consult-summary-pill">
+          <span class="consult-summary-label">Radiology</span>
+          <strong>{{ patient_radiology_history|length }}</strong>
+        </div>
+        <div class="consult-summary-pill">
+          <span class="consult-summary-label">Pharmacy</span>
+          <strong>{{ patient_pharmacy_history|length }}</strong>
+        </div>
+        <div class="consult-summary-pill consult-summary-pill-accent">
+          <span class="consult-summary-label">Workflow</span>
+          <strong>{{ visit.get_status_display }}</strong>
         </div>
       </div>
     </div>
-  </div>
-  {% endif %}
+  </section>
 
-  {% if current_visit_lab_results %}
-  <div class="col-md-6">
-    <div class="cl-card consult-panel-card h-100">
-      <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-droplet"></i> Lab Results</h2></div>
-      <div class="cl-card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-sm mb-0">
-            <thead><tr><th>Test</th><th>Status</th><th>Results</th><th></th></tr></thead>
-            <tbody>
-              {% for lr in current_visit_lab_results %}
-              <tr>
-                <td>{{ lr.test_type }}</td>
-                <td><span class="badge bg-{% if lr.status == 'completed' %}success{% elif lr.status == 'reviewed' %}primary{% else %}warning{% endif %}">{{ lr.get_status_display }}</span></td>
-                <td>{{ lr.results|truncatechars:60|default:"Pending" }}</td>
-                <td>{% if lr.status == 'completed' %}<form method="post" action="{% url 'consultation:review_lab_result' visit.pk lr.pk %}" class="d-inline">{% csrf_token %}<input type="hidden" name="panel" value="{{ selected_panel }}"><button type="submit" class="btn btn-sm btn-outline-success py-0">Review</button></form>{% endif %}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+  <div class="consult-workbench-body">
+    <section class="consult-section mb-3">
+      <div class="cl-card consult-overview-card border-0">
+        <div class="cl-card-header py-3">
+          <div>
+            <h2 class="cl-card-title mb-1 fs-5"><i class="bi bi-person-vcard me-2"></i>Patient Profile & Triage</h2>
+            <p class="consult-section-subtitle mb-0">Core patient identity, allergies, and the latest triage reading in one place.</p>
+          </div>
         </div>
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  {% if pending_visit_lab_requests %}
-  <div class="col-md-6">
-    <div class="cl-card consult-panel-card h-100">
-      <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-hourglass"></i> Pending Lab</h2></div>
-      <div class="cl-card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-sm mb-0">
-            <thead><tr><th>Test</th><th>Status</th><th>Requested</th></tr></thead>
-            <tbody>
-              {% for lr in pending_visit_lab_requests %}
-              <tr><td>{{ lr.test_type }}</td><td><span class="badge bg-warning text-dark">{{ lr.get_status_display }}</span></td><td>{{ lr.date|date:"d M H:i" }}</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  {% if current_visit_radiology_results %}
-  <div class="col-md-6">
-    <div class="cl-card consult-panel-card h-100">
-      <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-x-ray"></i> Radiology</h2></div>
-      <div class="cl-card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-sm mb-0">
-            <thead><tr><th>Type</th><th>Status</th><th>Findings</th></tr></thead>
-            <tbody>
-              {% for ir in current_visit_radiology_results %}
-              <tr><td>{{ ir.get_imaging_type_display }}</td><td><span class="badge bg-secondary">{{ ir.get_status_display }}</span></td><td>{% if ir.result %}{{ ir.result.findings|truncatechars:60 }}{% else %}Pending{% endif %}</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  {% if current_visit_pharmacy_requests %}
-  <div class="col-md-6">
-    <div class="cl-card consult-panel-card h-100">
-      <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-capsule"></i> Pharmacy Requests</h2></div>
-      <div class="cl-card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-sm mb-0">
-            <thead><tr><th>Medicine</th><th>Qty</th><th>Status</th></tr></thead>
-            <tbody>
-              {% for pr in current_visit_pharmacy_requests %}
-              <tr><td>{{ pr.medicine.name }}</td><td>{{ pr.quantity }}</td><td><span class="badge bg-{% if pr.status == 'dispensed' %}success{% else %}warning{% endif %}">{{ pr.get_status_display }}</span></td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  {% if current_visit_pharmacy_records %}
-  <div class="col-md-6">
-    <div class="cl-card consult-panel-card h-100">
-      <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-capsule"></i> Dispensed</h2></div>
-      <div class="cl-card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-sm mb-0">
-            <thead><tr><th>Medicine</th><th>Qty</th><th>Dispensed By</th></tr></thead>
-            <tbody>
-              {% for d in current_visit_pharmacy_records %}
-              <tr><td>{{ d.medicine.name }}</td><td>{{ d.quantity }}</td><td>{{ d.dispensed_by }}</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-  {% endif %}
-</div>
- </section>
-{% endif %}
-
-<!-- ── Main work area: Patient History + Consultation + Actions ── -->
-<div class="row g-3 mt-1 align-items-start">
-  
-  <!-- Main Area: Profile, History & Doctor's Notes -->
-  <div class="col-lg-8">
-    
-    <!-- Top Row: Horizontal Profile & History -->
-    <div class="row g-3 mb-3">
-      <!-- Patient Demographics -->
-      <div class="col-md-5">
-        {% if patient %}
-        <div class="cl-card consult-profile-card border-0 h-100">
-          <div class="cl-card-header py-3"><h2 class="cl-card-title mb-0 fs-6 fw-bold"><i class="bi bi-person-badge"></i> Patient Profile</h2></div>
-          <div class="cl-card-body p-3 consult-profile-body">
-            <div class="consult-profile-row">
-              <span class="text-muted">ID</span>
-              <span class="fw-bold">{{ patient.patient_id }}</span>
+        <div class="cl-card-body p-4">
+          <div class="row g-4 align-items-start">
+            <div class="col-lg-5">
+              {% if patient %}
+              <div class="consult-profile-body">
+                <div class="consult-profile-row">
+                  <span class="text-muted">ID</span>
+                  <span class="fw-bold">{{ patient.patient_id }}</span>
+                </div>
+                <div class="consult-profile-row">
+                  <span class="text-muted">Age/Gender</span>
+                  <span>{% if patient.date_of_birth %}{{ patient.get_age }}y{% else %}—{% endif %} • {{ patient.get_gender_display|default:"—" }}</span>
+                </div>
+                <div class="consult-profile-row">
+                  <span class="text-muted">Contact</span>
+                  <span>{{ patient.phone_number|default:"—" }}</span>
+                </div>
+                {% if patient.allergies %}
+                <div class="alert alert-warning py-2 px-2 mb-0 mt-3 d-flex align-items-start gap-2 border-0 consult-allergy-alert">
+                  <i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
+                  <div>
+                    <strong class="d-block mb-1">Allergies</strong>
+                    {{ patient.allergies }}
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+              {% endif %}
             </div>
-            <div class="consult-profile-row">
-              <span class="text-muted">Age/Gender</span>
-              <span>{% if patient.date_of_birth %}{{ patient.get_age }}y{% else %}—{% endif %} • {{ patient.get_gender_display|default:"—" }}</span>
+
+            <div class="col-lg-7">
+              <div class="consult-triage-panel">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                  <h3 class="consult-panel-title mb-0"><i class="bi bi-heart-pulse me-2 text-success"></i>Latest Triage</h3>
+                  {% if triage_records %}
+                  <span class="badge text-bg-light border">{{ triage_records.0.date|date:"d M Y H:i" }}</span>
+                  {% endif %}
+                </div>
+                {% if triage_records %}
+                {% with latest_triage=triage_records.0 %}
+                <div class="consult-triage-metrics">
+                  <div class="consult-metric-chip"><span>BP</span><strong>{{ latest_triage.blood_pressure|default:"—" }}</strong></div>
+                  <div class="consult-metric-chip"><span>Temp</span><strong>{{ latest_triage.temperature|default:"—" }}</strong></div>
+                  <div class="consult-metric-chip"><span>Pulse</span><strong>{{ latest_triage.pulse_rate|default:"—" }}</strong></div>
+                  <div class="consult-metric-chip"><span>Weight</span><strong>{{ latest_triage.weight|default:"—" }}</strong></div>
+                </div>
+                <div class="consult-triage-notes mt-3">
+                  <span class="consult-summary-label">Symptoms</span>
+                  <p class="mb-0 mt-2">{{ latest_triage.symptoms|default:"No triage symptoms captured yet." }}</p>
+                </div>
+                {% endwith %}
+                {% else %}
+                <div class="alert alert-light mb-0">No triage record has been captured for this visit yet.</div>
+                {% endif %}
+              </div>
             </div>
-            <div class="consult-profile-row">
-              <span class="text-muted">Contact</span>
-              <span>{{ patient.phone_number|default:"—" }}</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="row g-3 align-items-start">
+      <div class="col-xl-6">
+        <div class="cl-card consult-notes-card border-0 mb-0">
+          <div class="cl-card-header consult-notes-header py-3">
+            <div>
+              <h2 class="cl-card-title mb-1 fs-5"><i class="bi bi-journal-medical me-2"></i>Doctor's Notes</h2>
+              <p class="consult-section-subtitle mb-0">Assessment on the left, plan and follow-up on the right.</p>
             </div>
-            {% if patient.allergies %}
-            <div class="alert alert-warning py-2 px-2 mb-0 mt-3 d-flex align-items-start gap-2 border-0 consult-allergy-alert">
-              <i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
+          </div>
+          <div class="cl-card-body p-4">
+            <form method="post" novalidate>
+              {% csrf_token %}
+              <input type="hidden" name="panel" value="{{ selected_panel }}">
+              {% if form.non_field_errors %}<div class="alert alert-danger py-2">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>{% endif %}
+
+              <div class="row g-4 consult-notes-grid">
+                <div class="col-md-6 consult-notes-column consult-notes-column-primary">
+                  <div class="consult-field-group mb-3">
+                    <p class="consult-field-group-label">Assessment</p>
+                    <label for="{{ form.consultation_room.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.consultation_room.label }}</label>
+                    {{ form.consultation_room }}
+                    {% for error in form.consultation_room.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                  </div>
+                  <div class="consult-field-group mb-3">
+                    <label for="{{ form.symptoms.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.symptoms.label }}</label>
+                    {{ form.symptoms }}
+                    {% for error in form.symptoms.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                  </div>
+                  <div class="consult-field-group mb-0">
+                    <label for="{{ form.diagnosis.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.diagnosis.label }}</label>
+                    {{ form.diagnosis }}
+                    {% for error in form.diagnosis.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                  </div>
+                </div>
+
+                <div class="col-md-6 consult-notes-column consult-notes-column-secondary">
+                  <div class="consult-field-group mb-3">
+                    <p class="consult-field-group-label">Plan & Follow-up</p>
+                    <label for="{{ form.treatment_plan.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.treatment_plan.label }}</label>
+                    {{ form.treatment_plan }}
+                    {% for error in form.treatment_plan.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                  </div>
+                  <div class="consult-field-group mb-3">
+                    <label for="{{ form.prescription.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.prescription.label }}</label>
+                    {{ form.prescription }}
+                    {% for error in form.prescription.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                  </div>
+                  <div class="row g-2 mb-3">
+                    <div class="col-lg-6">
+                      <label for="{{ form.lab_tests_requested.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.lab_tests_requested.label }}</label>
+                      {{ form.lab_tests_requested }}
+                      {% for error in form.lab_tests_requested.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="col-lg-6">
+                      <label for="{{ form.follow_up_date.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.follow_up_date.label }}</label>
+                      {{ form.follow_up_date }}
+                      {% for error in form.follow_up_date.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-4 pt-3 border-top">
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold fs-6"><i class="bi bi-check-circle me-1"></i> Save Consultation</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-6">
+        <div class="consult-actions-rail">
+          <div class="cl-card consult-actions-card border-0 mb-0">
+            <div class="cl-card-header py-3">
               <div>
-                <strong class="d-block mb-1">Allergies</strong>
-                {{ patient.allergies }}
+                <h2 class="cl-card-title mb-1 fs-5"><i class="bi bi-lightning-charge me-2"></i>Clinical Actions</h2>
+                <p class="consult-section-subtitle mb-0">Lab, imaging, pharmacy, transfer, referral, and workflow in one balanced panel.</p>
+              </div>
+            </div>
+
+            <div class="cl-card-body p-0">
+              <ul class="nav nav-tabs nav-justified consult-actions-tabs border-bottom-0" id="actionsTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link active py-3 border-0 text-success fw-semibold" id="lab-tab" data-bs-toggle="tab" data-bs-target="#action-lab" type="button" role="tab"><i class="bi bi-droplet fs-5 d-block mb-1"></i> Lab</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link py-3 border-0 text-info fw-semibold" id="rad-tab" data-bs-toggle="tab" data-bs-target="#action-rad" type="button" role="tab"><i class="bi bi-x-ray fs-5 d-block mb-1"></i> Scan</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link py-3 border-0 text-primary fw-semibold" id="rx-tab" data-bs-toggle="tab" data-bs-target="#action-rx" type="button" role="tab"><i class="bi bi-capsule fs-5 d-block mb-1"></i> Rx</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link py-3 border-0 text-secondary fw-semibold" id="more-tab" data-bs-toggle="tab" data-bs-target="#action-more" type="button" role="tab"><i class="bi bi-grid fs-5 d-block mb-1"></i> More</button>
+                </li>
+              </ul>
+
+              <div class="tab-content p-3 border-top consult-actions-body" id="actionsTabContent">
+                <div class="tab-pane fade show active" id="action-lab" role="tabpanel">
+                  <h5 class="mb-3 text-success"><i class="bi bi-droplet"></i> Request Lab Test</h5>
+                  <form method="post" action="{% url 'consultation:request_lab_test' visit.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="panel" value="{{ selected_panel }}">
+                    {% for field in lab_test_form %}
+                    <div class="mb-3">
+                      <label class="form-label fw-medium">{{ field.label }}</label>
+                      {{ field }}
+                    </div>
+                    {% endfor %}
+                    <button type="submit" class="btn btn-success w-100"><i class="bi bi-plus-lg"></i> Add Request</button>
+                  </form>
+                </div>
+
+                <div class="tab-pane fade" id="action-rad" role="tabpanel">
+                  <h5 class="mb-3 text-info"><i class="bi bi-x-ray"></i> Medical Imaging</h5>
+                  <form method="post" action="{% url 'consultation:request_radiology' visit.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="panel" value="{{ selected_panel }}">
+                    {% for field in radiology_request_form %}
+                    <div class="mb-3">
+                      <label class="form-label fw-medium">{{ field.label }}</label>
+                      {{ field }}
+                    </div>
+                    {% endfor %}
+                    <button type="submit" class="btn btn-info text-white w-100"><i class="bi bi-plus-lg"></i> Add Scan</button>
+                  </form>
+                </div>
+
+                <div class="tab-pane fade" id="action-rx" role="tabpanel">
+                  <div class="d-flex justify-content-between align-items-start gap-2 mb-3 flex-wrap">
+                    <div>
+                      <h5 class="mb-1 text-primary"><i class="bi bi-capsule"></i> Prescribe Medication</h5>
+                      <p class="consult-section-subtitle mb-0">Search medicines, add multiple lines, then send the full prescription to pharmacy.</p>
+                    </div>
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="addPharmacyRow"><i class="bi bi-plus-circle me-1"></i>Add medicine</button>
+                  </div>
+
+                  <form method="post" action="{% url 'consultation:request_pharmacy' visit.pk %}" id="consultPharmacyForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="panel" value="{{ selected_panel }}">
+                    {{ pharmacy_formset.management_form }}
+                    {% if pharmacy_formset.non_form_errors %}<div class="alert alert-danger py-2">{% for e in pharmacy_formset.non_form_errors %}{{ e }}<br>{% endfor %}</div>{% endif %}
+
+                    <div class="consult-pharmacy-list" id="pharmacyRows">
+                      {% for f in pharmacy_formset %}
+                      <div class="consult-pharmacy-row" data-form-index="{{ forloop.counter0 }}">
+                        {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
+                        <div class="row g-2 align-items-end">
+                          <div class="col-12 col-xl-5">
+                            <label class="form-label small text-muted mb-1">Search medicine</label>
+                            <input type="search" class="form-control consult-medicine-search" placeholder="Type medicine name" autocomplete="off">
+                          </div>
+                          <div class="col-12 col-xl-4">
+                            <label class="form-label small text-muted mb-1">Medicine</label>
+                            {{ f.medicine }}
+                            {% for error in f.medicine.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                          </div>
+                          <div class="col-8 col-xl-2">
+                            <label class="form-label small text-muted mb-1">Quantity</label>
+                            {{ f.quantity }}
+                            {% for error in f.quantity.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                          </div>
+                          <div class="col-4 col-xl-1 d-grid">
+                            <button type="button" class="btn btn-outline-danger consult-remove-row" title="Remove medicine"><i class="bi bi-trash"></i></button>
+                          </div>
+                        </div>
+                      </div>
+                      {% endfor %}
+                    </div>
+
+                    <template id="pharmacyEmptyRowTemplate">
+                      <div class="consult-pharmacy-row" data-form-index="__prefix__">
+                        <div class="row g-2 align-items-end">
+                          <div class="col-12 col-xl-5">
+                            <label class="form-label small text-muted mb-1">Search medicine</label>
+                            <input type="search" class="form-control consult-medicine-search" placeholder="Type medicine name" autocomplete="off">
+                          </div>
+                          <div class="col-12 col-xl-4">
+                            <label class="form-label small text-muted mb-1">Medicine</label>
+                            {{ pharmacy_formset.empty_form.medicine }}
+                          </div>
+                          <div class="col-8 col-xl-2">
+                            <label class="form-label small text-muted mb-1">Quantity</label>
+                            {{ pharmacy_formset.empty_form.quantity }}
+                          </div>
+                          <div class="col-4 col-xl-1 d-grid">
+                            <button type="button" class="btn btn-outline-danger consult-remove-row" title="Remove medicine"><i class="bi bi-trash"></i></button>
+                          </div>
+                        </div>
+                      </div>
+                    </template>
+
+                    <div class="mb-3 mt-3">
+                      <label class="form-label fw-medium">Prescription Notes / Dosage</label>
+                      <textarea name="notes" class="form-control" rows="2" placeholder="e.g. 1x3 after meals"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send-check"></i> Send to Pharmacy</button>
+                  </form>
+                </div>
+
+                <div class="tab-pane fade" id="action-more" role="tabpanel">
+                  <div class="accordion" id="moreActionsAccordion">
+                    <div class="accordion-item border-0 border-bottom">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed px-2 py-3 bg-transparent shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTransfer">
+                          <i class="bi bi-arrow-left-right text-warning me-2"></i> Transfer Patient
+                        </button>
+                      </h2>
+                      <div id="collapseTransfer" class="accordion-collapse collapse" data-bs-parent="#moreActionsAccordion">
+                        <div class="accordion-body px-2 pb-3 pt-0">
+                          <form method="post" action="{% url 'consultation:transfer_patient' visit.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="panel" value="{{ selected_panel }}">
+                            {% for field in transfer_form %}
+                            <div class="mb-2">
+                              <label class="form-label small text-muted mb-1">{{ field.label }}</label>
+                              {{ field }}
+                            </div>
+                            {% endfor %}
+                            <button type="submit" class="btn btn-sm btn-warning w-100 mt-2">Transfer Now</button>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="accordion-item border-0 border-bottom">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed px-2 py-3 bg-transparent shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseReferral">
+                          <i class="bi bi-hospital text-danger me-2"></i> External Referral
+                        </button>
+                      </h2>
+                      <div id="collapseReferral" class="accordion-collapse collapse" data-bs-parent="#moreActionsAccordion">
+                        <div class="accordion-body px-2 pb-3 pt-0">
+                          <form method="post" action="{% url 'consultation:request_referral' visit.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="panel" value="{{ selected_panel }}">
+                            {% for field in referral_request_form %}
+                            <div class="mb-2">
+                              <label class="form-label small text-muted mb-1">{{ field.label }}</label>
+                              {{ field }}
+                            </div>
+                            {% endfor %}
+                            <button type="submit" class="btn btn-sm btn-danger w-100 mt-2">Create Referral</button>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mt-4 pt-3 border-top">
+                    <h6 class="text-muted fw-bold mb-3 small text-uppercase">Visit Workflow</h6>
+                    <div class="d-grid gap-2">
+                      <form method="post" action="{% url 'consultation:send_to_cashier' visit.pk %}">{% csrf_token %}<input type="hidden" name="panel" value="{{ selected_panel }}"><button type="submit" class="btn btn-outline-secondary w-100 text-start"><i class="bi bi-cash me-2"></i> Send To Cashier</button></form>
+                      <a href="{% url 'admission:create' %}?patient={{ patient.pk }}&visit={{ visit.pk }}" class="btn btn-outline-info w-100 text-start"><i class="bi bi-building me-2"></i> Admit Patient</a>
+                      {% if visit.status == 'admitted' %}
+                      <form method="post" action="{% url 'consultation:discharge_patient' visit.pk %}">{% csrf_token %}<input type="hidden" name="panel" value="{{ selected_panel }}"><button type="submit" class="btn btn-outline-danger w-100 text-start"><i class="bi bi-box-arrow-right me-2"></i> Discharge Patient</button></form>
+                      {% endif %}
+                      {% if visit.status != 'completed' %}
+                      <form method="post" action="{% url 'consultation:complete_visit' visit.pk %}">{% csrf_token %}<input type="hidden" name="panel" value="{{ selected_panel }}"><button type="submit" class="btn btn-dark w-100 text-start"><i class="bi bi-check2-all me-2"></i> Complete Visit</button></form>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if patient_lab_history or patient_radiology_history or patient_pharmacy_history %}
+    <section class="consult-section mt-3">
+      <div class="cl-card consult-history-card border-0 mb-0">
+        <div class="cl-card-header py-3 d-flex justify-content-between align-items-center">
+          <div>
+            <h2 class="cl-card-title mb-1 fs-5"><i class="bi bi-clock-history me-2"></i>Patient History</h2>
+            <p class="consult-section-subtitle mb-0">Previous lab, radiology, and pharmacy records appear below the main work area.</p>
+          </div>
+        </div>
+        <div class="cl-card-body p-0">
+          <div class="accordion accordion-flush" id="historyAccordion">
+            {% if patient_lab_history %}
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button class="accordion-button consult-history-toggle py-2 px-3 fw-semibold text-success" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLab">
+                  <i class="bi bi-droplet me-2"></i> Lab History
+                </button>
+              </h2>
+              <div id="collapseLab" class="accordion-collapse collapse show" data-bs-parent="#historyAccordion">
+                <div class="accordion-body p-0">
+                  <table class="table table-sm table-hover mb-0" style="font-size: 0.85rem;">
+                    <thead class="table-light"><tr><th class="ps-3">Date</th><th>Test</th></tr></thead>
+                    <tbody>{% for lr in patient_lab_history|slice:":5" %}<tr><td class="text-nowrap ps-3">{{ lr.date|date:"d M y" }}</td><td><span title="{{ lr.results|default:'' }}" class="text-truncate d-inline-block" style="max-width: 150px;">{{ lr.test_type }}</span></td></tr>{% endfor %}</tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+            {% if patient_radiology_history %}
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button class="accordion-button consult-history-toggle py-2 px-3 fw-semibold text-info {% if patient_lab_history %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRadio">
+                  <i class="bi bi-x-ray me-2"></i> Radiology History
+                </button>
+              </h2>
+              <div id="collapseRadio" class="accordion-collapse collapse {% if not patient_lab_history %}show{% endif %}" data-bs-parent="#historyAccordion">
+                <div class="accordion-body p-0">
+                  <table class="table table-sm table-hover mb-0" style="font-size: 0.85rem;">
+                    <thead class="table-light"><tr><th class="ps-3">Date</th><th>Scan</th></tr></thead>
+                    <tbody>{% for ir in patient_radiology_history|slice:":5" %}<tr><td class="text-nowrap ps-3">{{ ir.date_requested|date:"d M y" }}</td><td>{{ ir.get_imaging_type_display }}</td></tr>{% endfor %}</tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+            {% if patient_pharmacy_history %}
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button class="accordion-button consult-history-toggle py-2 px-3 fw-semibold text-warning {% if patient_lab_history or patient_radiology_history %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePharm">
+                  <i class="bi bi-capsule me-2"></i> Pharmacy History
+                </button>
+              </h2>
+              <div id="collapsePharm" class="accordion-collapse collapse {% if not patient_lab_history and not patient_radiology_history %}show{% endif %}" data-bs-parent="#historyAccordion">
+                <div class="accordion-body p-0">
+                  <table class="table table-sm table-hover mb-0" style="font-size: 0.85rem;">
+                    <thead class="table-light"><tr><th class="ps-3">Date</th><th>Medicine</th></tr></thead>
+                    <tbody>{% for d in patient_pharmacy_history|slice:":5" %}<tr><td class="text-nowrap ps-3">{{ d.dispensed_at|date:"d M y" }}</td><td>{{ d.medicine.name }}</td></tr>{% endfor %}</tbody>
+                  </table>
+                </div>
               </div>
             </div>
             {% endif %}
           </div>
         </div>
-        {% endif %}
       </div>
+    </section>
+    {% endif %}
 
-      <!-- Medical History Accordion -->
-      <div class="col-md-7">
-        {% if patient_lab_history or patient_radiology_history or patient_pharmacy_history %}
-        <div class="cl-card consult-history-card border-0 h-100">
-          <div class="cl-card-header py-3 d-flex justify-content-between align-items-center">
-            <h2 class="cl-card-title mb-0 fs-6 fw-bold"><i class="bi bi-clock-history"></i> Past Records</h2>
-          </div>
-          <div class="cl-card-body p-0">
-            <div class="accordion accordion-flush" id="historyAccordion">
-              
-              {% if patient_lab_history %}
-              <div class="accordion-item">
-                <h2 class="accordion-header">
-                  <button class="accordion-button consult-history-toggle py-2 px-3 fw-semibold text-success" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLab">
-                    <i class="bi bi-droplet me-2"></i> Lab History
-                  </button>
-                </h2>
-                <div id="collapseLab" class="accordion-collapse collapse show" data-bs-parent="#historyAccordion">
-                  <div class="accordion-body p-0">
-                    <table class="table table-sm table-hover mb-0" style="font-size: 0.85rem;">
-                      <thead class="table-light"><tr><th class="ps-3">Date</th><th>Test</th></tr></thead>
-                      <tbody>{% for lr in patient_lab_history|slice:":5" %}<tr><td class="text-nowrap ps-3">{{ lr.date|date:"d M y" }}</td><td><span title="{{ lr.results|default:'' }}" class="text-truncate d-inline-block" style="max-width: 150px;">{{ lr.test_type }}</span></td></tr>{% endfor %}</tbody>
-                    </table>
-                  </div>
-                </div>
+    {% if current_visit_lab_results or pending_visit_lab_requests or current_visit_radiology_results or current_visit_pharmacy_requests or current_visit_pharmacy_records %}
+    <section class="consult-section mt-3">
+      <div class="consult-section-heading">
+        <div>
+          <h2 class="consult-section-title">Current Visit Activity</h2>
+          <p class="consult-section-subtitle">Everything already requested or completed for this visit.</p>
+        </div>
+      </div>
+      <div class="row g-3 consult-current-grid">
+        {% if current_visit_lab_results %}
+        <div class="col-md-6">
+          <div class="cl-card consult-panel-card h-100">
+            <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-droplet"></i> Lab Results</h2></div>
+            <div class="cl-card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                  <thead><tr><th>Test</th><th>Status</th><th>Results</th><th></th></tr></thead>
+                  <tbody>
+                    {% for lr in current_visit_lab_results %}
+                    <tr>
+                      <td>{{ lr.test_type }}</td>
+                      <td><span class="badge bg-{% if lr.status == 'completed' %}success{% elif lr.status == 'reviewed' %}primary{% else %}warning{% endif %}">{{ lr.get_status_display }}</span></td>
+                      <td>{{ lr.results|truncatechars:60|default:"Pending" }}</td>
+                      <td>{% if lr.status == 'completed' %}<form method="post" action="{% url 'consultation:review_lab_result' visit.pk lr.pk %}" class="d-inline">{% csrf_token %}<input type="hidden" name="panel" value="{{ selected_panel }}"><button type="submit" class="btn btn-sm btn-outline-success py-0">Review</button></form>{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
               </div>
-              {% endif %}
-
-              {% if patient_radiology_history %}
-              <div class="accordion-item">
-                <h2 class="accordion-header">
-                  <button class="accordion-button consult-history-toggle py-2 px-3 fw-semibold text-info {% if not patient_lab_history %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRadio">
-                    <i class="bi bi-x-ray me-2"></i> Radiology History
-                  </button>
-                </h2>
-                <div id="collapseRadio" class="accordion-collapse collapse {% if not patient_lab_history %}show{% endif %}" data-bs-parent="#historyAccordion">
-                  <div class="accordion-body p-0">
-                    <table class="table table-sm table-hover mb-0" style="font-size: 0.85rem;">
-                      <thead class="table-light"><tr><th class="ps-3">Date</th><th>Scan</th></tr></thead>
-                      <tbody>{% for ir in patient_radiology_history|slice:":5" %}<tr><td class="text-nowrap ps-3">{{ ir.date_requested|date:"d M y" }}</td><td>{{ ir.get_imaging_type_display }}</td></tr>{% endfor %}</tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-              {% endif %}
-
-              {% if patient_pharmacy_history %}
-              <div class="accordion-item">
-                <h2 class="accordion-header">
-                  <button class="accordion-button consult-history-toggle py-2 px-3 fw-semibold text-warning collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePharm">
-                    <i class="bi bi-capsule me-2"></i> Pharmacy History
-                  </button>
-                </h2>
-                <div id="collapsePharm" class="accordion-collapse collapse" data-bs-parent="#historyAccordion">
-                  <div class="accordion-body p-0">
-                    <table class="table table-sm table-hover mb-0" style="font-size: 0.85rem;">
-                      <thead class="table-light"><tr><th class="ps-3">Date</th><th>Medicine</th></tr></thead>
-                      <tbody>{% for d in patient_pharmacy_history|slice:":5" %}<tr><td class="text-nowrap ps-3">{{ d.dispensed_at|date:"d M y" }}</td><td>{{ d.medicine.name }}</td></tr>{% endfor %}</tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-              {% endif %}
-
             </div>
           </div>
         </div>
         {% endif %}
-      </div>
-    </div> <!-- /Top Row -->
 
-    <!-- Doctor's Notes (Split into two columns horizontally) -->
-    <div class="cl-card consult-notes-card border-0 mb-3">
-      <div class="cl-card-header consult-notes-header py-3">
-        <div>
-          <h2 class="cl-card-title mb-1 fs-5"><i class="bi bi-journal-medical me-2"></i> Doctor's Notes</h2>
-          <p class="consult-section-subtitle mb-0">Capture assessment on the left and the treatment plan on the right.</p>
-        </div>
-      </div>
-      <div class="cl-card-body p-4">
-        <form method="post" novalidate>
-          {% csrf_token %}
-          <input type="hidden" name="panel" value="{{ selected_panel }}">
-          {% if form.non_field_errors %}<div class="alert alert-danger py-2">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>{% endif %}
-          
-          <div class="row g-4 consult-notes-grid">
-            <!-- Left Side of Form -->
-            <div class="col-md-6 consult-notes-column consult-notes-column-primary">
-              <div class="consult-field-group mb-3">
-                <p class="consult-field-group-label">Assessment</p>
-                <label for="{{ form.consultation_room.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.consultation_room.label }}</label>
-                {{ form.consultation_room }}
-                {% for error in form.consultation_room.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-              </div>
-              <div class="consult-field-group mb-3">
-                <label for="{{ form.symptoms.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.symptoms.label }}</label>
-                {{ form.symptoms }}
-                {% for error in form.symptoms.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-              </div>
-              <div class="consult-field-group mb-0">
-                <label for="{{ form.diagnosis.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.diagnosis.label }}</label>
-                {{ form.diagnosis }}
-                {% for error in form.diagnosis.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+        {% if pending_visit_lab_requests %}
+        <div class="col-md-6">
+          <div class="cl-card consult-panel-card h-100">
+            <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-hourglass"></i> Pending Lab</h2></div>
+            <div class="cl-card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                  <thead><tr><th>Test</th><th>Status</th><th>Requested</th></tr></thead>
+                  <tbody>
+                    {% for lr in pending_visit_lab_requests %}
+                    <tr><td>{{ lr.test_type }}</td><td><span class="badge bg-warning text-dark">{{ lr.get_status_display }}</span></td><td>{{ lr.date|date:"d M H:i" }}</td></tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
               </div>
             </div>
-            
-            <!-- Right Side of Form -->
-            <div class="col-md-6 consult-notes-column consult-notes-column-secondary">
-              <div class="consult-field-group mb-3">
-                <p class="consult-field-group-label">Plan & Follow-up</p>
-                <label for="{{ form.treatment_plan.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.treatment_plan.label }}</label>
-                {{ form.treatment_plan }}
-                {% for error in form.treatment_plan.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-              </div>
-              <div class="consult-field-group mb-3">
-                <label for="{{ form.prescription.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.prescription.label }}</label>
-                {{ form.prescription }}
-                {% for error in form.prescription.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-              </div>
-              <div class="row g-2 mb-3">
-                <div class="col-lg-6">
-                  <label for="{{ form.lab_tests_requested.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.lab_tests_requested.label }}</label>
-                  {{ form.lab_tests_requested }}
-                  {% for error in form.lab_tests_requested.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-                </div>
-                <div class="col-lg-6">
-                  <label for="{{ form.follow_up_date.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.follow_up_date.label }}</label>
-                  {{ form.follow_up_date }}
-                  {% for error in form.follow_up_date.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div class="mt-4 pt-3 border-top">
-            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold fs-6"><i class="bi bi-check-circle me-1"></i> Save Consultation</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- Right Column: Actions (Tabs) -->
-  <div class="col-lg-4">
-    <div class="consult-actions-rail">
-    <div class="cl-card consult-actions-card border-0 h-100">
-      <div class="cl-card-header py-3">
-        <div>
-          <h2 class="cl-card-title mb-1 fs-6 fw-bold"><i class="bi bi-lightning-charge"></i> Clinical Actions</h2>
-          <p class="consult-section-subtitle mb-0">Requests and workflow actions stay pinned while you write notes.</p>
-        </div>
-      </div>
-      
-      <div class="cl-card-body p-0">
-        <!-- Action Tabs -->
-        <ul class="nav nav-tabs nav-justified consult-actions-tabs border-bottom-0" id="actionsTab" role="tablist">
-          <li class="nav-item" role="presentation">
-            <button class="nav-link active py-3 border-0 text-success fw-semibold" id="lab-tab" data-bs-toggle="tab" data-bs-target="#action-lab" type="button" role="tab"><i class="bi bi-droplet fs-5 d-block mb-1"></i> Lab</button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link py-3 border-0 text-info fw-semibold" id="rad-tab" data-bs-toggle="tab" data-bs-target="#action-rad" type="button" role="tab"><i class="bi bi-x-ray fs-5 d-block mb-1"></i> Scan</button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link py-3 border-0 text-primary fw-semibold" id="rx-tab" data-bs-toggle="tab" data-bs-target="#action-rx" type="button" role="tab"><i class="bi bi-capsule fs-5 d-block mb-1"></i> Rx</button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link py-3 border-0 text-secondary fw-semibold" id="more-tab" data-bs-toggle="tab" data-bs-target="#action-more" type="button" role="tab"><i class="bi bi-grid fs-5 d-block mb-1"></i> More</button>
-          </li>
-        </ul>
-
-        <!-- Tab Panes -->
-        <div class="tab-content p-3 border-top consult-actions-body" id="actionsTabContent">
-          
-          <!-- Lab Request Tab -->
-          <div class="tab-pane fade show active" id="action-lab" role="tabpanel">
-            <h5 class="mb-3 text-success"><i class="bi bi-droplet"></i> Request Lab Test</h5>
-            <form method="post" action="{% url 'consultation:request_lab_test' visit.pk %}">
-              {% csrf_token %}
-              <input type="hidden" name="panel" value="{{ selected_panel }}">
-              {% for field in lab_test_form %}
-              <div class="mb-3">
-                <label class="form-label fw-medium">{{ field.label }}</label>
-                {{ field }}
-              </div>
-              {% endfor %}
-              <button type="submit" class="btn btn-success w-100"><i class="bi bi-plus-lg"></i> Add Request</button>
-            </form>
-          </div>
-
-          <!-- Radiology Request Tab -->
-          <div class="tab-pane fade" id="action-rad" role="tabpanel">
-            <h5 class="mb-3 text-info"><i class="bi bi-x-ray"></i> Medical Imaging</h5>
-            <form method="post" action="{% url 'consultation:request_radiology' visit.pk %}">
-              {% csrf_token %}
-              <input type="hidden" name="panel" value="{{ selected_panel }}">
-              {% for field in radiology_request_form %}
-              <div class="mb-3">
-                <label class="form-label fw-medium">{{ field.label }}</label>
-                {{ field }}
-              </div>
-              {% endfor %}
-              <button type="submit" class="btn btn-info text-white w-100"><i class="bi bi-plus-lg"></i> Add Scan</button>
-            </form>
-          </div>
-
-          <!-- Pharmacy Tab -->
-          <div class="tab-pane fade" id="action-rx" role="tabpanel">
-            <h5 class="mb-3 text-primary"><i class="bi bi-capsule"></i> Prescribe Medication</h5>
-            <form method="post" action="{% url 'consultation:request_pharmacy' visit.pk %}">
-              {% csrf_token %}
-              <input type="hidden" name="panel" value="{{ selected_panel }}">
-              {{ pharmacy_formset.management_form }}
-              
-              <div class="bg-light p-2 rounded mb-3">
-                <div class="row g-2 text-muted small fw-bold mb-1">
-                  <div class="col-8">Medicine</div>
-                  <div class="col-4">Qty</div>
-                </div>
-                {% for f in pharmacy_formset %}
-                <div class="row g-2 mb-2">
-                  <div class="col-8">{{ f.medicine }}</div>
-                  <div class="col-4">{{ f.quantity }}</div>
-                </div>
-                {% endfor %}
-              </div>
-              
-              <div class="mb-3">
-                <label class="form-label fw-medium">Prescription Notes / Dosage</label>
-                <textarea name="notes" class="form-control" rows="2" placeholder="e.g. 1x3 after meals"></textarea>
-              </div>
-              <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send-check"></i> Send to Pharmacy</button>
-            </form>
-          </div>
-
-          <!-- More Actions Tab (Referral, Transfer, Complete) -->
-          <div class="tab-pane fade" id="action-more" role="tabpanel">
-            <div class="accordion" id="moreActionsAccordion">
-              
-              <!-- Patient Transfer -->
-              <div class="accordion-item border-0 border-bottom">
-                <h2 class="accordion-header">
-                  <button class="accordion-button collapsed px-2 py-3 bg-transparent shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTransfer">
-                    <i class="bi bi-arrow-left-right text-warning me-2"></i> Transfer Patient
-                  </button>
-                </h2>
-                <div id="collapseTransfer" class="accordion-collapse collapse" data-bs-parent="#moreActionsAccordion">
-                  <div class="accordion-body px-2 pb-3 pt-0">
-                    <form method="post" action="{% url 'consultation:transfer_patient' visit.pk %}">
-                      {% csrf_token %}
-                      <input type="hidden" name="panel" value="{{ selected_panel }}">
-                      {% for field in transfer_form %}
-                      <div class="mb-2">
-                        <label class="form-label small text-muted mb-1">{{ field.label }}</label>
-                        {{ field }}
-                      </div>
-                      {% endfor %}
-                      <button type="submit" class="btn btn-sm btn-warning w-100 mt-2">Transfer Now</button>
-                    </form>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Referral -->
-              <div class="accordion-item border-0 border-bottom">
-                <h2 class="accordion-header">
-                  <button class="accordion-button collapsed px-2 py-3 bg-transparent shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseReferral">
-                    <i class="bi bi-hospital text-danger me-2"></i> External Referral
-                  </button>
-                </h2>
-                <div id="collapseReferral" class="accordion-collapse collapse" data-bs-parent="#moreActionsAccordion">
-                  <div class="accordion-body px-2 pb-3 pt-0">
-                    <form method="post" action="{% url 'consultation:request_referral' visit.pk %}">
-                      {% csrf_token %}
-                      <input type="hidden" name="panel" value="{{ selected_panel }}">
-                      {% for field in referral_request_form %}
-                      <div class="mb-2">
-                        <label class="form-label small text-muted mb-1">{{ field.label }}</label>
-                        {{ field }}
-                      </div>
-                      {% endfor %}
-                      <button type="submit" class="btn btn-sm btn-danger w-100 mt-2">Create Referral</button>
-                    </form>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            <!-- Quick Action Buttons -->
-            <div class="mt-4 pt-3 border-top">
-              <h6 class="text-muted fw-bold mb-3 small text-uppercase">Visit Workflow</h6>
-              <div class="d-grid gap-2">
-                <form method="post" action="{% url 'consultation:send_to_cashier' visit.pk %}">{% csrf_token %}<input type="hidden" name="panel" value="{{ selected_panel }}"><button type="submit" class="btn btn-outline-secondary w-100 text-start"><i class="bi bi-cash me-2"></i> Send To Cashier</button></form>
-                
-                <a href="{% url 'admission:create' %}?patient={{ patient.pk }}&visit={{ visit.pk }}" class="btn btn-outline-info w-100 text-start"><i class="bi bi-building me-2"></i> Admit Patient</a>
-                
-                {% if visit.status == 'admitted' %}
-                <form method="post" action="{% url 'consultation:discharge_patient' visit.pk %}">{% csrf_token %}<input type="hidden" name="panel" value="{{ selected_panel }}"><button type="submit" class="btn btn-outline-danger w-100 text-start"><i class="bi bi-box-arrow-right me-2"></i> Discharge Patient</button></form>
-                {% endif %}
-                
-                {% if visit.status != 'completed' %}
-                <form method="post" action="{% url 'consultation:complete_visit' visit.pk %}">{% csrf_token %}<input type="hidden" name="panel" value="{{ selected_panel }}"><button type="submit" class="btn btn-dark w-100 text-start"><i class="bi bi-check2-all me-2"></i> Complete Visit</button></form>
-                {% endif %}
-              </div>
-            </div>
-
           </div>
         </div>
+        {% endif %}
+
+        {% if current_visit_radiology_results %}
+        <div class="col-md-6">
+          <div class="cl-card consult-panel-card h-100">
+            <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-x-ray"></i> Radiology</h2></div>
+            <div class="cl-card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                  <thead><tr><th>Type</th><th>Status</th><th>Findings</th></tr></thead>
+                  <tbody>
+                    {% for ir in current_visit_radiology_results %}
+                    <tr><td>{{ ir.get_imaging_type_display }}</td><td><span class="badge bg-secondary">{{ ir.get_status_display }}</span></td><td>{% if ir.result %}{{ ir.result.findings|truncatechars:60 }}{% else %}Pending{% endif %}</td></tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if current_visit_pharmacy_requests %}
+        <div class="col-md-6">
+          <div class="cl-card consult-panel-card h-100">
+            <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-capsule"></i> Pharmacy Requests</h2></div>
+            <div class="cl-card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                  <thead><tr><th>Medicine</th><th>Qty</th><th>Status</th></tr></thead>
+                  <tbody>
+                    {% for pr in current_visit_pharmacy_requests %}
+                    <tr><td>{{ pr.medicine.name }}</td><td>{{ pr.quantity }}</td><td><span class="badge bg-{% if pr.status == 'dispensed' %}success{% else %}warning{% endif %}">{{ pr.get_status_display }}</span></td></tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if current_visit_pharmacy_records %}
+        <div class="col-md-6">
+          <div class="cl-card consult-panel-card h-100">
+            <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-capsule"></i> Dispensed</h2></div>
+            <div class="cl-card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                  <thead><tr><th>Medicine</th><th>Qty</th><th>Dispensed By</th></tr></thead>
+                  <tbody>
+                    {% for d in current_visit_pharmacy_records %}
+                    <tr><td>{{ d.medicine.name }}</td><td>{{ d.quantity }}</td><td>{{ d.dispensed_by }}</td></tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
       </div>
-    </div>
-    </div>
+    </section>
+    {% endif %}
   </div>
 </div>
-</div>
-</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    const addButton = document.getElementById("addPharmacyRow");
+    const rowsContainer = document.getElementById("pharmacyRows");
+    const totalFormsInput = document.getElementById("id_pharm-TOTAL_FORMS");
+    const emptyTemplate = document.getElementById("pharmacyEmptyRowTemplate");
+
+    if (!addButton || !rowsContainer || !totalFormsInput || !emptyTemplate) {
+      return;
+    }
+
+    function refreshSearchValue(row) {
+      const searchInput = row.querySelector(".consult-medicine-search");
+      const select = row.querySelector("select[data-role='medicine-select']");
+      if (!searchInput || !select) {
+        return;
+      }
+      const selectedOption = select.options[select.selectedIndex];
+      searchInput.value = selectedOption && selectedOption.value ? selectedOption.text : "";
+    }
+
+    function filterMedicineOptions(row, query) {
+      const select = row.querySelector("select[data-role='medicine-select']");
+      if (!select) {
+        return;
+      }
+      const search = query.trim().toLowerCase();
+      Array.from(select.options).forEach((option, index) => {
+        if (!option.value || index === 0) {
+          option.hidden = false;
+          return;
+        }
+        option.hidden = search ? !option.text.toLowerCase().includes(search) : false;
+      });
+    }
+
+    function reindexRows() {
+      const rows = Array.from(rowsContainer.querySelectorAll(".consult-pharmacy-row"));
+      rows.forEach((row, index) => {
+        row.dataset.formIndex = index;
+        row.querySelectorAll("[name], [id], label[for]").forEach((element) => {
+          ["name", "id", "for"].forEach((attribute) => {
+            const value = element.getAttribute(attribute);
+            if (value) {
+              element.setAttribute(attribute, value.replace(/pharm-(\d+|__prefix__)-/g, `pharm-${index}-`));
+            }
+          });
+        });
+      });
+      totalFormsInput.value = rows.length;
+      rows.forEach((row) => {
+        const removeButton = row.querySelector(".consult-remove-row");
+        if (removeButton) {
+          removeButton.disabled = rows.length === 1;
+        }
+      });
+    }
+
+    function bindRow(row) {
+      const searchInput = row.querySelector(".consult-medicine-search");
+      const select = row.querySelector("select[data-role='medicine-select']");
+      const removeButton = row.querySelector(".consult-remove-row");
+
+      if (searchInput && select) {
+        refreshSearchValue(row);
+        searchInput.addEventListener("input", () => filterMedicineOptions(row, searchInput.value));
+        select.addEventListener("change", () => refreshSearchValue(row));
+      }
+
+      if (removeButton) {
+        removeButton.addEventListener("click", () => {
+          const rows = rowsContainer.querySelectorAll(".consult-pharmacy-row");
+          if (rows.length === 1) {
+            return;
+          }
+          row.remove();
+          reindexRows();
+        });
+      }
+    }
+
+    addButton.addEventListener("click", () => {
+      const nextIndex = Number(totalFormsInput.value);
+      const markup = emptyTemplate.innerHTML.replace(/__prefix__/g, String(nextIndex));
+      rowsContainer.insertAdjacentHTML("beforeend", markup);
+      const newRow = rowsContainer.lastElementChild;
+      bindRow(newRow);
+      reindexRows();
+      newRow.querySelector(".consult-medicine-search")?.focus();
+    });
+
+    rowsContainer.querySelectorAll(".consult-pharmacy-row").forEach((row) => bindRow(row));
+    reindexRows();
+  })();
+</script>
 {% endblock %}
