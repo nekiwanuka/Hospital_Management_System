@@ -18,7 +18,8 @@
       --cl-info: {{ system_settings.secondary_color|default:"#0891b2" }};
       --cl-sidebar-bg: {{ system_settings.sidebar_color|default:"#1e293b" }};
       --cl-sidebar-hover: color-mix(in srgb, {{ system_settings.sidebar_color|default:"#1e293b" }} 84%, white);
-      --cl-sidebar-active: {{ system_settings.primary_color|default:"#0d6efd" }};
+      --cl-sidebar-active: {{ system_settings.sidebar_active_color|default:system_settings.primary_color|default:"#0d6efd" }};
+      --cl-sidebar-heading: {{ system_settings.sidebar_heading_color|default:"#cbd5e1" }};
       --cl-sidebar-text: {{ system_settings.sidebar_text_color|default:"#94a3b8" }};
       --cl-sidebar-text-active: {{ system_settings.sidebar_text_color|default:"#ffffff" }};
       --cl-body-bg: {{ system_settings.dashboard_color|default:"#f1f5f9" }};

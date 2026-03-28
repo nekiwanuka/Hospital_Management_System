@@ -8,6 +8,8 @@ class SystemSettings(TimeStampedModel):
     primary_color = models.CharField(max_length=32, default="#125ea8")
     secondary_color = models.CharField(max_length=32, default="#16a085")
     sidebar_color = models.CharField(max_length=32, default="#1e293b")
+    sidebar_active_color = models.CharField(max_length=32, default="#0d6efd")
+    sidebar_heading_color = models.CharField(max_length=32, default="#cbd5e1")
     sidebar_text_color = models.CharField(max_length=32, default="#94a3b8")
     sidebar_text_size = models.DecimalField(
         max_digits=3, decimal_places=2, default=0.81

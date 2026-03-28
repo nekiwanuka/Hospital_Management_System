@@ -153,7 +153,7 @@ body {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: rgba(148,163,184,0.6);
+    color: var(--cl-sidebar-heading, rgba(203,213,225,0.85));
     margin-top: 0.25rem;
 }
 
@@ -178,7 +178,7 @@ body {
 }
 
 .cl-nav-item.active {
-    background: rgba(13,110,253,0.15);
+    background: color-mix(in srgb, var(--cl-sidebar-active) 18%, var(--cl-sidebar-bg));
     color: var(--cl-sidebar-text-active);
 }
 
@@ -189,7 +189,7 @@ body {
     top: 0.25rem;
     bottom: 0.25rem;
     width: 3px;
-    background: var(--cl-primary);
+    background: var(--cl-sidebar-active);
     border-radius: 0 3px 3px 0;
 }
 

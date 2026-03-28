@@ -77,6 +77,14 @@
           <small class="text-muted" style="font-size:.7rem;">Sidebar</small>
         </div>
         <div class="text-center">
+          <div class="color-swatch" data-color="{{ settings_obj.sidebar_active_color|default:settings_obj.primary_color }}"></div>
+          <small class="text-muted" style="font-size:.7rem;">Active Item</small>
+        </div>
+        <div class="text-center">
+          <div class="color-swatch" data-color="{{ settings_obj.sidebar_heading_color|default:settings_obj.sidebar_text_color }}"></div>
+          <small class="text-muted" style="font-size:.7rem;">Section Heading</small>
+        </div>
+        <div class="text-center">
           <div class="color-swatch" data-color="{{ settings_obj.sidebar_text_color }}"></div>
           <small class="text-muted" style="font-size:.7rem;">Sidebar Text</small>
         </div>

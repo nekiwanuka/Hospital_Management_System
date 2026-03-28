@@ -30,6 +30,8 @@ class SystemSettingsForm(forms.ModelForm):
             "primary_color",
             "secondary_color",
             "sidebar_color",
+            "sidebar_active_color",
+            "sidebar_heading_color",
             "sidebar_text_color",
             "sidebar_text_size",
             "dashboard_color",
@@ -46,6 +48,12 @@ class SystemSettingsForm(forms.ModelForm):
                 attrs={"type": "color", "class": "form-control-color"}
             ),
             "sidebar_color": forms.TextInput(
+                attrs={"type": "color", "class": "form-control-color"}
+            ),
+            "sidebar_active_color": forms.TextInput(
+                attrs={"type": "color", "class": "form-control-color"}
+            ),
+            "sidebar_heading_color": forms.TextInput(
                 attrs={"type": "color", "class": "form-control-color"}
             ),
             "sidebar_text_color": forms.TextInput(
@@ -175,6 +183,8 @@ class InstallationWizardForm(forms.ModelForm):
             "primary_color",
             "secondary_color",
             "sidebar_color",
+            "sidebar_active_color",
+            "sidebar_heading_color",
             "sidebar_text_color",
             "sidebar_text_size",
             "dashboard_color",
@@ -190,6 +200,12 @@ class InstallationWizardForm(forms.ModelForm):
                 attrs={"type": "color", "class": "form-control-color"}
             ),
             "sidebar_color": forms.TextInput(
+                attrs={"type": "color", "class": "form-control-color"}
+            ),
+            "sidebar_active_color": forms.TextInput(
+                attrs={"type": "color", "class": "form-control-color"}
+            ),
+            "sidebar_heading_color": forms.TextInput(
                 attrs={"type": "color", "class": "form-control-color"}
             ),
             "sidebar_text_color": forms.TextInput(
