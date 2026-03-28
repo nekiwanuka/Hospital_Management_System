@@ -1,18 +1,15 @@
 import os
 from pathlib import Path
-from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-secret-key")
-DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in {"1", "true", "yes", "on"}
+SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
+DEBUG = os.getenv("DJANGO_DEBUG", "False").lower() in {"1", "true", "yes", "on"}
 ALLOWED_HOSTS = [
-    h.strip()
-    for h in os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
-    if h.strip()
+    h.strip() for h in os.environ["DJANGO_ALLOWED_HOSTS"].split(",") if h.strip()
 ]
 
 INSTALLED_APPS = [
@@ -82,42 +79,16 @@ WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
 
-def _sqlite_db(path: str):
-    return {"ENGINE": "django.db.backends.sqlite3", "NAME": str(BASE_DIR / path)}
-
-
-def _postgres_db(parsed):
-    return {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": parsed.path.lstrip("/") or "clinicms",
-        "USER": parsed.username or "postgres",
-        "PASSWORD": parsed.password or "",
-        "HOST": parsed.hostname or "127.0.0.1",
-        "PORT": str(parsed.port or 5432),
+DATABASES = {
+    "default": {
+        "ENGINE": os.getenv("DB_ENGINE", "django.db.backends.postgresql"),
+        "NAME": os.getenv("DB_NAME", "hms_db"),
+        "USER": os.getenv("DB_USER", "hms_user"),
+        "PASSWORD": os.getenv("DB_PASSWORD", ""),
+        "HOST": os.getenv("DB_HOST", "localhost"),
+        "PORT": os.getenv("DB_PORT", "5432"),
     }
-
-
-def _mysql_db(parsed):
-    return {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": parsed.path.lstrip("/") or "clinicms",
-        "USER": parsed.username or "root",
-        "PASSWORD": parsed.password or "",
-        "HOST": parsed.hostname or "127.0.0.1",
-        "PORT": str(parsed.port or 3306),
-        "OPTIONS": {"charset": "utf8mb4"},
-    }
-
-
-database_url = os.getenv("DATABASE_URL", "sqlite:///db.sqlite3")
-parsed = urlparse(database_url)
-if parsed.scheme.startswith("postgres"):
-    DATABASES = {"default": _postgres_db(parsed)}
-elif parsed.scheme.startswith("mysql"):
-    DATABASES = {"default": _mysql_db(parsed)}
-else:
-    rel = parsed.path.lstrip("/") if parsed.path else "db.sqlite3"
-    DATABASES = {"default": _sqlite_db(rel or "db.sqlite3")}
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {
