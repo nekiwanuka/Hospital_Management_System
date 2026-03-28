@@ -16,16 +16,16 @@
   </div>
 </div>
 
-<div class="row g-3">
-  <!-- Left: Clinical Data -->
-  <div class="col-lg-6">
-    <!-- Triage Records -->
-    {% if triage_records %}
-    <div class="cl-card mb-3">
-      <div class="cl-card-header"><h2 class="cl-card-title">Triage</h2></div>
+<!-- ── Current Visit Results (full-width, compact) ── -->
+{% if triage_records or current_visit_lab_results or pending_visit_lab_requests or current_visit_radiology_results or current_visit_pharmacy_requests or current_visit_pharmacy_records %}
+<div class="row g-2 mb-2">
+  {% if triage_records %}
+  <div class="col-12">
+    <div class="cl-card">
+      <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0">Triage</h2></div>
       <div class="cl-card-body p-0">
         <div class="table-responsive">
-          <table class="table table-sm">
+          <table class="table table-sm mb-0">
             <thead><tr><th>Date</th><th>BP</th><th>Temp</th><th>Pulse</th><th>Weight</th><th>Symptoms</th></tr></thead>
             <tbody>
               {% for t in triage_records %}
@@ -36,27 +36,24 @@
         </div>
       </div>
     </div>
-    {% endif %}
+  </div>
+  {% endif %}
 
-    <!-- Lab Results (current visit) -->
-    {% if current_visit_lab_results %}
-    <div class="cl-card mb-3">
-      <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-droplet"></i> Lab Results (This Visit)</h2></div>
+  {% if current_visit_lab_results %}
+  <div class="col-md-6">
+    <div class="cl-card h-100">
+      <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-droplet"></i> Lab Results</h2></div>
       <div class="cl-card-body p-0">
         <div class="table-responsive">
-          <table class="table table-sm">
-            <thead><tr><th>Test</th><th>Status</th><th>Results</th><th>Action</th></tr></thead>
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Test</th><th>Status</th><th>Results</th><th></th></tr></thead>
             <tbody>
               {% for lr in current_visit_lab_results %}
               <tr>
                 <td>{{ lr.test_type }}</td>
                 <td><span class="badge bg-{% if lr.status == 'completed' %}success{% elif lr.status == 'reviewed' %}primary{% else %}warning{% endif %}">{{ lr.get_status_display }}</span></td>
-                <td>{{ lr.results|truncatechars:100|default:"Pending" }}</td>
-                <td>
-                  {% if lr.status == 'completed' %}
-                  <form method="post" action="{% url 'consultation:review_lab_result' visit.pk lr.pk %}" class="d-inline">{% csrf_token %}<input type="hidden" name="panel" value="{{ selected_panel }}"><button type="submit" class="btn btn-sm btn-outline-success">Review</button></form>
-                  {% endif %}
-                </td>
+                <td>{{ lr.results|truncatechars:60|default:"Pending" }}</td>
+                <td>{% if lr.status == 'completed' %}<form method="post" action="{% url 'consultation:review_lab_result' visit.pk lr.pk %}" class="d-inline">{% csrf_token %}<input type="hidden" name="panel" value="{{ selected_panel }}"><button type="submit" class="btn btn-sm btn-outline-success py-0">Review</button></form>{% endif %}</td>
               </tr>
               {% endfor %}
             </tbody>
@@ -64,14 +61,16 @@
         </div>
       </div>
     </div>
-    {% endif %}
+  </div>
+  {% endif %}
 
-    {% if pending_visit_lab_requests %}
-    <div class="cl-card mb-3">
-      <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-hourglass"></i> Pending Lab Requests</h2></div>
+  {% if pending_visit_lab_requests %}
+  <div class="col-md-6">
+    <div class="cl-card h-100">
+      <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-hourglass"></i> Pending Lab</h2></div>
       <div class="cl-card-body p-0">
         <div class="table-responsive">
-          <table class="table table-sm">
+          <table class="table table-sm mb-0">
             <thead><tr><th>Test</th><th>Status</th><th>Requested</th></tr></thead>
             <tbody>
               {% for lr in pending_visit_lab_requests %}
@@ -82,34 +81,36 @@
         </div>
       </div>
     </div>
-    {% endif %}
+  </div>
+  {% endif %}
 
-    <!-- Radiology Results (current visit) -->
-    {% if current_visit_radiology_results %}
-    <div class="cl-card mb-3">
-      <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-x-ray"></i> Radiology (This Visit)</h2></div>
+  {% if current_visit_radiology_results %}
+  <div class="col-md-6">
+    <div class="cl-card h-100">
+      <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-x-ray"></i> Radiology</h2></div>
       <div class="cl-card-body p-0">
         <div class="table-responsive">
-          <table class="table table-sm">
+          <table class="table table-sm mb-0">
             <thead><tr><th>Type</th><th>Status</th><th>Findings</th></tr></thead>
             <tbody>
               {% for ir in current_visit_radiology_results %}
-              <tr><td>{{ ir.get_imaging_type_display }}</td><td><span class="badge bg-secondary">{{ ir.get_status_display }}</span></td><td>{% if ir.result %}{{ ir.result.findings|truncatechars:100 }}{% else %}Pending{% endif %}</td></tr>
+              <tr><td>{{ ir.get_imaging_type_display }}</td><td><span class="badge bg-secondary">{{ ir.get_status_display }}</span></td><td>{% if ir.result %}{{ ir.result.findings|truncatechars:60 }}{% else %}Pending{% endif %}</td></tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
       </div>
     </div>
-    {% endif %}
+  </div>
+  {% endif %}
 
-    <!-- Pharmacy (current visit) -->
-    {% if current_visit_pharmacy_requests %}
-    <div class="cl-card mb-3">
-      <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-capsule"></i> Pharmacy Requests (This Visit)</h2></div>
+  {% if current_visit_pharmacy_requests %}
+  <div class="col-md-6">
+    <div class="cl-card h-100">
+      <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-capsule"></i> Pharmacy Requests</h2></div>
       <div class="cl-card-body p-0">
         <div class="table-responsive">
-          <table class="table table-sm">
+          <table class="table table-sm mb-0">
             <thead><tr><th>Medicine</th><th>Qty</th><th>Status</th></tr></thead>
             <tbody>
               {% for pr in current_visit_pharmacy_requests %}
@@ -120,14 +121,16 @@
         </div>
       </div>
     </div>
-    {% endif %}
+  </div>
+  {% endif %}
 
-    {% if current_visit_pharmacy_records %}
-    <div class="cl-card mb-3">
-      <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-capsule"></i> Dispensed (This Visit)</h2></div>
+  {% if current_visit_pharmacy_records %}
+  <div class="col-md-6">
+    <div class="cl-card h-100">
+      <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-capsule"></i> Dispensed</h2></div>
       <div class="cl-card-body p-0">
         <div class="table-responsive">
-          <table class="table table-sm">
+          <table class="table table-sm mb-0">
             <thead><tr><th>Medicine</th><th>Qty</th><th>Dispensed By</th></tr></thead>
             <tbody>
               {% for d in current_visit_pharmacy_records %}
@@ -138,135 +141,155 @@
         </div>
       </div>
     </div>
-    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endif %}
 
-    <!-- Consultation Form -->
-    <div class="cl-card mb-3">
-      <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-journal-medical"></i> Record Consultation</h2></div>
+<!-- ── Main work area: Consultation + Actions side by side ── -->
+<div class="row g-2">
+  <!-- Consultation Form -->
+  <div class="col-lg-7">
+    <div class="cl-card">
+      <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-journal-medical"></i> Record Consultation</h2></div>
       <div class="cl-card-body">
         <form method="post" novalidate>
           {% csrf_token %}
           <input type="hidden" name="panel" value="{{ selected_panel }}">
           {% for field in form %}
-          <div class="mb-3">
-            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+          <div class="mb-2">
+            <label for="{{ field.id_for_label }}" class="form-label mb-1">{{ field.label }}</label>
             {{ field }}
             {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
           </div>
           {% endfor %}
-          {% if form.non_field_errors %}<div class="alert alert-danger">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>{% endif %}
-          <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Save Consultation</button>
+          {% if form.non_field_errors %}<div class="alert alert-danger py-1">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>{% endif %}
+          <button type="submit" class="btn btn-primary btn-sm mt-1"><i class="bi bi-check-lg"></i> Save Consultation</button>
         </form>
       </div>
     </div>
   </div>
 
-  <!-- Right: Actions -->
-  <div class="col-lg-6">
-    <!-- Request Lab Test -->
-    <div class="cl-card mb-3">
-      <div class="cl-card-header"><h2 class="cl-card-title">Request Lab Test</h2></div>
-      <div class="cl-card-body">
-        <form method="post" action="{% url 'consultation:request_lab_test' visit.pk %}">
-          {% csrf_token %}
-          <input type="hidden" name="panel" value="{{ selected_panel }}">
-          {% for field in lab_test_form %}
-          <div class="mb-2">
-            <label class="form-label form-label-sm">{{ field.label }}</label>
-            {{ field }}
+  <!-- Actions column -->
+  <div class="col-lg-5">
+    <div class="row g-2">
+      <!-- Request Lab Test -->
+      <div class="col-sm-6">
+        <div class="cl-card h-100">
+          <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-droplet"></i> Lab Test</h2></div>
+          <div class="cl-card-body py-2">
+            <form method="post" action="{% url 'consultation:request_lab_test' visit.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="panel" value="{{ selected_panel }}">
+              {% for field in lab_test_form %}
+              <div class="mb-1">
+                <label class="form-label form-label-sm mb-0">{{ field.label }}</label>
+                {{ field }}
+              </div>
+              {% endfor %}
+              <button type="submit" class="btn btn-sm btn-outline-primary w-100 mt-1"><i class="bi bi-droplet"></i> Request</button>
+            </form>
           </div>
-          {% endfor %}
-          <button type="submit" class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-droplet"></i> Request</button>
-        </form>
+        </div>
       </div>
-    </div>
 
-    <!-- Request Radiology -->
-    <div class="cl-card mb-3">
-      <div class="cl-card-header"><h2 class="cl-card-title">Request Radiology</h2></div>
-      <div class="cl-card-body">
-        <form method="post" action="{% url 'consultation:request_radiology' visit.pk %}">
-          {% csrf_token %}
-          <input type="hidden" name="panel" value="{{ selected_panel }}">
-          {% for field in radiology_request_form %}
-          <div class="mb-2">
-            <label class="form-label form-label-sm">{{ field.label }}</label>
-            {{ field }}
+      <!-- Request Radiology -->
+      <div class="col-sm-6">
+        <div class="cl-card h-100">
+          <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-x-ray"></i> Radiology</h2></div>
+          <div class="cl-card-body py-2">
+            <form method="post" action="{% url 'consultation:request_radiology' visit.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="panel" value="{{ selected_panel }}">
+              {% for field in radiology_request_form %}
+              <div class="mb-1">
+                <label class="form-label form-label-sm mb-0">{{ field.label }}</label>
+                {{ field }}
+              </div>
+              {% endfor %}
+              <button type="submit" class="btn btn-sm btn-outline-primary w-100 mt-1"><i class="bi bi-x-ray"></i> Request</button>
+            </form>
           </div>
-          {% endfor %}
-          <button type="submit" class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-x-ray"></i> Request</button>
-        </form>
+        </div>
       </div>
-    </div>
 
-    <!-- Request Pharmacy -->
-    <div class="cl-card mb-3">
-      <div class="cl-card-header"><h2 class="cl-card-title">Prescribe Medicine</h2></div>
-      <div class="cl-card-body">
-        <form method="post" action="{% url 'consultation:request_pharmacy' visit.pk %}">
-          {% csrf_token %}
-          <input type="hidden" name="panel" value="{{ selected_panel }}">
-          {{ pharmacy_formset.management_form }}
-          {% for f in pharmacy_formset %}
-          <div class="row g-1 mb-2">
-            <div class="col-7">{{ f.medicine }}</div>
-            <div class="col-5">{{ f.quantity }}</div>
+      <!-- Prescribe Medicine -->
+      <div class="col-sm-6">
+        <div class="cl-card h-100">
+          <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-capsule"></i> Prescribe</h2></div>
+          <div class="cl-card-body py-2">
+            <form method="post" action="{% url 'consultation:request_pharmacy' visit.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="panel" value="{{ selected_panel }}">
+              {{ pharmacy_formset.management_form }}
+              {% for f in pharmacy_formset %}
+              <div class="row g-1 mb-1">
+                <div class="col-7">{{ f.medicine }}</div>
+                <div class="col-5">{{ f.quantity }}</div>
+              </div>
+              {% endfor %}
+              <textarea name="notes" class="form-control form-control-sm mb-1" rows="1" placeholder="Notes"></textarea>
+              <button type="submit" class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-capsule"></i> Prescribe</button>
+            </form>
           </div>
-          {% endfor %}
-          <div class="mb-2"><textarea name="notes" class="form-control form-control-sm" rows="2" placeholder="Notes (optional)"></textarea></div>
-          <button type="submit" class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-capsule"></i> Prescribe</button>
-        </form>
+        </div>
       </div>
-    </div>
 
-    <!-- Request Referral -->
-    <div class="cl-card mb-3">
-      <div class="cl-card-header"><h2 class="cl-card-title">Referral</h2></div>
-      <div class="cl-card-body">
-        <form method="post" action="{% url 'consultation:request_referral' visit.pk %}">
-          {% csrf_token %}
-          <input type="hidden" name="panel" value="{{ selected_panel }}">
-          {% for field in referral_request_form %}
-          <div class="mb-2">
-            <label class="form-label form-label-sm">{{ field.label }}</label>
-            {{ field }}
+      <!-- Referral -->
+      <div class="col-sm-6">
+        <div class="cl-card h-100">
+          <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-send"></i> Referral</h2></div>
+          <div class="cl-card-body py-2">
+            <form method="post" action="{% url 'consultation:request_referral' visit.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="panel" value="{{ selected_panel }}">
+              {% for field in referral_request_form %}
+              <div class="mb-1">
+                <label class="form-label form-label-sm mb-0">{{ field.label }}</label>
+                {{ field }}
+              </div>
+              {% endfor %}
+              <button type="submit" class="btn btn-sm btn-outline-warning w-100 mt-1"><i class="bi bi-send"></i> Refer</button>
+            </form>
           </div>
-          {% endfor %}
-          <button type="submit" class="btn btn-sm btn-outline-warning w-100"><i class="bi bi-send"></i> Refer</button>
-        </form>
+        </div>
       </div>
-    </div>
 
-    <!-- Quick Actions -->
-    <div class="cl-card mb-3">
-      <div class="cl-card-header"><h2 class="cl-card-title">Actions</h2></div>
-      <div class="cl-card-body d-grid gap-2">
-        <form method="post" action="{% url 'consultation:send_to_cashier' visit.pk %}">{% csrf_token %}<input type="hidden" name="panel" value="{{ selected_panel }}"><button type="submit" class="btn btn-outline-success w-100"><i class="bi bi-cash"></i> Send To Cashier</button></form>
-        {% if visit.status != 'completed' %}
-        <form method="post" action="{% url 'consultation:complete_visit' visit.pk %}">{% csrf_token %}<input type="hidden" name="panel" value="{{ selected_panel }}"><button type="submit" class="btn btn-outline-secondary w-100"><i class="bi bi-check-circle"></i> Complete Visit</button></form>
-        {% endif %}
-        {% if visit.status == 'admitted' %}
-        <form method="post" action="{% url 'consultation:discharge_patient' visit.pk %}">{% csrf_token %}<input type="hidden" name="panel" value="{{ selected_panel }}"><button type="submit" class="btn btn-outline-danger w-100"><i class="bi bi-box-arrow-right"></i> Discharge</button></form>
-        {% endif %}
-        <a href="{% url 'admission:create' %}?patient={{ patient.pk }}&visit={{ visit.pk }}" class="btn btn-outline-info w-100"><i class="bi bi-building"></i> Admit</a>
-      </div>
-    </div>
-
-    <!-- Transfer -->
-    <div class="cl-card mb-3">
-      <div class="cl-card-header"><h2 class="cl-card-title">Transfer Patient</h2></div>
-      <div class="cl-card-body">
-        <form method="post" action="{% url 'consultation:transfer_patient' visit.pk %}">
-          {% csrf_token %}
-          <input type="hidden" name="panel" value="{{ selected_panel }}">
-          {% for field in transfer_form %}
-          <div class="mb-2">
-            <label class="form-label form-label-sm">{{ field.label }}</label>
-            {{ field }}
+      <!-- Transfer -->
+      <div class="col-sm-6">
+        <div class="cl-card h-100">
+          <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-arrow-left-right"></i> Transfer</h2></div>
+          <div class="cl-card-body py-2">
+            <form method="post" action="{% url 'consultation:transfer_patient' visit.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="panel" value="{{ selected_panel }}">
+              {% for field in transfer_form %}
+              <div class="mb-1">
+                <label class="form-label form-label-sm mb-0">{{ field.label }}</label>
+                {{ field }}
+              </div>
+              {% endfor %}
+              <button type="submit" class="btn btn-sm btn-outline-warning w-100 mt-1"><i class="bi bi-arrow-left-right"></i> Transfer</button>
+            </form>
           </div>
-          {% endfor %}
-          <button type="submit" class="btn btn-sm btn-outline-warning w-100"><i class="bi bi-arrow-left-right"></i> Transfer</button>
-        </form>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="col-sm-6">
+        <div class="cl-card h-100">
+          <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-lightning"></i> Actions</h2></div>
+          <div class="cl-card-body py-2 d-grid gap-1">
+            <form method="post" action="{% url 'consultation:send_to_cashier' visit.pk %}">{% csrf_token %}<input type="hidden" name="panel" value="{{ selected_panel }}"><button type="submit" class="btn btn-outline-success btn-sm w-100"><i class="bi bi-cash"></i> Send To Cashier</button></form>
+            {% if visit.status != 'completed' %}
+            <form method="post" action="{% url 'consultation:complete_visit' visit.pk %}">{% csrf_token %}<input type="hidden" name="panel" value="{{ selected_panel }}"><button type="submit" class="btn btn-outline-secondary btn-sm w-100"><i class="bi bi-check-circle"></i> Complete Visit</button></form>
+            {% endif %}
+            {% if visit.status == 'admitted' %}
+            <form method="post" action="{% url 'consultation:discharge_patient' visit.pk %}">{% csrf_token %}<input type="hidden" name="panel" value="{{ selected_panel }}"><button type="submit" class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-box-arrow-right"></i> Discharge</button></form>
+            {% endif %}
+            <a href="{% url 'admission:create' %}?patient={{ patient.pk }}&visit={{ visit.pk }}" class="btn btn-outline-info btn-sm w-100"><i class="bi bi-building"></i> Admit</a>
+          </div>
+        </div>
       </div>
     </div>
   </div>
