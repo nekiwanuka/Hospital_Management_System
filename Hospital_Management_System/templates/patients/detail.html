@@ -1,8 +1,249 @@
 {% extends "base.html" %}
 {% block title %}{{ patient.first_name }} {{ patient.last_name }} — {{ clinic_name }}{% endblock %}
-{% block header_title %}Patient Detail{% endblock %}
+{% block header_title %}{% if history_only %}Patient History{% else %}Patient Detail{% endif %}{% endblock %}
+
+{% block extra_css %}
+{% if history_only %}
+<style>
+  .history-document-wrap {
+    max-width: 980px;
+    margin: 0 auto;
+  }
+
+  .history-document {
+    background: #fff;
+    border: 1px solid var(--cl-border);
+    border-radius: 1rem;
+    box-shadow: var(--cl-shadow-md);
+    overflow: hidden;
+  }
+
+  .history-document-header {
+    padding: 1.5rem 1.75rem 1.25rem;
+    border-bottom: 1px solid var(--cl-border);
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  }
+
+  .history-document-brand {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+  }
+
+  .history-document-brand-main {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  .history-logo-wrap {
+    width: 68px;
+    height: 68px;
+    border-radius: 1rem;
+    border: 1px solid var(--cl-border);
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .history-logo-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .history-logo-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    color: var(--cl-primary);
+    background: rgba(13,110,253,0.08);
+  }
+
+  .history-document-title {
+    margin: 0;
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: var(--cl-ink);
+  }
+
+  .history-document-subtitle {
+    margin: 0.2rem 0 0;
+    font-size: 0.82rem;
+    color: var(--cl-muted);
+  }
+
+  .history-document-meta {
+    text-align: right;
+    font-size: 0.78rem;
+    color: var(--cl-muted);
+  }
+
+  .history-document-meta strong {
+    display: block;
+    color: var(--cl-ink);
+    font-size: 0.92rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .history-patient-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .history-summary-item {
+    background: #fff;
+    border: 1px solid var(--cl-border);
+    border-radius: 0.85rem;
+    padding: 0.8rem 0.9rem;
+  }
+
+  .history-summary-item span {
+    display: block;
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    color: var(--cl-muted);
+    margin-bottom: 0.25rem;
+  }
+
+  .history-summary-item strong,
+  .history-summary-item div {
+    font-size: 0.84rem;
+    color: var(--cl-ink);
+  }
+
+  .history-document-body {
+    padding: 1.25rem 1.75rem 1.75rem;
+  }
+
+  .history-section {
+    margin-bottom: 1rem;
+    border: 1px solid var(--cl-border);
+    border-radius: 0.9rem;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .history-section-header {
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid var(--cl-border);
+    background: #f8fafc;
+  }
+
+  .history-section-header h2 {
+    margin: 0;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--cl-ink);
+  }
+
+  .history-section .table {
+    font-size: 0.78rem;
+  }
+
+  .history-section .table thead th {
+    font-size: 0.68rem;
+  }
+
+  @media (max-width: 767.98px) {
+    .history-document-header,
+    .history-document-body {
+      padding: 1rem;
+    }
+
+    .history-document-brand {
+      flex-direction: column;
+    }
+
+    .history-document-meta {
+      text-align: left;
+    }
+
+    .history-patient-summary {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  @media print {
+    .cl-header,
+    .cl-sidebar,
+    .history-document-toolbar,
+    .alert,
+    .btn,
+    .cl-header-actions {
+      display: none !important;
+    }
+
+    .cl-main,
+    .cl-content {
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    .history-document {
+      border: 0;
+      box-shadow: none;
+    }
+  }
+</style>
+{% endif %}
+{% endblock %}
 
 {% block content %}
+{% if history_only %}
+<div class="history-document-wrap">
+  <div class="history-document-toolbar d-flex justify-content-end gap-2 mb-3">
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()"><i class="bi bi-printer me-1"></i> Print</button>
+  </div>
+
+  <article class="history-document">
+    <header class="history-document-header">
+      <div class="history-document-brand">
+        <div class="history-document-brand-main">
+          <div class="history-logo-wrap">
+            {% if system_settings and system_settings.logo %}
+            <img src="{{ system_settings.logo.url }}" alt="{{ clinic_name }} logo">
+            {% else %}
+            <div class="history-logo-fallback"><i class="bi bi-hospital"></i></div>
+            {% endif %}
+          </div>
+          <div>
+            <h1 class="history-document-title">{{ clinic_name }}</h1>
+            <p class="history-document-subtitle">Patient Medical History Document</p>
+            <p class="history-document-subtitle mb-0">
+              {% if system_settings.system_email %}{{ system_settings.system_email }}{% endif %}
+              {% if patient.branch %} &bull; {{ patient.branch }}{% endif %}
+            </p>
+          </div>
+        </div>
+        <div class="history-document-meta">
+          <strong>Patient History</strong>
+          <div>Generated: {% now "d M Y H:i" %}</div>
+          <div>File No: {{ patient.patient_id }}</div>
+        </div>
+      </div>
+
+      <div class="history-patient-summary">
+        <div class="history-summary-item"><span>Patient</span><strong>{{ patient.first_name }} {{ patient.last_name }}</strong></div>
+        <div class="history-summary-item"><span>Gender</span><div>{{ patient.get_gender_display|default:"—" }}</div></div>
+        <div class="history-summary-item"><span>Date of Birth</span><div>{{ patient.date_of_birth|date:"d M Y"|default:"—" }}</div></div>
+        <div class="history-summary-item"><span>Branch</span><div>{{ patient.branch|default:"—" }}</div></div>
+      </div>
+    </header>
+
+    <div class="history-document-body">
+{% else %}
 <div class="cl-page-header">
   <div>
     <h1>{{ patient.first_name }} {{ patient.last_name }}</h1>
@@ -37,8 +278,8 @@
 
 <!-- Medical History -->
 {% if medical_history.triage_records %}
-<div class="cl-card mb-3">
-  <div class="cl-card-header"><h2 class="cl-card-title">Triage Records</h2></div>
+<div class="{% if history_only %}history-section{% else %}cl-card mb-3{% endif %}">
+  <div class="{% if history_only %}history-section-header{% else %}cl-card-header{% endif %}"><h2 class="{% if history_only %}mb-0{% else %}cl-card-title{% endif %}">Triage Records</h2></div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
       <table class="table">
@@ -55,8 +296,8 @@
 {% endif %}
 
 {% if medical_history.consultations %}
-<div class="cl-card mb-3">
-  <div class="cl-card-header"><h2 class="cl-card-title">Consultations</h2></div>
+<div class="{% if history_only %}history-section{% else %}cl-card mb-3{% endif %}">
+  <div class="{% if history_only %}history-section-header{% else %}cl-card-header{% endif %}"><h2 class="{% if history_only %}mb-0{% else %}cl-card-title{% endif %}">Consultations</h2></div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
       <table class="table">
@@ -73,8 +314,8 @@
 {% endif %}
 
 {% if medical_history.lab_requests %}
-<div class="cl-card mb-3">
-  <div class="cl-card-header"><h2 class="cl-card-title">Lab Results</h2></div>
+<div class="{% if history_only %}history-section{% else %}cl-card mb-3{% endif %}">
+  <div class="{% if history_only %}history-section-header{% else %}cl-card-header{% endif %}"><h2 class="{% if history_only %}mb-0{% else %}cl-card-title{% endif %}">Lab Results</h2></div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
       <table class="table">
@@ -91,8 +332,8 @@
 {% endif %}
 
 {% if medical_history.radiology_requests %}
-<div class="cl-card mb-3">
-  <div class="cl-card-header"><h2 class="cl-card-title">Radiology</h2></div>
+<div class="{% if history_only %}history-section{% else %}cl-card mb-3{% endif %}">
+  <div class="{% if history_only %}history-section-header{% else %}cl-card-header{% endif %}"><h2 class="{% if history_only %}mb-0{% else %}cl-card-title{% endif %}">Radiology</h2></div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
       <table class="table">
@@ -109,8 +350,8 @@
 {% endif %}
 
 {% if medical_history.invoices %}
-<div class="cl-card mb-3">
-  <div class="cl-card-header"><h2 class="cl-card-title">Billing History</h2></div>
+<div class="{% if history_only %}history-section{% else %}cl-card mb-3{% endif %}">
+  <div class="{% if history_only %}history-section-header{% else %}cl-card-header{% endif %}"><h2 class="{% if history_only %}mb-0{% else %}cl-card-title{% endif %}">Billing History</h2></div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
       <table class="table">
@@ -127,8 +368,8 @@
 {% endif %}
 
 {% if medical_history.admissions %}
-<div class="cl-card mb-3">
-  <div class="cl-card-header"><h2 class="cl-card-title">Admissions</h2></div>
+<div class="{% if history_only %}history-section{% else %}cl-card mb-3{% endif %}">
+  <div class="{% if history_only %}history-section-header{% else %}cl-card-header{% endif %}"><h2 class="{% if history_only %}mb-0{% else %}cl-card-title{% endif %}">Admissions</h2></div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
       <table class="table">
@@ -145,8 +386,8 @@
 {% endif %}
 
 {% if medical_history.referrals %}
-<div class="cl-card mb-3">
-  <div class="cl-card-header"><h2 class="cl-card-title">Referrals</h2></div>
+<div class="{% if history_only %}history-section{% else %}cl-card mb-3{% endif %}">
+  <div class="{% if history_only %}history-section-header{% else %}cl-card-header{% endif %}"><h2 class="{% if history_only %}mb-0{% else %}cl-card-title{% endif %}">Referrals</h2></div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
       <table class="table">
@@ -159,6 +400,11 @@
       </table>
     </div>
   </div>
+</div>
+{% endif %}
+{% if history_only %}
+    </div>
+  </article>
 </div>
 {% endif %}
 {% endblock %}
