@@ -1,7 +1,9 @@
+from django.contrib import messages
 from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 from .forms import UserCreateForm, UserEditForm
 from .models import User
@@ -76,3 +78,19 @@ def edit_user(request, pk):
             "submit_label": "Save Changes",
         },
     )
+
+
+@login_required
+@role_required("system_admin", "director")
+@module_permission_required("accounts", "update")
+@require_POST
+def toggle_user_status(request, pk):
+    user_obj = get_object_or_404(User, pk=pk)
+    if user_obj == request.user:
+        messages.error(request, "You cannot suspend your own account.")
+    else:
+        user_obj.is_active = not user_obj.is_active
+        User.objects.filter(pk=pk).update(is_active=user_obj.is_active)
+        action = "activated" if user_obj.is_active else "suspended"
+        messages.success(request, f"User {user_obj.username} has been {action}.")
+    return redirect("settingsapp:index")

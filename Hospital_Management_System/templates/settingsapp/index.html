@@ -3,114 +3,123 @@
 {% block header_title %}Administration{% endblock %}
 
 {% block content %}
-<div class="cl-page-header">
-  <div><h1>Administration</h1></div>
+<div class="cl-page-header d-flex justify-content-between align-items-center mb-3">
+  <h1 class="mb-0">Administration</h1>
   {% if can_manage_settings %}
   <a href="{% url 'settingsapp:edit_settings' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-gear"></i> Edit Settings</a>
   {% endif %}
 </div>
 
+{% if messages %}
+<div class="mb-3">
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-2" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 <!-- Tabs -->
 <ul class="nav nav-tabs mb-4">
-  <li class="nav-item"><a class="nav-link {% if active_tab == 'general' %}active{% endif %}" href="?tab=general">General</a></li>
-  <li class="nav-item"><a class="nav-link {% if active_tab == 'branches' %}active{% endif %}" href="?tab=branches">Branches</a></li>
-  <li class="nav-item"><a class="nav-link {% if active_tab == 'users' %}active{% endif %}" href="?tab=users">Users</a></li>
-  {% if is_sys_admin %}<li class="nav-item"><a class="nav-link {% if active_tab == 'permissions' %}active{% endif %}" href="?tab=permissions">Permissions</a></li>{% endif %}
+  <li class="nav-item"><a class="nav-link {% if active_tab == 'general' %}active{% endif %}" href="?tab=general"><i class="bi bi-sliders"></i> General</a></li>
+  <li class="nav-item"><a class="nav-link {% if active_tab == 'branches' %}active{% endif %}" href="?tab=branches"><i class="bi bi-building"></i> Branches</a></li>
+  <li class="nav-item"><a class="nav-link {% if active_tab == 'users' %}active{% endif %}" href="?tab=users"><i class="bi bi-people"></i> Users</a></li>
+  {% if is_sys_admin %}<li class="nav-item"><a class="nav-link {% if active_tab == 'permissions' %}active{% endif %}" href="?tab=permissions"><i class="bi bi-shield-lock"></i> Permissions</a></li>{% endif %}
 </ul>
 
-<!-- General -->
+<!-- ─── General Tab ─── -->
 {% if active_tab == 'general' %}
-<div class="cl-card">
-  <div class="cl-card-header"><h2 class="cl-card-title">System Settings</h2></div>
+<div class="cl-card mb-4">
+  <div class="cl-card-header d-flex justify-content-between align-items-center">
+    <h2 class="cl-card-title mb-0">System Settings</h2>
+    {% if can_manage_settings %}<a href="{% url 'settingsapp:edit_settings' %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i> Edit</a>{% endif %}
+  </div>
   <div class="cl-card-body">
     {% if settings_obj %}
-    <div class="row">
-      <div class="col-sm-6"><strong>Clinic Name:</strong> {{ settings_obj.clinic_name }}</div>
-      <div class="col-sm-6"><strong>Currency:</strong> {{ settings_obj.currency|default:"UGX" }}</div>
-      <div class="col-sm-6"><strong>Phone:</strong> {{ settings_obj.clinic_phone|default:"—" }}</div>
-      <div class="col-sm-6"><strong>Email:</strong> {{ settings_obj.clinic_email|default:"—" }}</div>
-      <div class="col-sm-12"><strong>Address:</strong> {{ settings_obj.clinic_address|default:"—" }}</div>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="mb-2"><small class="text-muted d-block">Clinic Name</small><strong>{{ settings_obj.clinic_name }}</strong></div>
+      </div>
+      <div class="col-md-6">
+        <div class="mb-2"><small class="text-muted d-block">System Email</small><strong>{{ settings_obj.system_email|default:"—" }}</strong></div>
+      </div>
+      <div class="col-md-6">
+        <div class="mb-2"><small class="text-muted d-block">Timezone</small><strong>{{ settings_obj.timezone|default:"UTC" }}</strong></div>
+      </div>
+      <div class="col-md-6">
+        <div class="mb-2"><small class="text-muted d-block">Consultation Fee</small><strong>UGX {{ settings_obj.consultation_fee|default:"50,000" }}</strong></div>
+      </div>
     </div>
-    {% if settings_obj.logo %}<div class="mt-3"><img src="{{ settings_obj.logo.url }}" alt="Logo" class="img-fluid" style="max-height:80px;"></div>{% endif %}
+
+    {% if settings_obj.logo %}
+    <div class="mt-3 pt-3 border-top">
+      <small class="text-muted d-block mb-1">Logo</small>
+      <img src="{{ settings_obj.logo.url }}" alt="Clinic Logo" class="img-fluid rounded" style="max-height:80px;">
+    </div>
+    {% endif %}
+
+    <!-- Color Preview -->
+    <div class="mt-3 pt-3 border-top">
+      <small class="text-muted d-block mb-2">Color Scheme</small>
+      <div class="d-flex gap-2 flex-wrap">
+        <div class="text-center">
+          <div class="color-swatch" data-color="{{ settings_obj.primary_color }}"></div>
+          <small class="text-muted" style="font-size:.7rem;">Primary</small>
+        </div>
+        <div class="text-center">
+          <div class="color-swatch" data-color="{{ settings_obj.secondary_color }}"></div>
+          <small class="text-muted" style="font-size:.7rem;">Secondary</small>
+        </div>
+        <div class="text-center">
+          <div class="color-swatch" data-color="{{ settings_obj.sidebar_color }}"></div>
+          <small class="text-muted" style="font-size:.7rem;">Sidebar</small>
+        </div>
+        <div class="text-center">
+          <div class="color-swatch" data-color="{{ settings_obj.sidebar_text_color }}"></div>
+          <small class="text-muted" style="font-size:.7rem;">Sidebar Text</small>
+        </div>
+        <div class="text-center">
+          <div class="color-swatch" data-color="{{ settings_obj.dashboard_color }}"></div>
+          <small class="text-muted" style="font-size:.7rem;">Dashboard</small>
+        </div>
+        <div class="text-center">
+          <div class="color-swatch" data-color="{{ settings_obj.text_color }}"></div>
+          <small class="text-muted" style="font-size:.7rem;">Text</small>
+        </div>
+      </div>
+    </div>
     {% else %}
-    <p class="text-muted">No settings configured.</p>
+    <p class="text-muted mb-0">No settings configured. <a href="{% url 'settingsapp:install' %}">Run setup wizard</a>.</p>
     {% endif %}
   </div>
 </div>
 {% endif %}
 
-<!-- Branches -->
+<!-- ─── Branches Tab ─── -->
 {% if active_tab == 'branches' %}
 <div class="cl-card">
-  <div class="cl-card-header">
-    <h2 class="cl-card-title">Branches</h2>
-    {% if is_sys_admin %}<a href="{% url 'branches:index' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-list"></i> Manage</a>{% endif %}
+  <div class="cl-card-header d-flex justify-content-between align-items-center">
+    <h2 class="cl-card-title mb-0">Branches</h2>
+    {% if is_sys_admin %}<a href="{% url 'branches:create' %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-lg"></i> Add Branch</a>{% endif %}
   </div>
-  <div class="cl-card-body p-0">
-    <table class="table table-sm">
-      <thead><tr><th>Name</th><th>Code</th><th>City</th><th>Status</th></tr></thead>
-      <tbody>
-        {% for b in branches %}
-        <tr><td>{{ b.branch_name }}</td><td>{{ b.branch_code }}</td><td>{{ b.city|default:"—" }}</td><td><span class="badge bg-{% if b.status == 'active' %}success{% else %}secondary{% endif %}">{{ b.get_status_display }}</span></td></tr>
-        {% empty %}
-        <tr><td colspan="4" class="text-center text-muted py-4">No branches.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-{% endif %}
-
-<!-- Users -->
-{% if active_tab == 'users' %}
-<div class="cl-card">
-  <div class="cl-card-header">
-    <h2 class="cl-card-title">Users</h2>
-    {% if is_sys_admin %}<a href="{% url 'accounts:index' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-people"></i> Manage</a>{% endif %}
-  </div>
-  <div class="cl-card-body p-0">
-    <table class="table table-sm">
-      <thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Branch</th><th>Active</th></tr></thead>
-      <tbody>
-        {% for u in users %}
-        <tr><td>{{ u.username }}</td><td>{{ u.get_full_name }}</td><td>{{ u.get_role_display }}</td><td>{{ u.branch.branch_name|default:"—" }}</td><td>{% if u.is_active %}<i class="bi bi-check-circle text-success"></i>{% else %}<i class="bi bi-x-circle text-danger"></i>{% endif %}</td></tr>
-        {% empty %}
-        <tr><td colspan="5" class="text-center text-muted py-4">No users.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-{% endif %}
-
-<!-- Permissions -->
-{% if active_tab == 'permissions' and is_sys_admin %}
-<div class="cl-card mb-4">
-  <div class="cl-card-header"><h2 class="cl-card-title">Module Permissions</h2></div>
-  <div class="cl-card-body p-0">
-    <table class="table table-sm">
-      <thead><tr><th>User</th><th>Module</th><th>Can View</th><th>Can Update</th><th>Can Delete</th><th>Granted By</th></tr></thead>
-      <tbody>
-        {% for p in permissions %}
-        <tr><td>{{ p.user.username }}</td><td>{{ p.module_name }}</td><td>{% if p.can_view %}<i class="bi bi-check text-success"></i>{% else %}<i class="bi bi-x text-danger"></i>{% endif %}</td><td>{% if p.can_update %}<i class="bi bi-check text-success"></i>{% else %}<i class="bi bi-x text-danger"></i>{% endif %}</td><td>{% if p.can_delete %}<i class="bi bi-check text-success"></i>{% else %}<i class="bi bi-x text-danger"></i>{% endif %}</td><td>{{ p.granted_by.username|default:"—" }}</td></tr>
-        {% empty %}
-        <tr><td colspan="6" class="text-center text-muted py-4">No explicit permissions.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- Role Defaults Matrix -->
-<div class="cl-card">
-  <div class="cl-card-header"><h2 class="cl-card-title">Role Default Modules</h2></div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
-      <table class="table table-sm">
-        <thead><tr><th>Role</th>{% for code, label in module_choices %}<th class="text-center"><small>{{ label }}</small></th>{% endfor %}</tr></thead>
+      <table class="table table-sm table-hover mb-0">
+        <thead><tr><th>Name</th><th>Code</th><th>City</th><th>Phone</th><th>Status</th>{% if is_sys_admin %}<th class="text-end">Actions</th>{% endif %}</tr></thead>
         <tbody>
-          {% for role_code, role_label, defaults in role_defaults %}
-          <tr><td><strong>{{ role_label }}</strong></td>{% for code, label in module_choices %}<td class="text-center">{% if code in defaults %}<i class="bi bi-check-circle text-success"></i>{% else %}<i class="bi bi-x-circle text-secondary"></i>{% endif %}</td>{% endfor %}</tr>
+          {% for b in branches %}
+          <tr>
+            <td>{{ b.branch_name }}</td>
+            <td><code>{{ b.branch_code }}</code></td>
+            <td>{{ b.city|default:"—" }}</td>
+            <td>{{ b.phone|default:"—" }}</td>
+            <td><span class="badge bg-{% if b.status == 'active' %}success{% else %}secondary{% endif %}">{{ b.get_status_display }}</span></td>
+            {% if is_sys_admin %}<td class="text-end"><a href="{% url 'branches:edit' b.pk %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i></a></td>{% endif %}
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-center text-muted py-4">No branches.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -118,4 +127,149 @@
   </div>
 </div>
 {% endif %}
+
+<!-- ─── Users Tab ─── -->
+{% if active_tab == 'users' %}
+<div class="cl-card">
+  <div class="cl-card-header d-flex justify-content-between align-items-center">
+    <h2 class="cl-card-title mb-0">Users</h2>
+    {% if is_sys_admin %}<a href="{% url 'accounts:create' %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-person-plus"></i> Add User</a>{% endif %}
+  </div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0">
+        <thead><tr><th>Username</th><th>Full Name</th><th>Role</th><th>Branch</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td>
+              <a class="text-decoration-none" data-bs-toggle="collapse" href="#user-detail-{{ u.pk }}" role="button" aria-expanded="false" title="View details">
+                <i class="bi bi-chevron-right me-1 small"></i>{{ u.username }}
+              </a>
+            </td>
+            <td>{{ u.get_full_name|default:"—" }}</td>
+            <td>{{ u.get_role_display }}</td>
+            <td>{{ u.branch.branch_name|default:"—" }}</td>
+            <td>
+              {% if u.is_active %}
+              <span class="badge bg-success">Active</span>
+              {% else %}
+              <span class="badge bg-danger">Suspended</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                <a href="{% url 'accounts:edit' u.pk %}" class="btn btn-outline-secondary" title="Edit"><i class="bi bi-pencil"></i></a>
+                {% if u.pk != request.user.pk %}
+                <form method="post" action="{% url 'accounts:toggle_status' u.pk %}" class="d-inline toggle-form" data-confirm="{{ u.is_active|yesno:'Suspend,Activate' }} user {{ u.username }}?">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-outline-{% if u.is_active %}warning{% else %}success{% endif %}" title="{{ u.is_active|yesno:'Suspend,Activate' }}">
+                    <i class="bi bi-{% if u.is_active %}pause-circle{% else %}play-circle{% endif %}"></i>
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          <!-- Expandable detail row -->
+          <tr class="collapse" id="user-detail-{{ u.pk }}">
+            <td colspan="6" class="bg-light border-0 px-4 py-3">
+              <div class="row g-3">
+                <div class="col-md-4"><small class="text-muted d-block">Email</small>{{ u.email|default:"—" }}</div>
+                <div class="col-md-4"><small class="text-muted d-block">Phone</small>{{ u.phone|default:"—" }}</div>
+                <div class="col-md-4"><small class="text-muted d-block">Branch</small>{{ u.branch.branch_name|default:"—" }}</div>
+                <div class="col-md-4"><small class="text-muted d-block">Role</small>{{ u.get_role_display }}</div>
+                {% if u.radiology_unit_assignment %}
+                <div class="col-md-4"><small class="text-muted d-block">Radiology Unit</small>{{ u.get_radiology_unit_assignment_display }}</div>
+                {% endif %}
+                <div class="col-md-4"><small class="text-muted d-block">Can View Revenue</small>{{ u.can_view_revenue|yesno:"Yes,No" }}</div>
+                <div class="col-md-4"><small class="text-muted d-block">Can Delete Records</small>{{ u.can_delete_records|yesno:"Yes,No" }}</div>
+                <div class="col-md-4"><small class="text-muted d-block">Can Approve Edits</small>{{ u.can_approve_edits|yesno:"Yes,No" }}</div>
+                <div class="col-md-4"><small class="text-muted d-block">Superuser</small>{{ u.is_superuser|yesno:"Yes,No" }}</div>
+                <div class="col-md-4"><small class="text-muted d-block">Staff</small>{{ u.is_staff|yesno:"Yes,No" }}</div>
+                <div class="col-md-4"><small class="text-muted d-block">Date Joined</small>{{ u.date_joined|date:"M d, Y" }}</div>
+                <div class="col-md-4"><small class="text-muted d-block">Last Login</small>{{ u.last_login|date:"M d, Y H:i"|default:"Never" }}</div>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-center text-muted py-4">No users.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ─── Permissions Tab ─── -->
+{% if active_tab == 'permissions' and is_sys_admin %}
+<div class="cl-card mb-4">
+  <div class="cl-card-header d-flex justify-content-between align-items-center">
+    <h2 class="cl-card-title mb-0">Module Permissions</h2>
+    <a href="{% url 'permissions:create' %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-lg"></i> Add Permission</a>
+  </div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0">
+        <thead><tr><th>User</th><th>Module</th><th>View</th><th>Create</th><th>Update</th><th>Delete</th><th>Granted By</th></tr></thead>
+        <tbody>
+          {% for p in permissions %}
+          <tr>
+            <td>{{ p.user.username }}</td>
+            <td>{{ p.get_module_name_display }}</td>
+            <td>{% if p.can_view %}<i class="bi bi-check-circle text-success"></i>{% else %}<i class="bi bi-x-circle text-danger"></i>{% endif %}</td>
+            <td>{% if p.can_create %}<i class="bi bi-check-circle text-success"></i>{% else %}<i class="bi bi-x-circle text-danger"></i>{% endif %}</td>
+            <td>{% if p.can_update %}<i class="bi bi-check-circle text-success"></i>{% else %}<i class="bi bi-x-circle text-danger"></i>{% endif %}</td>
+            <td>{% if p.can_soft_delete or p.can_hard_delete %}<i class="bi bi-check-circle text-success"></i>{% else %}<i class="bi bi-x-circle text-danger"></i>{% endif %}</td>
+            <td>{{ p.granted_by.username|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-center text-muted py-4">No explicit permissions.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Role Defaults Matrix -->
+<div class="cl-card">
+  <div class="cl-card-header"><h2 class="cl-card-title mb-0">Role Default Modules</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead><tr><th>Role</th>{% for code, label in module_choices %}<th class="text-center"><small>{{ label }}</small></th>{% endfor %}</tr></thead>
+        <tbody>
+          {% for role_code, role_label, defaults in role_defaults %}
+          <tr>
+            <td><strong>{{ role_label }}</strong></td>
+            {% for code, label in module_choices %}
+            <td class="text-center">{% if code in defaults %}<i class="bi bi-check-circle text-success"></i>{% else %}<i class="bi bi-x-circle text-secondary"></i>{% endif %}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>.color-swatch{width:40px;height:40px;border-radius:6px;border:1px solid #dee2e6;flex-shrink:0;}</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.color-swatch[data-color]').forEach(function(el){
+  el.style.backgroundColor = el.dataset.color;
+});
+document.querySelectorAll('.toggle-form').forEach(function(f){
+  f.addEventListener('submit', function(e){
+    if(!confirm(f.dataset.confirm)) e.preventDefault();
+  });
+});
+</script>
 {% endblock %}

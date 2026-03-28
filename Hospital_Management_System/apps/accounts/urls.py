@@ -5,6 +5,7 @@ from .views import (
     ClinicLogoutView,
     create_user,
     edit_user,
+    toggle_user_status,
     users_index,
 )
 
@@ -16,4 +17,5 @@ urlpatterns = [
     path("", users_index, name="index"),
     path("create/", create_user, name="create"),
     path("<int:pk>/edit/", edit_user, name="edit"),
+    path("<int:pk>/toggle-status/", toggle_user_status, name="toggle_status"),
 ]
