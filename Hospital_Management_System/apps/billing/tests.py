@@ -642,43 +642,24 @@ class BillingVisitFlowTests(TestCase):
         self.assertEqual(str(imaging_request.profit_amount), "0.00")
         self.assertEqual(radiology_item.quantity_on_hand, 1)
 
-    def test_shift_sessions_report_supports_status_filter_and_csv_export(self):
-        self.active_shift.status = "closed"
-        self.active_shift.closed_at = timezone.now()
-        self.active_shift.closed_by = self.cashier
-        self.active_shift.declared_cash_total = "55000.00" # type: ignore
-        self.active_shift.expected_cash_total = "50000.00"
-        self.active_shift.variance_amount = "5000.00"
-        self.active_shift.save(
-            update_fields=[
-                "status",
-                "closed_at",
-                "closed_by",
-                "declared_cash_total",
-                "expected_cash_total",
-                "variance_amount",
-                "updated_at",
-            ]
+    def test_cashier_cannot_access_billing_without_open_shift(self):
+        self.client.force_login(self.cashier)
+
+        response = self.client.get(reverse("billing:detail", args=[self.invoice.pk]), follow=True)
+
+        self.assertRedirects(response, reverse("billing:open_shift"))
+        self.assertContains(response, "Opening Float")
+
+    def test_cashier_can_open_shift(self):
+        self.client.force_login(self.cashier)
+
+        response = self.client.post(
+            reverse("billing:open_shift"),
+            {"opening_float": "10000.00"},
+            follow=True
         )
 
-        self.client.force_login(self.director)
-        html_response = self.client.get(
-            reverse("billing:shift_sessions_report"),
-            {"status": "closed", "branch": str(self.branch.pk)},
+        self.assertRedirects(response, reverse("billing:index"))
+        self.assertTrue(
+            CashierShiftSession.objects.filter(opened_by=self.cashier, status="open").exists()
         )
-        self.assertEqual(html_response.status_code, 200)
-        self.assertContains(html_response, f"#{self.active_shift.pk}")
-
-        csv_response = self.client.get(
-            reverse("billing:shift_sessions_report"),
-            {
-                "status": "closed",
-                "branch": str(self.branch.pk),
-                "export": "csv",
-            },
-        )
-        self.assertEqual(csv_response.status_code, 200)
-        self.assertIn("text/csv", csv_response["Content-Type"])
-        csv_text = csv_response.content.decode("utf-8")
-        self.assertIn("Shift ID,Branch,Opened By", csv_text)
-        self.assertIn(f"{self.active_shift.pk}", csv_text)

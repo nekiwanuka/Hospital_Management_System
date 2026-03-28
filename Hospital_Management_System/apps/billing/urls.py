@@ -25,4 +25,5 @@ urlpatterns = [
     path("<int:pk>/line/<int:line_id>/pay/", views.pay_line_item, name="pay_line_item"),
     path("<int:pk>/receipt/", views.receipt, name="receipt"),
     path("receipt/<int:receipt_pk>/", views.receipt_detail, name="receipt_detail"),
+    path("invoices/", views.invoices, name="invoices"),
 ]

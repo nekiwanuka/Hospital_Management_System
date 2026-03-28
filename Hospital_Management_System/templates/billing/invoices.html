@@ -1,4 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Invoices</h1>
 <form method="get">
-  <input type="text" name="search" placeholder="Search invoices..." class="form-control">
-  <button type="submit" class="btn btn-primary">Filter</button>
+    <input type="text" name="query" placeholder="Search invoices" value="{{ query }}">
+    <button type="submit">Search</button>
 </form>
+
+<table>
+    <thead>
+        <tr>
+            <th>Invoice Number</th>
+            <th>Patient</th>
+            <th>Status</th>
+            <th>Total Amount</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for invoice in invoices %}
+        <tr>
+            <td>{{ invoice.invoice_number }}</td>
+            <td>{{ invoice.patient.name }}</td>
+            <td>{{ invoice.payment_status }}</td>
+            <td>{{ invoice.total_amount }}</td>
+            <td><a href="{% url 'billing:detail' invoice.pk %}">View</a></td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5">No invoices found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div>
+    <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}&query={{ query }}">Previous</a>
+    {% endif %} {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}&query={{ query }}">Next</a>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1851,64 +1851,35 @@ def shift_sessions_report(request):
 @role_required("cashier", "receptionist", "director", "system_admin")
 @module_permission_required("billing", "update")
 def open_shift(request):
-    if request.method != "POST":
-        return redirect("billing:index")
+    if request.method == "POST":
+        opening_float = request.POST.get("opening_float")
+        if not opening_float or float(opening_float) <= 0:
+            return render(
+                request,
+                "billing/open_shift.html",
+                {"error": "Opening float must be a positive number."},
+            )
 
-    if request.user.role not in {"cashier", "receptionist"}:
-        messages.error(
-            request, "Only cashier or receptionist can open a cashier shift."
+        # Ensure no open shifts exist for the cashier
+        if CashierShiftSession.objects.filter(
+            opened_by=request.user, status="open"
+        ).exists():
+            return render(
+                request,
+                "billing/open_shift.html",
+                {"error": "You already have an open shift."},
+            )
+
+        # Create a new shift
+        CashierShiftSession.objects.create(
+            branch=request.user.branch,
+            opened_by=request.user,
+            opening_float=opening_float,
+            status="open",
         )
         return redirect("billing:index")
 
-    if _get_open_shift_for_user(request.user):
-        messages.info(request, "You already have an open shift.")
-        return redirect("billing:index")
-
-    if ApprovalRequest.objects.filter(
-        branch=request.user.branch,
-        approval_type="shift_variance",
-        status="pending",
-    ).exists():
-        messages.error(
-            request,
-            "Cannot open a new shift while this branch has a pending shift variance approval.",
-        )
-        return redirect("billing:index")
-
-    opening_float_raw = (request.POST.get("opening_float") or "0").strip()
-    notes = (request.POST.get("shift_notes") or "").strip()
-    try:
-        opening_float = Decimal(opening_float_raw)
-    except Exception:
-        messages.error(request, "Enter a valid opening float amount.")
-        return redirect("billing:index")
-
-    if opening_float < 0:
-        messages.error(request, "Opening float cannot be negative.")
-        return redirect("billing:index")
-
-    branch_threshold = getattr(
-        request.user.branch,
-        "shift_variance_threshold",
-        DEFAULT_SHIFT_VARIANCE_THRESHOLD,
-    )
-
-    shift = CashierShiftSession.objects.create(
-        branch=request.user.branch,
-        opened_by=request.user,
-        opening_float=opening_float,
-        variance_threshold=branch_threshold,
-        notes=notes,
-    )
-    _log_financial_event(
-        request,
-        action="billing.shift.open",
-        object_type="cashier_shift",
-        object_id=shift.pk,
-        after={"opening_float": str(opening_float), "status": shift.status},
-    )
-    messages.success(request, "Cashier shift opened successfully.")
-    return redirect("billing:index")
+    return render(request, "billing/open_shift.html")
 
 
 @login_required

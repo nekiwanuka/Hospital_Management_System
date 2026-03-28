@@ -1,0 +1,9 @@
+<form method="post">
+    {% csrf_token %}
+    <label for="opening_float">Opening Float:</label>
+    <input type="number" name="opening_float" id="opening_float" step="0.01" required>
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% endif %}
+    <button type="submit">Open Shift</button>
+</form>
