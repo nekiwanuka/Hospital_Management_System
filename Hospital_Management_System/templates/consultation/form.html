@@ -3,25 +3,67 @@
 {% block header_title %}Consultation Workbench{% endblock %}
 
 {% block content %}
-<div class="cl-page-header">
-  <div>
-    <h1>{{ patient.first_name }} {{ patient.last_name }}</h1>
-    <p>Visit {{ visit.visit_number }} &bull; {{ visit.get_status_display }}
-      {% if cashier_cycle_badge %}<span class="badge {{ cashier_cycle_badge.1 }} ms-2">{{ cashier_cycle_badge.0 }}</span>{% endif %}
-    </p>
+<div class="consult-workbench">
+<section class="consult-hero cl-card border-0">
+  <div class="cl-card-body">
+    <div class="cl-page-header consult-hero-header mb-0">
+      <div>
+        <p class="consult-hero-kicker mb-2">Consultation Workbench</p>
+        <h1>{{ patient.first_name }} {{ patient.last_name }}</h1>
+        <p>Visit {{ visit.visit_number }} &bull; {{ visit.get_status_display }}
+          {% if cashier_cycle_badge %}<span class="badge {{ cashier_cycle_badge.1 }} ms-2">{{ cashier_cycle_badge.0 }}</span>{% endif %}
+        </p>
+      </div>
+      <div class="d-flex gap-2 consult-hero-actions">
+        <a href="{% url 'patients:detail' patient.pk %}?history_only=1" class="btn btn-outline-secondary btn-sm" target="_blank"><i class="bi bi-clock-history"></i> History</a>
+        <a href="{% url 'consultation:index' %}{% if selected_panel != 'all' %}?panel={{ selected_panel }}{% endif %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+      </div>
+    </div>
+
+    <div class="consult-summary-grid">
+      <div class="consult-summary-pill">
+        <span class="consult-summary-label">Patient ID</span>
+        <strong>{{ patient.patient_id|default:"—" }}</strong>
+      </div>
+      <div class="consult-summary-pill">
+        <span class="consult-summary-label">Age / Gender</span>
+        <strong>{% if patient.date_of_birth %}{{ patient.get_age }}y{% else %}—{% endif %} • {{ patient.get_gender_display|default:"—" }}</strong>
+      </div>
+      <div class="consult-summary-pill">
+        <span class="consult-summary-label">Lab History</span>
+        <strong>{{ patient_lab_history|length }}</strong>
+      </div>
+      <div class="consult-summary-pill">
+        <span class="consult-summary-label">Radiology</span>
+        <strong>{{ patient_radiology_history|length }}</strong>
+      </div>
+      <div class="consult-summary-pill">
+        <span class="consult-summary-label">Pharmacy</span>
+        <strong>{{ patient_pharmacy_history|length }}</strong>
+      </div>
+      <div class="consult-summary-pill consult-summary-pill-accent">
+        <span class="consult-summary-label">Workflow</span>
+        <strong>{{ visit.get_status_display }}</strong>
+      </div>
+    </div>
   </div>
-  <div class="d-flex gap-2">
-    <a href="{% url 'patients:detail' patient.pk %}?history_only=1" class="btn btn-outline-secondary btn-sm" target="_blank"><i class="bi bi-clock-history"></i> History</a>
-    <a href="{% url 'consultation:index' %}{% if selected_panel != 'all' %}?panel={{ selected_panel }}{% endif %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+</section>
   </div>
-</div>
+<div class="consult-workbench-body">
 
 <!-- ── Current Visit Results (full-width, compact) ── -->
 {% if triage_records or current_visit_lab_results or pending_visit_lab_requests or current_visit_radiology_results or current_visit_pharmacy_requests or current_visit_pharmacy_records %}
-<div class="row g-2 mb-2">
+<section class="consult-section mb-3">
+  <div class="consult-section-heading">
+    <div>
+      <h2 class="consult-section-title">Current Visit Activity</h2>
+      <p class="consult-section-subtitle">Everything already requested or completed for this visit.</p>
+    </div>
+  </div>
+<div class="row g-3 consult-current-grid">
   {% if triage_records %}
   <div class="col-12">
-    <div class="cl-card">
+    <div class="cl-card consult-panel-card h-100">
       <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0">Triage</h2></div>
       <div class="cl-card-body p-0">
         <div class="table-responsive">
@@ -41,7 +83,7 @@
 
   {% if current_visit_lab_results %}
   <div class="col-md-6">
-    <div class="cl-card h-100">
+    <div class="cl-card consult-panel-card h-100">
       <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-droplet"></i> Lab Results</h2></div>
       <div class="cl-card-body p-0">
         <div class="table-responsive">
@@ -66,7 +108,7 @@
 
   {% if pending_visit_lab_requests %}
   <div class="col-md-6">
-    <div class="cl-card h-100">
+    <div class="cl-card consult-panel-card h-100">
       <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-hourglass"></i> Pending Lab</h2></div>
       <div class="cl-card-body p-0">
         <div class="table-responsive">
@@ -86,7 +128,7 @@
 
   {% if current_visit_radiology_results %}
   <div class="col-md-6">
-    <div class="cl-card h-100">
+    <div class="cl-card consult-panel-card h-100">
       <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-x-ray"></i> Radiology</h2></div>
       <div class="cl-card-body p-0">
         <div class="table-responsive">
@@ -106,7 +148,7 @@
 
   {% if current_visit_pharmacy_requests %}
   <div class="col-md-6">
-    <div class="cl-card h-100">
+    <div class="cl-card consult-panel-card h-100">
       <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-capsule"></i> Pharmacy Requests</h2></div>
       <div class="cl-card-body p-0">
         <div class="table-responsive">
@@ -126,7 +168,7 @@
 
   {% if current_visit_pharmacy_records %}
   <div class="col-md-6">
-    <div class="cl-card h-100">
+    <div class="cl-card consult-panel-card h-100">
       <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-capsule"></i> Dispensed</h2></div>
       <div class="cl-card-body p-0">
         <div class="table-responsive">
@@ -144,10 +186,11 @@
   </div>
   {% endif %}
 </div>
+ </section>
 {% endif %}
 
 <!-- ── Main work area: Patient History + Consultation + Actions ── -->
-<div class="row g-3 mt-1">
+<div class="row g-3 mt-1 align-items-start">
   
   <!-- Main Area: Profile, History & Doctor's Notes -->
   <div class="col-lg-8">
@@ -157,23 +200,23 @@
       <!-- Patient Demographics -->
       <div class="col-md-5">
         {% if patient %}
-        <div class="cl-card border-0 shadow-sm border-start border-4 border-info h-100">
-          <div class="cl-card-header bg-light py-2"><h2 class="cl-card-title mb-0 fs-6 fw-bold"><i class="bi bi-person-badge"></i> Patient Profile</h2></div>
-          <div class="cl-card-body p-3" style="font-size: 0.9rem;">
-            <div class="d-flex justify-content-between mb-2">
-              <span class="text-muted">ID:</span>
+        <div class="cl-card consult-profile-card border-0 h-100">
+          <div class="cl-card-header py-3"><h2 class="cl-card-title mb-0 fs-6 fw-bold"><i class="bi bi-person-badge"></i> Patient Profile</h2></div>
+          <div class="cl-card-body p-3 consult-profile-body">
+            <div class="consult-profile-row">
+              <span class="text-muted">ID</span>
               <span class="fw-bold">{{ patient.patient_id }}</span>
             </div>
-            <div class="d-flex justify-content-between mb-2">
-              <span class="text-muted">Age/Gender:</span>
+            <div class="consult-profile-row">
+              <span class="text-muted">Age/Gender</span>
               <span>{% if patient.date_of_birth %}{{ patient.get_age }}y{% else %}—{% endif %} • {{ patient.get_gender_display|default:"—" }}</span>
             </div>
-            <div class="d-flex justify-content-between mb-2">
-              <span class="text-muted">Contact:</span>
+            <div class="consult-profile-row">
+              <span class="text-muted">Contact</span>
               <span>{{ patient.phone_number|default:"—" }}</span>
             </div>
             {% if patient.allergies %}
-            <div class="alert alert-warning py-2 px-2 mb-0 mt-3 d-flex align-items-start gap-2 border-0" style="background-color: #fff3cd; font-size: 0.85rem;">
+            <div class="alert alert-warning py-2 px-2 mb-0 mt-3 d-flex align-items-start gap-2 border-0 consult-allergy-alert">
               <i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
               <div>
                 <strong class="d-block mb-1">Allergies</strong>
@@ -189,8 +232,8 @@
       <!-- Medical History Accordion -->
       <div class="col-md-7">
         {% if patient_lab_history or patient_radiology_history or patient_pharmacy_history %}
-        <div class="cl-card border-0 shadow-sm h-100">
-          <div class="cl-card-header bg-light py-2 d-flex justify-content-between align-items-center">
+        <div class="cl-card consult-history-card border-0 h-100">
+          <div class="cl-card-header py-3 d-flex justify-content-between align-items-center">
             <h2 class="cl-card-title mb-0 fs-6 fw-bold"><i class="bi bi-clock-history"></i> Past Records</h2>
           </div>
           <div class="cl-card-body p-0">
@@ -199,7 +242,7 @@
               {% if patient_lab_history %}
               <div class="accordion-item">
                 <h2 class="accordion-header">
-                  <button class="accordion-button py-2 px-3 fw-semibold text-success" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLab">
+                  <button class="accordion-button consult-history-toggle py-2 px-3 fw-semibold text-success" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLab">
                     <i class="bi bi-droplet me-2"></i> Lab History
                   </button>
                 </h2>
@@ -217,7 +260,7 @@
               {% if patient_radiology_history %}
               <div class="accordion-item">
                 <h2 class="accordion-header">
-                  <button class="accordion-button py-2 px-3 fw-semibold text-info {% if not patient_lab_history %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRadio">
+                  <button class="accordion-button consult-history-toggle py-2 px-3 fw-semibold text-info {% if not patient_lab_history %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRadio">
                     <i class="bi bi-x-ray me-2"></i> Radiology History
                   </button>
                 </h2>
@@ -235,7 +278,7 @@
               {% if patient_pharmacy_history %}
               <div class="accordion-item">
                 <h2 class="accordion-header">
-                  <button class="accordion-button py-2 px-3 fw-semibold text-warning collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePharm">
+                  <button class="accordion-button consult-history-toggle py-2 px-3 fw-semibold text-warning collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePharm">
                     <i class="bi bi-capsule me-2"></i> Pharmacy History
                   </button>
                 </h2>
@@ -258,9 +301,12 @@
     </div> <!-- /Top Row -->
 
     <!-- Doctor's Notes (Split into two columns horizontally) -->
-    <div class="cl-card shadow-sm border-0 mb-3">
-      <div class="cl-card-header bg-primary text-white py-3">
-        <h2 class="cl-card-title mb-0 fs-5"><i class="bi bi-journal-medical me-2"></i> Doctor's Notes</h2>
+    <div class="cl-card consult-notes-card border-0 mb-3">
+      <div class="cl-card-header consult-notes-header py-3">
+        <div>
+          <h2 class="cl-card-title mb-1 fs-5"><i class="bi bi-journal-medical me-2"></i> Doctor's Notes</h2>
+          <p class="consult-section-subtitle mb-0">Capture assessment on the left and the treatment plan on the right.</p>
+        </div>
       </div>
       <div class="cl-card-body p-4">
         <form method="post" novalidate>
@@ -268,20 +314,21 @@
           <input type="hidden" name="panel" value="{{ selected_panel }}">
           {% if form.non_field_errors %}<div class="alert alert-danger py-2">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>{% endif %}
           
-          <div class="row g-4">
+          <div class="row g-4 consult-notes-grid">
             <!-- Left Side of Form -->
-            <div class="col-md-6 border-end">
-              <div class="mb-3">
+            <div class="col-md-6 consult-notes-column consult-notes-column-primary">
+              <div class="consult-field-group mb-3">
+                <p class="consult-field-group-label">Assessment</p>
                 <label for="{{ form.consultation_room.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.consultation_room.label }}</label>
                 {{ form.consultation_room }}
                 {% for error in form.consultation_room.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
               </div>
-              <div class="mb-3">
+              <div class="consult-field-group mb-3">
                 <label for="{{ form.symptoms.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.symptoms.label }}</label>
                 {{ form.symptoms }}
                 {% for error in form.symptoms.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
               </div>
-              <div class="mb-3">
+              <div class="consult-field-group mb-0">
                 <label for="{{ form.diagnosis.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.diagnosis.label }}</label>
                 {{ form.diagnosis }}
                 {% for error in form.diagnosis.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
@@ -289,13 +336,14 @@
             </div>
             
             <!-- Right Side of Form -->
-            <div class="col-md-6">
-              <div class="mb-3">
+            <div class="col-md-6 consult-notes-column consult-notes-column-secondary">
+              <div class="consult-field-group mb-3">
+                <p class="consult-field-group-label">Plan & Follow-up</p>
                 <label for="{{ form.treatment_plan.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.treatment_plan.label }}</label>
                 {{ form.treatment_plan }}
                 {% for error in form.treatment_plan.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
               </div>
-              <div class="mb-3">
+              <div class="consult-field-group mb-3">
                 <label for="{{ form.prescription.id_for_label }}" class="form-label fw-semibold text-secondary">{{ form.prescription.label }}</label>
                 {{ form.prescription }}
                 {% for error in form.prescription.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
@@ -325,14 +373,18 @@
 
   <!-- Right Column: Actions (Tabs) -->
   <div class="col-lg-4">
-    <div class="cl-card shadow-sm border-0 h-100">
-      <div class="cl-card-header bg-light py-2">
-        <h2 class="cl-card-title mb-0 fs-6 fw-bold"><i class="bi bi-lightning-charge"></i> Clinical Actions</h2>
+    <div class="consult-actions-rail">
+    <div class="cl-card consult-actions-card border-0 h-100">
+      <div class="cl-card-header py-3">
+        <div>
+          <h2 class="cl-card-title mb-1 fs-6 fw-bold"><i class="bi bi-lightning-charge"></i> Clinical Actions</h2>
+          <p class="consult-section-subtitle mb-0">Requests and workflow actions stay pinned while you write notes.</p>
+        </div>
       </div>
       
       <div class="cl-card-body p-0">
         <!-- Action Tabs -->
-        <ul class="nav nav-tabs nav-justified bg-light border-bottom-0" id="actionsTab" role="tablist">
+        <ul class="nav nav-tabs nav-justified consult-actions-tabs border-bottom-0" id="actionsTab" role="tablist">
           <li class="nav-item" role="presentation">
             <button class="nav-link active py-3 border-0 text-success fw-semibold" id="lab-tab" data-bs-toggle="tab" data-bs-target="#action-lab" type="button" role="tab"><i class="bi bi-droplet fs-5 d-block mb-1"></i> Lab</button>
           </li>
@@ -348,7 +400,7 @@
         </ul>
 
         <!-- Tab Panes -->
-        <div class="tab-content p-3 border-top" id="actionsTabContent">
+        <div class="tab-content p-3 border-top consult-actions-body" id="actionsTabContent">
           
           <!-- Lab Request Tab -->
           <div class="tab-pane fade show active" id="action-lab" role="tabpanel">
@@ -487,6 +539,9 @@
         </div>
       </div>
     </div>
+    </div>
   </div>
+</div>
+</div>
 </div>
 {% endblock %}

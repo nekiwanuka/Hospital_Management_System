@@ -689,6 +689,238 @@ body {
     font-size: 0.8125rem;
 }
 
+/* ---------- Consultation Workbench ---------- */
+.consult-workbench {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.consult-hero {
+    background:
+        radial-gradient(circle at top right, rgba(8,145,178,0.14), transparent 28%),
+        linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+    box-shadow: var(--cl-shadow-md);
+}
+
+.consult-hero .cl-card-body {
+    padding: 1.5rem;
+}
+
+.consult-hero-header {
+    align-items: flex-start;
+}
+
+.consult-hero-kicker {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--cl-info);
+}
+
+.consult-hero-actions {
+    flex-wrap: wrap;
+}
+
+.consult-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+
+.consult-summary-pill {
+    background: rgba(255,255,255,0.88);
+    border: 1px solid rgba(226,232,240,0.95);
+    border-radius: 0.875rem;
+    padding: 0.875rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-height: 74px;
+}
+
+.consult-summary-pill strong {
+    font-size: 0.95rem;
+    color: var(--cl-ink);
+}
+
+.consult-summary-pill-accent {
+    background: linear-gradient(135deg, rgba(13,110,253,0.08), rgba(8,145,178,0.12));
+}
+
+.consult-summary-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--cl-muted);
+}
+
+.consult-workbench-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.consult-section-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.85rem;
+}
+
+.consult-section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0;
+    color: var(--cl-ink);
+}
+
+.consult-section-subtitle {
+    margin: 0;
+    font-size: 0.78rem;
+    color: var(--cl-muted);
+}
+
+.consult-panel-card {
+    overflow: hidden;
+}
+
+.consult-profile-card,
+.consult-history-card,
+.consult-notes-card,
+.consult-actions-card {
+    box-shadow: var(--cl-shadow-md);
+}
+
+.consult-profile-card {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.consult-profile-card .cl-card-header,
+.consult-history-card .cl-card-header,
+.consult-actions-card .cl-card-header {
+    background: #ffffff;
+}
+
+.consult-profile-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.consult-profile-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding-bottom: 0.55rem;
+    border-bottom: 1px solid #eef2f7;
+    font-size: 0.86rem;
+}
+
+.consult-profile-row:last-of-type {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+.consult-allergy-alert {
+    background-color: #fff3cd;
+    font-size: 0.85rem;
+}
+
+.consult-history-card .accordion-item {
+    border-bottom: 1px solid #edf2f7;
+}
+
+.consult-history-toggle {
+    background: #fff;
+    box-shadow: none !important;
+}
+
+.consult-history-toggle:not(.collapsed) {
+    background: #f8fbff;
+}
+
+.consult-notes-card {
+    overflow: hidden;
+}
+
+.consult-notes-header {
+    background: linear-gradient(135deg, #0d6efd 0%, #0891b2 100%);
+    color: #fff;
+}
+
+.consult-notes-header .cl-card-title,
+.consult-notes-header .consult-section-subtitle {
+    color: #fff;
+}
+
+.consult-notes-grid {
+    align-items: start;
+}
+
+.consult-notes-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.consult-notes-column-primary {
+    padding-right: 1rem;
+    border-right: 1px solid #e8eef5;
+}
+
+.consult-notes-column-secondary {
+    padding-left: 1rem;
+}
+
+.consult-field-group {
+    background: #f8fafc;
+    border: 1px solid #e8eef5;
+    border-radius: 0.875rem;
+    padding: 1rem;
+}
+
+.consult-field-group-label {
+    margin: 0 0 0.75rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--cl-info);
+}
+
+.consult-actions-rail {
+    position: sticky;
+    top: calc(var(--header-height) + 1rem);
+}
+
+.consult-actions-card {
+    overflow: hidden;
+}
+
+.consult-actions-tabs {
+    padding: 0.65rem 0.65rem 0;
+    gap: 0.35rem;
+    background: #f8fafc;
+}
+
+.consult-actions-tabs .nav-link {
+    border-radius: 0.85rem 0.85rem 0 0;
+    background: transparent;
+}
+
+.consult-actions-tabs .nav-link.active {
+    background: #fff;
+}
+
+.consult-actions-body {
+    background: #fff;
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 991.98px) {
     .cl-sidebar {
@@ -710,6 +942,50 @@ body {
 
     .cl-main {
         margin-left: 0;
+    }
+
+    .consult-summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .consult-actions-rail {
+        position: static;
+        top: auto;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .consult-hero .cl-card-body,
+    .consult-notes-card .cl-card-body {
+        padding: 1rem;
+    }
+
+    .consult-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .consult-profile-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .consult-notes-column-primary {
+        padding-right: calc(var(--bs-gutter-x) * 0.5);
+        border-right: 0;
+        padding-bottom: 0;
+    }
+
+    .consult-notes-column-secondary {
+        padding-left: calc(var(--bs-gutter-x) * 0.5);
+    }
+
+    .consult-actions-tabs {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+    }
+
+    .consult-actions-tabs .nav-item {
+        min-width: 96px;
     }
 }
 
