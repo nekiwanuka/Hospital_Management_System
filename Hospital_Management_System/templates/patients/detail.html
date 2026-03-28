@@ -123,6 +123,77 @@
     color: var(--cl-ink);
   }
 
+  .history-patient-details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .history-detail-card {
+    border: 1px solid var(--cl-border);
+    border-radius: 0.9rem;
+    background: #fff;
+    overflow: hidden;
+  }
+
+  .history-detail-card-header {
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid var(--cl-border);
+    background: #f8fafc;
+  }
+
+  .history-detail-card-header h2 {
+    margin: 0;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--cl-ink);
+  }
+
+  .history-detail-card-body {
+    padding: 0.9rem 1rem;
+  }
+
+  .history-detail-list {
+    display: grid;
+    grid-template-columns: minmax(120px, 150px) 1fr;
+    gap: 0.55rem 0.9rem;
+    margin: 0;
+    font-size: 0.82rem;
+  }
+
+  .history-detail-list dt {
+    margin: 0;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    color: var(--cl-muted);
+  }
+
+  .history-detail-list dd {
+    margin: 0;
+    color: var(--cl-ink);
+  }
+
+  .history-highlight-box {
+    border: 1px solid var(--cl-border);
+    border-radius: 0.8rem;
+    background: #fffaf0;
+    padding: 0.85rem 1rem;
+    font-size: 0.82rem;
+    color: var(--cl-ink);
+  }
+
+  .history-highlight-box strong {
+    display: block;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #b45309;
+    margin-bottom: 0.35rem;
+  }
+
   .history-document-body {
     padding: 1.25rem 1.75rem 1.75rem;
   }
@@ -172,6 +243,15 @@
 
     .history-patient-summary {
       grid-template-columns: 1fr 1fr;
+    }
+
+    .history-patient-details-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .history-detail-list {
+      grid-template-columns: 1fr;
+      gap: 0.25rem;
     }
   }
 
@@ -243,6 +323,44 @@
     </header>
 
     <div class="history-document-body">
+      <div class="history-patient-details-grid">
+        <section class="history-detail-card">
+          <div class="history-detail-card-header">
+            <h2>Patient Profile</h2>
+          </div>
+          <div class="history-detail-card-body">
+            <dl class="history-detail-list">
+              <dt>Patient ID</dt><dd>{{ patient.patient_id }}</dd>
+              <dt>Full Name</dt><dd>{{ patient.first_name }} {{ patient.last_name }}</dd>
+              <dt>Gender</dt><dd>{{ patient.get_gender_display|default:"—" }}</dd>
+              <dt>Date of Birth</dt><dd>{{ patient.date_of_birth|date:"d M Y"|default:"—" }}</dd>
+              <dt>Blood Group</dt><dd>{{ patient.blood_group|default:"—" }}</dd>
+              <dt>Registered</dt><dd>{{ patient.date_registered|date:"d M Y H:i"|default:"—" }}</dd>
+              <dt>Branch</dt><dd>{{ patient.branch|default:"—" }}</dd>
+            </dl>
+          </div>
+        </section>
+
+        <section class="history-detail-card">
+          <div class="history-detail-card-header">
+            <h2>Contact & Next of Kin</h2>
+          </div>
+          <div class="history-detail-card-body">
+            <dl class="history-detail-list">
+              <dt>Phone</dt><dd>{{ patient.phone|default:"—" }}</dd>
+              <dt>Address</dt><dd>{{ patient.address|default:"—" }}</dd>
+              <dt>Next of Kin</dt><dd>{{ patient.next_of_kin|default:"—" }}</dd>
+              <dt>Kin Contact</dt><dd>{{ patient.next_of_kin_phone|default:"—" }}</dd>
+            </dl>
+          </div>
+        </section>
+      </div>
+
+      <div class="history-highlight-box mb-3">
+        <strong>Allergies / Special Notes</strong>
+        {{ patient.allergies|default:"No allergies or special alerts recorded." }}
+      </div>
+
 {% else %}
 <div class="cl-page-header">
   <div>
