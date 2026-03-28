@@ -147,223 +147,296 @@
 {% endif %}
 
 <!-- ── Main work area: Patient History + Consultation + Actions ── -->
-<div class="row g-2">
-  <!-- Patient Medical History (left sidebar) -->
+<div class="row g-3 mt-1">
+  <!-- Left Column: Patient Medical History -->
   <div class="col-lg-3">
     <!-- Patient Demographics -->
     {% if patient %}
-    <div class="cl-card mb-2" style="border-left: 4px solid var(--bs-info);">
-      <div class="cl-card-header py-2" style="background-color: rgba(13, 110, 253, 0.05);"><h2 class="cl-card-title mb-0 fs-6"><i class="bi bi-person-circle"></i> Patient Info</h2></div>
-      <div class="cl-card-body" style="font-size: 0.9rem;">
-        <div class="mb-2"><strong>ID:</strong> <span class="badge bg-light text-dark">{{ patient.patient_id }}</span></div>
-        <div class="mb-2"><strong>Age:</strong> {% if patient.date_of_birth %}{{ patient.get_age }}y{% else %}—{% endif %}</div>
-        <div class="mb-2"><strong>Gender:</strong> {{ patient.get_gender_display|default:"—" }}</div>
-        <div class="mb-2"><strong>Contact:</strong> {{ patient.phone_number|default:"—" }}</div>
+    <div class="cl-card mb-3 border-0 shadow-sm border-start border-4 border-info">
+      <div class="cl-card-header bg-light py-2"><h2 class="cl-card-title mb-0 fs-6 fw-bold"><i class="bi bi-person-badge"></i> Patient Profile</h2></div>
+      <div class="cl-card-body p-3" style="font-size: 0.9rem;">
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted">ID:</span>
+          <span class="fw-bold">{{ patient.patient_id }}</span>
+        </div>
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted">Age/Gender:</span>
+          <span>{% if patient.date_of_birth %}{{ patient.get_age }}y{% else %}—{% endif %} • {{ patient.get_gender_display|default:"—" }}</span>
+        </div>
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted">Contact:</span>
+          <span>{{ patient.phone_number|default:"—" }}</span>
+        </div>
         {% if patient.allergies %}
-        <div class="alert alert-warning py-1 px-2 mb-2" style="font-size: 0.85rem;">
-          <strong><i class="bi bi-exclamation-triangle"></i> Allergies:</strong><br>
-          {{ patient.allergies }}
+        <div class="alert alert-warning py-2 px-2 mb-0 mt-3 d-flex align-items-start gap-2 border-0" style="background-color: #fff3cd; font-size: 0.85rem;">
+          <i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
+          <div>
+            <strong class="d-block mb-1">Allergies</strong>
+            {{ patient.allergies }}
+          </div>
         </div>
         {% endif %}
       </div>
     </div>
     {% endif %}
 
-    <!-- Patient Medical History (tabbed view) -->
+    <!-- Medical History Accordion -->
     {% if patient_lab_history or patient_radiology_history or patient_pharmacy_history %}
-    <div class="cl-card">
-      <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0 fs-6"><i class="bi bi-clock-history"></i> History</h2></div>
-      <div class="cl-card-body p-2">
-        <!-- Nav tabs -->
-        <ul class="nav nav-tabs nav-fill" role="tablist" style="font-size: 0.85rem;">
-          {% if patient_lab_history %}<li class="nav-item"><a class="nav-link active" href="#history-lab" data-bs-toggle="tab"><i class="bi bi-droplet"></i> Lab</a></li>{% endif %}
-          {% if patient_radiology_history %}<li class="nav-item"><a class="nav-link" href="#history-radio" data-bs-toggle="tab"><i class="bi bi-x-ray"></i> Radiology</a></li>{% endif %}
-          {% if patient_pharmacy_history %}<li class="nav-item"><a class="nav-link" href="#history-pharm" data-bs-toggle="tab"><i class="bi bi-capsule"></i> Pharmacy</a></li>{% endif %}
-        </ul>
-
-        <!-- Tab content -->
-        <div class="tab-content mt-2">
+    <div class="cl-card border-0 shadow-sm">
+      <div class="cl-card-header bg-light py-2 d-flex justify-content-between align-items-center">
+        <h2 class="cl-card-title mb-0 fs-6.fw-bold"><i class="bi bi-clock-history"></i> Past Records</h2>
+      </div>
+      <div class="cl-card-body p-0">
+        <div class="accordion accordion-flush" id="historyAccordion">
+          
           {% if patient_lab_history %}
-          <div class="tab-pane fade show active" id="history-lab">
-            <div class="table-responsive">
-              <table class="table table-sm mb-0" style="font-size: 0.85rem;">
-                <thead><tr><th>Date</th><th>Test</th></tr></thead>
-                <tbody>{% for lr in patient_lab_history|slice:":5" %}<tr><td>{{ lr.date|date:"d M y" }}</td><td><span title="{{ lr.results|truncatechars:60 }}">{{ lr.test_type }}</span></td></tr>{% endfor %}</tbody>
-              </table>
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button py-2 px-3 fw-semibold text-success" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLab">
+                <i class="bi bi-droplet me-2"></i> Lab History
+              </button>
+            </h2>
+            <div id="collapseLab" class="accordion-collapse collapse show" data-bs-parent="#historyAccordion">
+              <div class="accordion-body p-0">
+                <table class="table table-sm table-hover mb-0" style="font-size: 0.85rem;">
+                  <thead class="table-light"><tr><th class="ps-3">Date</th><th>Test</th></tr></thead>
+                  <tbody>{% for lr in patient_lab_history|slice:":5" %}<tr><td class="text-nowrap ps-3">{{ lr.date|date:"d M y" }}</td><td><span title="{{ lr.results|default:'' }}" class="text-truncate d-inline-block" style="max-width: 150px;">{{ lr.test_type }}</span></td></tr>{% endfor %}</tbody>
+                </table>
+              </div>
             </div>
-            {% if patient_lab_history|length > 5 %}<small class="text-muted d-block mt-1">+{{ patient_lab_history|length|add:"-5" }} more</small>{% endif %}
           </div>
           {% endif %}
 
           {% if patient_radiology_history %}
-          <div class="tab-pane fade" id="history-radio">
-            <div class="table-responsive">
-              <table class="table table-sm mb-0" style="font-size: 0.85rem;">
-                <thead><tr><th>Date</th><th>Type</th></tr></thead>
-                <tbody>{% for ir in patient_radiology_history|slice:":5" %}<tr><td>{{ ir.date_requested|date:"d M y" }}</td><td>{{ ir.get_imaging_type_display }}</td></tr>{% endfor %}</tbody>
-              </table>
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button py-2 px-3 fw-semibold text-info {% if not patient_lab_history %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRadio">
+                <i class="bi bi-x-ray me-2"></i> Radiology History
+              </button>
+            </h2>
+            <div id="collapseRadio" class="accordion-collapse collapse {% if not patient_lab_history %}show{% endif %}" data-bs-parent="#historyAccordion">
+              <div class="accordion-body p-0">
+                <table class="table table-sm table-hover mb-0" style="font-size: 0.85rem;">
+                  <thead class="table-light"><tr><th class="ps-3">Date</th><th>Scan</th></tr></thead>
+                  <tbody>{% for ir in patient_radiology_history|slice:":5" %}<tr><td class="text-nowrap ps-3">{{ ir.date_requested|date:"d M y" }}</td><td>{{ ir.get_imaging_type_display }}</td></tr>{% endfor %}</tbody>
+                </table>
+              </div>
             </div>
-            {% if patient_radiology_history|length > 5 %}<small class="text-muted d-block mt-1">+{{ patient_radiology_history|length|add:"-5" }} more</small>{% endif %}
           </div>
           {% endif %}
 
           {% if patient_pharmacy_history %}
-          <div class="tab-pane fade" id="history-pharm">
-            <div class="table-responsive">
-              <table class="table table-sm mb-0" style="font-size: 0.85rem;">
-                <thead><tr><th>Date</th><th>Medicine</th></tr></thead>
-                <tbody>{% for d in patient_pharmacy_history|slice:":5" %}<tr><td>{{ d.dispensed_at|date:"d M y" }}</td><td>{{ d.medicine.name }}</td></tr>{% endfor %}</tbody>
-              </table>
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button py-2 px-3 fw-semibold text-warning collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePharm">
+                <i class="bi bi-capsule me-2"></i> Pharmacy History
+              </button>
+            </h2>
+            <div id="collapsePharm" class="accordion-collapse collapse" data-bs-parent="#historyAccordion">
+              <div class="accordion-body p-0">
+                <table class="table table-sm table-hover mb-0" style="font-size: 0.85rem;">
+                  <thead class="table-light"><tr><th class="ps-3">Date</th><th>Medicine</th></tr></thead>
+                  <tbody>{% for d in patient_pharmacy_history|slice:":5" %}<tr><td class="text-nowrap ps-3">{{ d.dispensed_at|date:"d M y" }}</td><td>{{ d.medicine.name }}</td></tr>{% endfor %}</tbody>
+                </table>
+              </div>
             </div>
-            {% if patient_pharmacy_history|length > 5 %}<small class="text-muted d-block mt-1">+{{ patient_pharmacy_history|length|add:"-5" }} more</small>{% endif %}
           </div>
           {% endif %}
+
         </div>
       </div>
     </div>
     {% endif %}
   </div>
 
-  <!-- Consultation Form (center) -->
-  <div class="col-lg-4">
-    <div class="cl-card">
-      <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-journal-medical"></i> Record Consultation</h2></div>
-      <div class="cl-card-body">
+  <!-- Center Column: Main Consultation Form -->
+  <div class="col-lg-5">
+    <div class="cl-card shadow-sm border-0 h-100">
+      <div class="cl-card-header bg-primary text-white py-3">
+        <h2 class="cl-card-title mb-0 fs-5"><i class="bi bi-journal-medical me-2"></i> Doctor's Notes</h2>
+      </div>
+      <div class="cl-card-body p-4">
         <form method="post" novalidate>
           {% csrf_token %}
           <input type="hidden" name="panel" value="{{ selected_panel }}">
           {% for field in form %}
-          <div class="mb-2">
-            <label for="{{ field.id_for_label }}" class="form-label mb-1">{{ field.label }}</label>
+          <div class="mb-3">
+            <label for="{{ field.id_for_label }}" class="form-label fw-semibold text-secondary">{{ field.label }}</label>
             {{ field }}
             {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
           </div>
           {% endfor %}
-          {% if form.non_field_errors %}<div class="alert alert-danger py-1">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>{% endif %}
-          <button type="submit" class="btn btn-primary btn-sm mt-2 w-100"><i class="bi bi-check-lg"></i> Save Consultation</button>
+          {% if form.non_field_errors %}<div class="alert alert-danger py-2">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>{% endif %}
+          
+          <div class="mt-4 pt-3 border-top">
+            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold fs-6"><i class="bi bi-check-circle me-1"></i> Save Consultation</button>
+          </div>
         </form>
       </div>
     </div>
   </div>
 
-  <!-- Actions column (right) -->
-  <div class="col-lg-5">
-    <div class="row g-2">
-      <!-- Request Lab Test -->
-      <div class="col-sm-6 col-lg-6">
-        <div class="cl-card h-100">
-          <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-droplet"></i> Lab Test</h2></div>
-          <div class="cl-card-body py-2">
+  <!-- Right Column: Actions (Tabs) -->
+  <div class="col-lg-4">
+    <div class="cl-card shadow-sm border-0 h-100">
+      <div class="cl-card-header bg-light py-2">
+        <h2 class="cl-card-title mb-0 fs-6 fw-bold"><i class="bi bi-lightning-charge"></i> Clinical Actions</h2>
+      </div>
+      
+      <div class="cl-card-body p-0">
+        <!-- Action Tabs -->
+        <ul class="nav nav-tabs nav-justified bg-light border-bottom-0" id="actionsTab" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active py-3 border-0 text-success fw-semibold" id="lab-tab" data-bs-toggle="tab" data-bs-target="#action-lab" type="button" role="tab"><i class="bi bi-droplet fs-5 d-block mb-1"></i> Lab</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link py-3 border-0 text-info fw-semibold" id="rad-tab" data-bs-toggle="tab" data-bs-target="#action-rad" type="button" role="tab"><i class="bi bi-x-ray fs-5 d-block mb-1"></i> Scan</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link py-3 border-0 text-primary fw-semibold" id="rx-tab" data-bs-toggle="tab" data-bs-target="#action-rx" type="button" role="tab"><i class="bi bi-capsule fs-5 d-block mb-1"></i> Rx</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link py-3 border-0 text-secondary fw-semibold" id="more-tab" data-bs-toggle="tab" data-bs-target="#action-more" type="button" role="tab"><i class="bi bi-grid fs-5 d-block mb-1"></i> More</button>
+          </li>
+        </ul>
+
+        <!-- Tab Panes -->
+        <div class="tab-content p-3 border-top" id="actionsTabContent">
+          
+          <!-- Lab Request Tab -->
+          <div class="tab-pane fade show active" id="action-lab" role="tabpanel">
+            <h5 class="mb-3 text-success"><i class="bi bi-droplet"></i> Request Lab Test</h5>
             <form method="post" action="{% url 'consultation:request_lab_test' visit.pk %}">
               {% csrf_token %}
               <input type="hidden" name="panel" value="{{ selected_panel }}">
               {% for field in lab_test_form %}
-              <div class="mb-1">
-                <label class="form-label form-label-sm mb-0">{{ field.label }}</label>
+              <div class="mb-3">
+                <label class="form-label fw-medium">{{ field.label }}</label>
                 {{ field }}
               </div>
               {% endfor %}
-              <button type="submit" class="btn btn-sm btn-outline-primary w-100 mt-1"><i class="bi bi-droplet"></i> Request</button>
+              <button type="submit" class="btn btn-success w-100"><i class="bi bi-plus-lg"></i> Add Request</button>
             </form>
           </div>
-        </div>
-      </div>
 
-      <!-- Request Radiology -->
-      <div class="col-sm-6 col-lg-6">
-        <div class="cl-card h-100">
-          <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-x-ray"></i> Radiology</h2></div>
-          <div class="cl-card-body py-2">
+          <!-- Radiology Request Tab -->
+          <div class="tab-pane fade" id="action-rad" role="tabpanel">
+            <h5 class="mb-3 text-info"><i class="bi bi-x-ray"></i> Medical Imaging</h5>
             <form method="post" action="{% url 'consultation:request_radiology' visit.pk %}">
               {% csrf_token %}
               <input type="hidden" name="panel" value="{{ selected_panel }}">
               {% for field in radiology_request_form %}
-              <div class="mb-1">
-                <label class="form-label form-label-sm mb-0">{{ field.label }}</label>
+              <div class="mb-3">
+                <label class="form-label fw-medium">{{ field.label }}</label>
                 {{ field }}
               </div>
               {% endfor %}
-              <button type="submit" class="btn btn-sm btn-outline-primary w-100 mt-1"><i class="bi bi-x-ray"></i> Request</button>
+              <button type="submit" class="btn btn-info text-white w-100"><i class="bi bi-plus-lg"></i> Add Scan</button>
             </form>
           </div>
-        </div>
-      </div>
 
-      <!-- Prescribe Medicine -->
-      <div class="col-sm-6 col-lg-6">
-        <div class="cl-card h-100">
-          <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-capsule"></i> Prescribe</h2></div>
-          <div class="cl-card-body py-2">
+          <!-- Pharmacy Tab -->
+          <div class="tab-pane fade" id="action-rx" role="tabpanel">
+            <h5 class="mb-3 text-primary"><i class="bi bi-capsule"></i> Prescribe Medication</h5>
             <form method="post" action="{% url 'consultation:request_pharmacy' visit.pk %}">
               {% csrf_token %}
               <input type="hidden" name="panel" value="{{ selected_panel }}">
               {{ pharmacy_formset.management_form }}
-              {% for f in pharmacy_formset %}
-              <div class="row g-1 mb-1">
-                <div class="col-7">{{ f.medicine }}</div>
-                <div class="col-5">{{ f.quantity }}</div>
+              
+              <div class="bg-light p-2 rounded mb-3">
+                <div class="row g-2 text-muted small fw-bold mb-1">
+                  <div class="col-8">Medicine</div>
+                  <div class="col-4">Qty</div>
+                </div>
+                {% for f in pharmacy_formset %}
+                <div class="row g-2 mb-2">
+                  <div class="col-8">{{ f.medicine }}</div>
+                  <div class="col-4">{{ f.quantity }}</div>
+                </div>
+                {% endfor %}
               </div>
-              {% endfor %}
-              <textarea name="notes" class="form-control form-control-sm mb-1" rows="1" placeholder="Notes"></textarea>
-              <button type="submit" class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-capsule"></i> Prescribe</button>
+              
+              <div class="mb-3">
+                <label class="form-label fw-medium">Prescription Notes / Dosage</label>
+                <textarea name="notes" class="form-control" rows="2" placeholder="e.g. 1x3 after meals"></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send-check"></i> Send to Pharmacy</button>
             </form>
           </div>
-        </div>
-      </div>
 
-      <!-- Referral -->
-      <div class="col-sm-6 col-lg-6">
-        <div class="cl-card h-100">
-          <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-send"></i> Referral</h2></div>
-          <div class="cl-card-body py-2">
-            <form method="post" action="{% url 'consultation:request_referral' visit.pk %}">
-              {% csrf_token %}
-              <input type="hidden" name="panel" value="{{ selected_panel }}">
-              {% for field in referral_request_form %}
-              <div class="mb-1">
-                <label class="form-label form-label-sm mb-0">{{ field.label }}</label>
-                {{ field }}
+          <!-- More Actions Tab (Referral, Transfer, Complete) -->
+          <div class="tab-pane fade" id="action-more" role="tabpanel">
+            <div class="accordion" id="moreActionsAccordion">
+              
+              <!-- Patient Transfer -->
+              <div class="accordion-item border-0 border-bottom">
+                <h2 class="accordion-header">
+                  <button class="accordion-button collapsed px-2 py-3 bg-transparent shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTransfer">
+                    <i class="bi bi-arrow-left-right text-warning me-2"></i> Transfer Patient
+                  </button>
+                </h2>
+                <div id="collapseTransfer" class="accordion-collapse collapse" data-bs-parent="#moreActionsAccordion">
+                  <div class="accordion-body px-2 pb-3 pt-0">
+                    <form method="post" action="{% url 'consultation:transfer_patient' visit.pk %}">
+                      {% csrf_token %}
+                      <input type="hidden" name="panel" value="{{ selected_panel }}">
+                      {% for field in transfer_form %}
+                      <div class="mb-2">
+                        <label class="form-label small text-muted mb-1">{{ field.label }}</label>
+                        {{ field }}
+                      </div>
+                      {% endfor %}
+                      <button type="submit" class="btn btn-sm btn-warning w-100 mt-2">Transfer Now</button>
+                    </form>
+                  </div>
+                </div>
               </div>
-              {% endfor %}
-              <button type="submit" class="btn btn-sm btn-outline-warning w-100 mt-1"><i class="bi bi-send"></i> Refer</button>
-            </form>
-          </div>
-        </div>
-      </div>
 
-      <!-- Transfer -->
-      <div class="col-sm-6 col-lg-6">
-        <div class="cl-card h-100">
-          <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-arrow-left-right"></i> Transfer</h2></div>
-          <div class="cl-card-body py-2">
-            <form method="post" action="{% url 'consultation:transfer_patient' visit.pk %}">
-              {% csrf_token %}
-              <input type="hidden" name="panel" value="{{ selected_panel }}">
-              {% for field in transfer_form %}
-              <div class="mb-1">
-                <label class="form-label form-label-sm mb-0">{{ field.label }}</label>
-                {{ field }}
+              <!-- Referral -->
+              <div class="accordion-item border-0 border-bottom">
+                <h2 class="accordion-header">
+                  <button class="accordion-button collapsed px-2 py-3 bg-transparent shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseReferral">
+                    <i class="bi bi-hospital text-danger me-2"></i> External Referral
+                  </button>
+                </h2>
+                <div id="collapseReferral" class="accordion-collapse collapse" data-bs-parent="#moreActionsAccordion">
+                  <div class="accordion-body px-2 pb-3 pt-0">
+                    <form method="post" action="{% url 'consultation:request_referral' visit.pk %}">
+                      {% csrf_token %}
+                      <input type="hidden" name="panel" value="{{ selected_panel }}">
+                      {% for field in referral_request_form %}
+                      <div class="mb-2">
+                        <label class="form-label small text-muted mb-1">{{ field.label }}</label>
+                        {{ field }}
+                      </div>
+                      {% endfor %}
+                      <button type="submit" class="btn btn-sm btn-danger w-100 mt-2">Create Referral</button>
+                    </form>
+                  </div>
+                </div>
               </div>
-              {% endfor %}
-              <button type="submit" class="btn btn-sm btn-outline-warning w-100 mt-1"><i class="bi bi-arrow-left-right"></i> Transfer</button>
-            </form>
-          </div>
-        </div>
-      </div>
 
-      <!-- Quick Actions -->
-      <div class="col-sm-6 col-lg-6">
-        <div class="cl-card h-100">
-          <div class="cl-card-header py-2"><h2 class="cl-card-title mb-0"><i class="bi bi-lightning"></i> Actions</h2></div>
-          <div class="cl-card-body py-2 d-grid gap-1">
-            <form method="post" action="{% url 'consultation:send_to_cashier' visit.pk %}">{% csrf_token %}<input type="hidden" name="panel" value="{{ selected_panel }}"><button type="submit" class="btn btn-outline-success btn-sm w-100"><i class="bi bi-cash"></i> Send To Cashier</button></form>
-            {% if visit.status != 'completed' %}
-            <form method="post" action="{% url 'consultation:complete_visit' visit.pk %}">{% csrf_token %}<input type="hidden" name="panel" value="{{ selected_panel }}"><button type="submit" class="btn btn-outline-secondary btn-sm w-100"><i class="bi bi-check-circle"></i> Complete Visit</button></form>
-            {% endif %}
-            {% if visit.status == 'admitted' %}
-            <form method="post" action="{% url 'consultation:discharge_patient' visit.pk %}">{% csrf_token %}<input type="hidden" name="panel" value="{{ selected_panel }}"><button type="submit" class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-box-arrow-right"></i> Discharge</button></form>
-            {% endif %}
-            <a href="{% url 'admission:create' %}?patient={{ patient.pk }}&visit={{ visit.pk }}" class="btn btn-outline-info btn-sm w-100"><i class="bi bi-building"></i> Admit</a>
+            </div>
+
+            <!-- Quick Action Buttons -->
+            <div class="mt-4 pt-3 border-top">
+              <h6 class="text-muted fw-bold mb-3 small text-uppercase">Visit Workflow</h6>
+              <div class="d-grid gap-2">
+                <form method="post" action="{% url 'consultation:send_to_cashier' visit.pk %}">{% csrf_token %}<input type="hidden" name="panel" value="{{ selected_panel }}"><button type="submit" class="btn btn-outline-secondary w-100 text-start"><i class="bi bi-cash me-2"></i> Send To Cashier</button></form>
+                
+                <a href="{% url 'admission:create' %}?patient={{ patient.pk }}&visit={{ visit.pk }}" class="btn btn-outline-info w-100 text-start"><i class="bi bi-building me-2"></i> Admit Patient</a>
+                
+                {% if visit.status == 'admitted' %}
+                <form method="post" action="{% url 'consultation:discharge_patient' visit.pk %}">{% csrf_token %}<input type="hidden" name="panel" value="{{ selected_panel }}"><button type="submit" class="btn btn-outline-danger w-100 text-start"><i class="bi bi-box-arrow-right me-2"></i> Discharge Patient</button></form>
+                {% endif %}
+                
+                {% if visit.status != 'completed' %}
+                <form method="post" action="{% url 'consultation:complete_visit' visit.pk %}">{% csrf_token %}<input type="hidden" name="panel" value="{{ selected_panel }}"><button type="submit" class="btn btn-dark w-100 text-start"><i class="bi bi-check2-all me-2"></i> Complete Visit</button></form>
+                {% endif %}
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
