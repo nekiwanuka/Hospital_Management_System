@@ -7,13 +7,18 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>body{font-family:'Inter',sans-serif;background:#f5f7fa;min-height:100vh;display:flex;align-items:center;justify-content:center;}.wizard-card{max-width:700px;width:100%;background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.08);padding:2.5rem;}</style>
+  <style>
+    body{font-family:'Inter',sans-serif;background:#f5f7fa;min-height:100vh;padding:2rem 0;}
+    .wizard-card{max-width:780px;margin:0 auto;background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.08);padding:2.5rem;}
+    .step-number{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#125ea8;color:#fff;font-weight:600;font-size:.85rem;margin-right:.5rem;}
+  </style>
 </head>
 <body>
   <div class="wizard-card">
     <div class="text-center mb-4">
-      <h1 class="h3"><i class="bi bi-hospital text-primary"></i> Hospital Management System</h1>
-      <p class="text-muted">Initial Setup — Create your clinic, branch, and admin account.</p>
+      <i class="bi bi-hospital display-4 text-primary"></i>
+      <h1 class="h3 mt-2">Hospital Management System</h1>
+      <p class="text-muted">Initial Setup — Configure your clinic, create the first branch, and set up the admin account.</p>
     </div>
 
     <form method="post" enctype="multipart/form-data" novalidate>
@@ -23,42 +28,151 @@
       <div class="alert alert-danger">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>
       {% endif %}
 
-      <h5 class="mt-3 mb-3"><i class="bi bi-building"></i> Clinic Details</h5>
-      {% for field in form %}
-        {% if field.name|slice:":6" == "clinic" or field.name == "logo" or field.name == "currency" %}
-        <div class="mb-3">
-          <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-          {{ field }}
-          {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-          {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+      <!-- ── Step 1: Clinic Details ── -->
+      <h5 class="border-bottom pb-2 mb-3"><span class="step-number">1</span> Clinic Details</h5>
+      <div class="row g-3 mb-4">
+        <div class="col-md-8">
+          <label for="{{ form.clinic_name.id_for_label }}" class="form-label">Clinic Name <span class="text-danger">*</span></label>
+          {{ form.clinic_name }}
+          {% for e in form.clinic_name.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
         </div>
-        {% endif %}
-      {% endfor %}
-
-      <h5 class="mt-4 mb-3"><i class="bi bi-geo-alt"></i> Branch Details</h5>
-      {% for field in form %}
-        {% if field.name|slice:":6" == "branch" %}
-        <div class="mb-3">
-          <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-          {{ field }}
-          {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+        <div class="col-md-4">
+          <label for="{{ form.logo.id_for_label }}" class="form-label">Logo</label>
+          {{ form.logo }}
+          {% for e in form.logo.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
         </div>
-        {% endif %}
-      {% endfor %}
-
-      <h5 class="mt-4 mb-3"><i class="bi bi-person-lock"></i> Admin Account</h5>
-      {% for field in form %}
-        {% if field.name|slice:":5" == "admin" %}
-        <div class="mb-3">
-          <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-          {{ field }}
-          {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+        <div class="col-md-6">
+          <label for="{{ form.system_email.id_for_label }}" class="form-label">System Email <span class="text-danger">*</span></label>
+          {{ form.system_email }}
+          {% for e in form.system_email.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
         </div>
-        {% endif %}
-      {% endfor %}
+        <div class="col-md-6">
+          <label for="{{ form.timezone.id_for_label }}" class="form-label">Timezone</label>
+          {{ form.timezone }}
+          {% for e in form.timezone.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+      </div>
 
-      <button type="submit" class="btn btn-primary w-100 mt-3"><i class="bi bi-rocket-takeoff"></i> Complete Setup</button>
+      <!-- Colors (collapsed by default) -->
+      <div class="mb-4">
+        <a class="text-decoration-none small" data-bs-toggle="collapse" href="#colorSection" role="button" aria-expanded="false">
+          <i class="bi bi-palette"></i> Customize Colors (optional — defaults are fine)
+        </a>
+        <div class="collapse mt-3" id="colorSection">
+          <div class="row g-3">
+            <div class="col-6 col-md-3">
+              <label for="{{ form.primary_color.id_for_label }}" class="form-label small">Primary</label>
+              {{ form.primary_color }}
+            </div>
+            <div class="col-6 col-md-3">
+              <label for="{{ form.secondary_color.id_for_label }}" class="form-label small">Secondary</label>
+              {{ form.secondary_color }}
+            </div>
+            <div class="col-6 col-md-3">
+              <label for="{{ form.sidebar_color.id_for_label }}" class="form-label small">Sidebar</label>
+              {{ form.sidebar_color }}
+            </div>
+            <div class="col-6 col-md-3">
+              <label for="{{ form.sidebar_text_color.id_for_label }}" class="form-label small">Sidebar Text</label>
+              {{ form.sidebar_text_color }}
+            </div>
+            <div class="col-6 col-md-3">
+              <label for="{{ form.sidebar_text_size.id_for_label }}" class="form-label small">Sidebar Text Size</label>
+              {{ form.sidebar_text_size }}
+            </div>
+            <div class="col-6 col-md-3">
+              <label for="{{ form.dashboard_color.id_for_label }}" class="form-label small">Dashboard BG</label>
+              {{ form.dashboard_color }}
+            </div>
+            <div class="col-6 col-md-3">
+              <label for="{{ form.text_color.id_for_label }}" class="form-label small">Text</label>
+              {{ form.text_color }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Step 2: First Branch ── -->
+      <h5 class="border-bottom pb-2 mb-3"><span class="step-number">2</span> First Branch</h5>
+      <div class="row g-3 mb-4">
+        <div class="col-md-8">
+          <label for="{{ form.branch_name.id_for_label }}" class="form-label">Branch Name <span class="text-danger">*</span></label>
+          {{ form.branch_name }}
+          {% for e in form.branch_name.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-4">
+          <label for="{{ form.branch_code.id_for_label }}" class="form-label">Branch Code <span class="text-danger">*</span></label>
+          {{ form.branch_code }}
+          {% for e in form.branch_code.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-12">
+          <label for="{{ form.branch_address.id_for_label }}" class="form-label">Address <span class="text-danger">*</span></label>
+          {{ form.branch_address }}
+          {% for e in form.branch_address.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-4">
+          <label for="{{ form.branch_city.id_for_label }}" class="form-label">City <span class="text-danger">*</span></label>
+          {{ form.branch_city }}
+          {% for e in form.branch_city.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-4">
+          <label for="{{ form.branch_country.id_for_label }}" class="form-label">Country <span class="text-danger">*</span></label>
+          {{ form.branch_country }}
+          {% for e in form.branch_country.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-4">
+          <label for="{{ form.branch_phone.id_for_label }}" class="form-label">Phone <span class="text-danger">*</span></label>
+          {{ form.branch_phone }}
+          {% for e in form.branch_phone.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-6">
+          <label for="{{ form.branch_email.id_for_label }}" class="form-label">Branch Email <span class="text-danger">*</span></label>
+          {{ form.branch_email }}
+          {% for e in form.branch_email.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+      </div>
+
+      <!-- ── Step 3: Admin Account ── -->
+      <h5 class="border-bottom pb-2 mb-3"><span class="step-number">3</span> Administrator Account</h5>
+      <div class="row g-3 mb-4">
+        <div class="col-md-4">
+          <label for="{{ form.admin_username.id_for_label }}" class="form-label">Username <span class="text-danger">*</span></label>
+          {{ form.admin_username }}
+          {% for e in form.admin_username.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-4">
+          <label for="{{ form.admin_first_name.id_for_label }}" class="form-label">First Name</label>
+          {{ form.admin_first_name }}
+        </div>
+        <div class="col-md-4">
+          <label for="{{ form.admin_last_name.id_for_label }}" class="form-label">Last Name</label>
+          {{ form.admin_last_name }}
+        </div>
+        <div class="col-md-4">
+          <label for="{{ form.admin_email.id_for_label }}" class="form-label">Email <span class="text-danger">*</span></label>
+          {{ form.admin_email }}
+          {% for e in form.admin_email.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-4">
+          <label for="{{ form.admin_phone.id_for_label }}" class="form-label">Phone</label>
+          {{ form.admin_phone }}
+        </div>
+        <div class="col-md-6">
+          <label for="{{ form.admin_password.id_for_label }}" class="form-label">Password <span class="text-danger">*</span></label>
+          {{ form.admin_password }}
+          {% for e in form.admin_password.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-6">
+          <label for="{{ form.admin_password_confirm.id_for_label }}" class="form-label">Confirm Password <span class="text-danger">*</span></label>
+          {{ form.admin_password_confirm }}
+          {% for e in form.admin_password_confirm.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-lg w-100"><i class="bi bi-rocket-takeoff"></i> Complete Setup</button>
     </form>
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

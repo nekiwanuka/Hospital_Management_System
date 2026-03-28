@@ -3,33 +3,140 @@
 {% block header_title %}{{ page_title }}{% endblock %}
 
 {% block content %}
-<div class="cl-page-header">
-  <div><h1>{{ page_title }}</h1></div>
-  <a href="{% url 'settingsapp:index' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+<div class="cl-page-header d-flex justify-content-between align-items-center mb-3">
+  <h1 class="mb-0">{{ page_title }}</h1>
+  <a href="{% url 'settingsapp:index' %}?tab=users" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
 </div>
 
-<div class="cl-card">
-  <div class="cl-card-body">
-    <form method="post" novalidate>
-      {% csrf_token %}
-      {% for field in form %}
-      <div class="mb-3">
-        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-        {{ field }}
-        {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-        {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+<form method="post" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-danger">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>{% endif %}
+
+  <!-- Basic Info -->
+  <div class="cl-card mb-4">
+    <div class="cl-card-header"><h2 class="cl-card-title mb-0"><i class="bi bi-person"></i> User Information</h2></div>
+    <div class="cl-card-body">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label for="{{ form.username.id_for_label }}" class="form-label">Username <span class="text-danger">*</span></label>
+          {{ form.username }}
+          {% for e in form.username.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-4">
+          <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name</label>
+          {{ form.first_name }}
+        </div>
+        <div class="col-md-4">
+          <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name</label>
+          {{ form.last_name }}
+        </div>
+        <div class="col-md-4">
+          <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
+          {{ form.email }}
+        </div>
+        <div class="col-md-4">
+          <label for="{{ form.phone.id_for_label }}" class="form-label">Phone</label>
+          {{ form.phone }}
+        </div>
+        <div class="col-md-4">
+          <label for="{{ form.branch.id_for_label }}" class="form-label">Branch <span class="text-danger">*</span></label>
+          {{ form.branch }}
+          {% for e in form.branch.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
       </div>
-      {% endfor %}
-      {% if form.non_field_errors %}
-      <div class="alert alert-danger">
-        {% for error in form.non_field_errors %}{{ error }}<br>{% endfor %}
-      </div>
-      {% endif %}
-      <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> {{ submit_label }}</button>
-        <a href="{% url 'settingsapp:index' %}" class="btn btn-outline-secondary">Cancel</a>
-      </div>
-    </form>
+    </div>
   </div>
-</div>
+
+  <!-- Role & Assignment -->
+  <div class="cl-card mb-4">
+    <div class="cl-card-header"><h2 class="cl-card-title mb-0"><i class="bi bi-person-badge"></i> Role &amp; Assignment</h2></div>
+    <div class="cl-card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label for="{{ form.role.id_for_label }}" class="form-label">Role <span class="text-danger">*</span></label>
+          {{ form.role }}
+          {% for e in form.role.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-6">
+          <label for="{{ form.radiology_unit_assignment.id_for_label }}" class="form-label">Radiology Unit</label>
+          {{ form.radiology_unit_assignment }}
+          {% if form.radiology_unit_assignment.help_text %}<div class="form-text">{{ form.radiology_unit_assignment.help_text }}</div>{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Password (only for create) -->
+  {% if form.password1 %}
+  <div class="cl-card mb-4">
+    <div class="cl-card-header"><h2 class="cl-card-title mb-0"><i class="bi bi-key"></i> Password</h2></div>
+    <div class="cl-card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label for="{{ form.password1.id_for_label }}" class="form-label">Password <span class="text-danger">*</span></label>
+          {{ form.password1 }}
+          {% if form.password1.help_text %}<div class="form-text">{{ form.password1.help_text }}</div>{% endif %}
+          {% for e in form.password1.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-6">
+          <label for="{{ form.password2.id_for_label }}" class="form-label">Confirm Password <span class="text-danger">*</span></label>
+          {{ form.password2 }}
+          {% for e in form.password2.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Permissions -->
+  <div class="cl-card mb-4">
+    <div class="cl-card-header"><h2 class="cl-card-title mb-0"><i class="bi bi-shield-check"></i> Permissions</h2></div>
+    <div class="cl-card-body">
+      <div class="row g-3 mb-3">
+        <div class="col-auto">
+          <div class="form-check">
+            {{ form.is_active }}
+            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">Active</label>
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="form-check">
+            {{ form.can_view_revenue }}
+            <label class="form-check-label" for="{{ form.can_view_revenue.id_for_label }}">Can View Revenue</label>
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="form-check">
+            {{ form.can_delete_records }}
+            <label class="form-check-label" for="{{ form.can_delete_records.id_for_label }}">Can Delete Records</label>
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="form-check">
+            {{ form.can_approve_edits }}
+            <label class="form-check-label" for="{{ form.can_approve_edits.id_for_label }}">Can Approve Edits</label>
+          </div>
+        </div>
+      </div>
+      <hr>
+      <h6 class="mb-3">Module Access</h6>
+      <div class="row g-2">
+        {% for checkbox in form.allowed_modules %}
+        <div class="col-6 col-md-4 col-lg-3">
+          <div class="form-check">
+            {{ checkbox.tag }}
+            <label class="form-check-label" for="{{ checkbox.id_for_label }}">{{ checkbox.choice_label }}</label>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% for e in form.allowed_modules.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mb-4">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> {{ submit_label }}</button>
+    <a href="{% url 'settingsapp:index' %}?tab=users" class="btn btn-outline-secondary">Cancel</a>
+  </div>
+</form>
 {% endblock %}

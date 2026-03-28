@@ -3,29 +3,128 @@
 {% block header_title %}Edit Settings{% endblock %}
 
 {% block content %}
-<div class="cl-page-header">
-  <div><h1>Edit System Settings</h1></div>
-  <a href="{% url 'settingsapp:index' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+<div class="cl-page-header d-flex justify-content-between align-items-center mb-3">
+  <h1 class="mb-0">Edit System Settings</h1>
+  <a href="{% url 'settingsapp:index' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
 </div>
 
-<div class="cl-card">
-  <div class="cl-card-body">
-    <form method="post" enctype="multipart/form-data" novalidate>
-      {% csrf_token %}
-      {% for field in form %}
-      <div class="mb-3">
-        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-        {{ field }}
-        {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-        {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+<form method="post" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-danger">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>{% endif %}
+
+  <!-- ── Branding ── -->
+  <div class="cl-card mb-4">
+    <div class="cl-card-header"><h2 class="cl-card-title mb-0"><i class="bi bi-hospital"></i> Clinic Information</h2></div>
+    <div class="cl-card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label for="{{ form.clinic_name.id_for_label }}" class="form-label">Clinic Name</label>
+          {{ form.clinic_name }}
+          {% for e in form.clinic_name.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-6">
+          <label for="{{ form.system_email.id_for_label }}" class="form-label">System Email</label>
+          {{ form.system_email }}
+          {% for e in form.system_email.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-6">
+          <label for="{{ form.timezone.id_for_label }}" class="form-label">Timezone</label>
+          {{ form.timezone }}
+          {% for e in form.timezone.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-6">
+          <label for="{{ form.logo.id_for_label }}" class="form-label">Logo</label>
+          {{ form.logo }}
+          {% if settings_obj.logo %}<small class="text-muted">Current: {{ settings_obj.logo.name }}</small>{% endif %}
+          {% for e in form.logo.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
       </div>
-      {% endfor %}
-      {% if form.non_field_errors %}<div class="alert alert-danger">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>{% endif %}
-      <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save Settings</button>
-        <a href="{% url 'settingsapp:index' %}" class="btn btn-outline-secondary">Cancel</a>
-      </div>
-    </form>
+    </div>
   </div>
-</div>
+
+  <!-- ── Colors ── -->
+  <div class="cl-card mb-4">
+    <div class="cl-card-header"><h2 class="cl-card-title mb-0"><i class="bi bi-palette"></i> Color Scheme &amp; Appearance</h2></div>
+    <div class="cl-card-body">
+      <div class="row g-3">
+        <div class="col-md-4 col-lg-3">
+          <label for="{{ form.primary_color.id_for_label }}" class="form-label">Primary Color</label>
+          <div class="d-flex align-items-center gap-2">{{ form.primary_color }}<div style="width:36px;height:36px;border-radius:6px;border:1px solid #dee2e6;background:{{ form.primary_color.value }};flex-shrink:0;"></div></div>
+        </div>
+        <div class="col-md-4 col-lg-3">
+          <label for="{{ form.secondary_color.id_for_label }}" class="form-label">Secondary Color</label>
+          <div class="d-flex align-items-center gap-2">{{ form.secondary_color }}<div style="width:36px;height:36px;border-radius:6px;border:1px solid #dee2e6;background:{{ form.secondary_color.value }};flex-shrink:0;"></div></div>
+        </div>
+        <div class="col-md-4 col-lg-3">
+          <label for="{{ form.sidebar_color.id_for_label }}" class="form-label">Sidebar Color</label>
+          <div class="d-flex align-items-center gap-2">{{ form.sidebar_color }}<div style="width:36px;height:36px;border-radius:6px;border:1px solid #dee2e6;background:{{ form.sidebar_color.value }};flex-shrink:0;"></div></div>
+        </div>
+        <div class="col-md-4 col-lg-3">
+          <label for="{{ form.sidebar_text_color.id_for_label }}" class="form-label">Sidebar Text Color</label>
+          <div class="d-flex align-items-center gap-2">{{ form.sidebar_text_color }}<div style="width:36px;height:36px;border-radius:6px;border:1px solid #dee2e6;background:{{ form.sidebar_text_color.value }};flex-shrink:0;"></div></div>
+        </div>
+        <div class="col-md-4 col-lg-3">
+          <label for="{{ form.dashboard_color.id_for_label }}" class="form-label">Dashboard BG</label>
+          <div class="d-flex align-items-center gap-2">{{ form.dashboard_color }}<div style="width:36px;height:36px;border-radius:6px;border:1px solid #dee2e6;background:{{ form.dashboard_color.value }};flex-shrink:0;"></div></div>
+        </div>
+        <div class="col-md-4 col-lg-3">
+          <label for="{{ form.text_color.id_for_label }}" class="form-label">Text Color</label>
+          <div class="d-flex align-items-center gap-2">{{ form.text_color }}<div style="width:36px;height:36px;border-radius:6px;border:1px solid #dee2e6;background:{{ form.text_color.value }};flex-shrink:0;"></div></div>
+        </div>
+        <div class="col-md-4 col-lg-3">
+          <label for="{{ form.sidebar_text_size.id_for_label }}" class="form-label">Sidebar Text Size (rem)</label>
+          {{ form.sidebar_text_size }}
+          {% for e in form.sidebar_text_size.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Consultation Fee ── -->
+  <div class="cl-card mb-4">
+    <div class="cl-card-header"><h2 class="cl-card-title mb-0"><i class="bi bi-cash-stack"></i> Service Fees</h2></div>
+    <div class="cl-card-body">
+      <div class="row g-3 mb-4">
+        <div class="col-md-4">
+          <label for="{{ form.consultation_fee.id_for_label }}" class="form-label fw-semibold">Consultation Fee (UGX)</label>
+          {{ form.consultation_fee }}
+          {% for e in form.consultation_fee.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+      </div>
+
+      <!-- Lab Rates -->
+      {% if form.lab_rate_fields %}
+      <h5 class="mt-2 mb-3"><i class="bi bi-droplet text-success"></i> Laboratory Test Rates (UGX)</h5>
+      <div class="row g-3 mb-4">
+        {% for label, field in form.lab_rate_fields %}
+        <div class="col-md-4 col-lg-3">
+          <label for="{{ field.id_for_label }}" class="form-label small">{{ label }}</label>
+          {{ field }}
+          {% for e in field.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Radiology Rates -->
+      {% if form.radiology_rate_fields %}
+      <h5 class="mt-2 mb-3"><i class="bi bi-camera text-info"></i> Radiology Examination Rates (UGX)</h5>
+      <div class="row g-3">
+        {% for label, field in form.radiology_rate_fields %}
+        <div class="col-md-4 col-lg-3">
+          <label for="{{ field.id_for_label }}" class="form-label small">{{ label }}</label>
+          {{ field }}
+          {% for e in field.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mb-4">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save Settings</button>
+    <a href="{% url 'settingsapp:index' %}" class="btn btn-outline-secondary">Cancel</a>
+  </div>
+</form>
 {% endblock %}
