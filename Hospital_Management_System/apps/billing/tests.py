@@ -174,7 +174,7 @@ class BillingVisitFlowTests(TestCase):
         self.assertRedirects(
             response, reverse("billing:receipt_detail", args=[receipt.pk])
         )
-        self.visit.refresh_from_db()
+        self.visit.refresh_from_db() # type: ignore
         self.invoice.refresh_from_db()
         self.assertEqual(self.invoice.payment_status, "paid")
         self.assertEqual(self.visit.status, "waiting_triage")
@@ -646,7 +646,7 @@ class BillingVisitFlowTests(TestCase):
         self.active_shift.status = "closed"
         self.active_shift.closed_at = timezone.now()
         self.active_shift.closed_by = self.cashier
-        self.active_shift.declared_cash_total = "55000.00"
+        self.active_shift.declared_cash_total = "55000.00" # type: ignore
         self.active_shift.expected_cash_total = "50000.00"
         self.active_shift.variance_amount = "5000.00"
         self.active_shift.save(
