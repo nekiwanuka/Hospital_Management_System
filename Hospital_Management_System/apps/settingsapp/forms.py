@@ -39,15 +39,27 @@ class SystemSettingsForm(forms.ModelForm):
             "consultation_fee",
         ]
         widgets = {
-            "primary_color": forms.TextInput(attrs={"type": "color"}),
-            "secondary_color": forms.TextInput(attrs={"type": "color"}),
-            "sidebar_color": forms.TextInput(attrs={"type": "color"}),
-            "sidebar_text_color": forms.TextInput(attrs={"type": "color"}),
+            "primary_color": forms.TextInput(
+                attrs={"type": "color", "class": "form-control-color"}
+            ),
+            "secondary_color": forms.TextInput(
+                attrs={"type": "color", "class": "form-control-color"}
+            ),
+            "sidebar_color": forms.TextInput(
+                attrs={"type": "color", "class": "form-control-color"}
+            ),
+            "sidebar_text_color": forms.TextInput(
+                attrs={"type": "color", "class": "form-control-color"}
+            ),
             "sidebar_text_size": forms.NumberInput(
                 attrs={"step": "0.01", "min": "0.70", "max": "1.20"}
             ),
-            "dashboard_color": forms.TextInput(attrs={"type": "color"}),
-            "text_color": forms.TextInput(attrs={"type": "color"}),
+            "dashboard_color": forms.TextInput(
+                attrs={"type": "color", "class": "form-control-color"}
+            ),
+            "text_color": forms.TextInput(
+                attrs={"type": "color", "class": "form-control-color"}
+            ),
         }
 
     LAB_SERVICE_CHOICES = [(value, label) for value, label in LAB_TEST_CHOICES if value]
@@ -150,8 +162,10 @@ class InstallationWizardForm(forms.ModelForm):
     admin_last_name = forms.CharField(max_length=150, required=False)
     admin_phone = forms.CharField(max_length=30, required=False)
     admin_email = forms.EmailField()
-    admin_password = forms.CharField(widget=forms.PasswordInput)
-    admin_password_confirm = forms.CharField(widget=forms.PasswordInput)
+    admin_password = forms.CharField(widget=forms.PasswordInput(render_value=True))
+    admin_password_confirm = forms.CharField(
+        widget=forms.PasswordInput(render_value=True)
+    )
 
     class Meta:
         model = SystemSettings
@@ -168,6 +182,29 @@ class InstallationWizardForm(forms.ModelForm):
             "system_email",
             "timezone",
         ]
+        widgets = {
+            "primary_color": forms.TextInput(
+                attrs={"type": "color", "class": "form-control-color"}
+            ),
+            "secondary_color": forms.TextInput(
+                attrs={"type": "color", "class": "form-control-color"}
+            ),
+            "sidebar_color": forms.TextInput(
+                attrs={"type": "color", "class": "form-control-color"}
+            ),
+            "sidebar_text_color": forms.TextInput(
+                attrs={"type": "color", "class": "form-control-color"}
+            ),
+            "sidebar_text_size": forms.NumberInput(
+                attrs={"step": "0.01", "min": "0.70", "max": "1.20"}
+            ),
+            "dashboard_color": forms.TextInput(
+                attrs={"type": "color", "class": "form-control-color"}
+            ),
+            "text_color": forms.TextInput(
+                attrs={"type": "color", "class": "form-control-color"}
+            ),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
