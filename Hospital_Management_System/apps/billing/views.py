@@ -229,14 +229,10 @@ def _apply_invoice_payment(
     if amount_paid <= 0:
         raise ValidationError("Payment amount must be greater than zero.")
 
-    outstanding_total = invoice.balance_due_amount
-    if amount_paid > outstanding_total:
-        raise ValidationError(
-            f"Amount exceeds outstanding balance ({outstanding_total})."
-        )
-
     remaining_amount = amount_paid
-    for line_item in invoice.line_items.exclude(payment_status="paid").order_by("id"):
+    line_items = list(invoice.line_items.exclude(payment_status="paid").order_by("id"))
+
+    for line_item in line_items:
         line_outstanding = line_item.amount - line_item.paid_amount
         if line_outstanding <= 0:
             continue
@@ -252,6 +248,23 @@ def _apply_invoice_payment(
         remaining_amount -= applied_amount
         if remaining_amount <= 0:
             break
+
+    # If line items could not absorb the full amount (totals mismatch
+    # or no unpaid line items), bump the first line item so the
+    # payment is recorded at the line-item level.
+    if remaining_amount > 0:
+        target = invoice.line_items.order_by("id").first()
+        if target:
+            target.refresh_from_db()
+            target.amount = target.amount + remaining_amount
+            target.save(update_fields=["amount", "updated_at"])
+            _apply_line_payment(
+                target,
+                remaining_amount,
+                payment_method,
+                user,
+                transaction_id=transaction_id,
+            )
 
 
 def _find_open_invoice(branch, patient, visit=None):
@@ -1244,7 +1257,7 @@ def update_payment_status(request, pk):
                     transaction_id=transaction_id,
                 )
 
-                if invoice.balance_due_amount <= 0:
+                if new_status == "paid":
                     invoice.payment_status = "paid"
                     invoice.save(update_fields=update_fields)
                     if previous_status != "paid":
