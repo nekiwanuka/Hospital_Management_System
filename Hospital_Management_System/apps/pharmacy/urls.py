@@ -15,4 +15,5 @@ urlpatterns = [
         name="dispense_prescription",
     ),
     path("prescriptions/", views.prescriptions, name="prescriptions"),
+    path("receipts/", views.pharmacy_receipts, name="pharmacy_receipts"),
 ]

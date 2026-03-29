@@ -7,7 +7,7 @@ from django.db.models import Q
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
-from apps.billing.models import InvoiceLineItem
+from apps.billing.models import InvoiceLineItem, Receipt
 from apps.core.permissions import (
     branch_queryset_for_user,
     module_permission_required,
@@ -501,5 +501,63 @@ def prescriptions(request):
             "records": page_obj.object_list,
             "page_obj": page_obj,
             "query": query,
+        },
+    )
+
+
+@login_required
+@role_required(
+    "pharmacist", "nurse", "cashier", "receptionist", "system_admin", "director"
+)
+@module_permission_required("pharmacy", "view")
+def pharmacy_receipts(request):
+    """Pharmacy-specific receipts filtered from billing receipts."""
+    query = request.GET.get("q", "").strip()
+    method = request.GET.get("method", "").strip()
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
+    receipt_type = request.GET.get("type", "").strip()
+
+    # Receipts whose invoice has at least one pharmacy line item
+    pharmacy_invoice_ids = InvoiceLineItem.objects.filter(
+        service_type="pharmacy",
+    ).values_list("invoice_id", flat=True)
+
+    queryset = branch_queryset_for_user(
+        request.user,
+        Receipt.objects.select_related("invoice", "patient", "received_by")
+        .filter(invoice_id__in=pharmacy_invoice_ids)
+        .order_by("-created_at"),
+    )
+
+    if query:
+        queryset = queryset.filter(
+            Q(receipt_number__icontains=query)
+            | Q(patient__first_name__icontains=query)
+            | Q(patient__last_name__icontains=query)
+            | Q(invoice__invoice_number__icontains=query)
+        )
+    if method:
+        queryset = queryset.filter(payment_method=method)
+    if receipt_type:
+        queryset = queryset.filter(receipt_type=receipt_type)
+    if date_from:
+        queryset = queryset.filter(created_at__date__gte=date_from)
+    if date_to:
+        queryset = queryset.filter(created_at__date__lte=date_to)
+
+    paginator = Paginator(queryset, 25)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    return render(
+        request,
+        "pharmacy/pharmacy_receipts.html",
+        {
+            "receipts": page_obj,
+            "query": query,
+            "method": method,
+            "date_from": date_from,
+            "date_to": date_to,
+            "receipt_type": receipt_type,
         },
     )

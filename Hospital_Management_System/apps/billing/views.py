@@ -396,6 +396,8 @@ def _create_receipt(
     receipt_type="full",
     notes="",
     transaction_id="",
+    service_type="",
+    service_description="",
 ):
     balance_due = invoice.total_amount - invoice.amount_paid
     return Receipt.objects.create(
@@ -411,7 +413,27 @@ def _create_receipt(
         receipt_type=receipt_type,
         received_by=received_by,
         notes=notes,
+        service_type=service_type,
+        service_description=service_description,
     )
+
+
+def _build_receipt_service_info(invoice):
+    """Determine service_type and a human-readable description from invoice line items."""
+    line_items = invoice.line_items.all()
+    if not line_items:
+        return "", ""
+    types = set(li.service_type for li in line_items)
+    if len(types) == 1:
+        stype = types.pop()
+    else:
+        stype = "mixed"
+    type_labels = dict(InvoiceLineItem.SERVICE_TYPES)
+    descriptions = []
+    for li in line_items:
+        label = type_labels.get(li.service_type, li.service_type)
+        descriptions.append(f"{label}: {li.description}")
+    return stype, "; ".join(descriptions)[:500]
 
 
 def _service_code_for_line(line_item):
@@ -1260,6 +1282,8 @@ def update_payment_status(request, pk):
                 if "amount_paid" not in update_fields:
                     update_fields.append("amount_paid")
 
+                svc_type, svc_desc = _build_receipt_service_info(invoice)
+
                 if new_status == "paid":
                     invoice.payment_status = "paid"
                     invoice.save(update_fields=update_fields)
@@ -1273,6 +1297,8 @@ def update_payment_status(request, pk):
                         receipt_type="full",
                         notes=payment_notes,
                         transaction_id=transaction_id,
+                        service_type=svc_type,
+                        service_description=svc_desc,
                     )
                 else:
                     invoice.payment_status = "partial"
@@ -1285,6 +1311,8 @@ def update_payment_status(request, pk):
                         receipt_type="partial",
                         notes=payment_notes,
                         transaction_id=transaction_id,
+                        service_type=svc_type,
+                        service_description=svc_desc,
                     )
 
             _log_financial_event(
@@ -1485,6 +1513,7 @@ def pay_line_item(request, pk, line_id):
                 rcpt_type = None
 
             if rcpt_type:
+                li_svc_type, li_svc_desc = _build_receipt_service_info(invoice)
                 rcpt = _create_receipt(
                     invoice,
                     form.cleaned_data["amount_paid"],
@@ -1492,6 +1521,8 @@ def pay_line_item(request, pk, line_id):
                     request.user,
                     receipt_type=rcpt_type,
                     transaction_id=form.cleaned_data.get("transaction_id", ""),
+                    service_type=li_svc_type,
+                    service_description=li_svc_desc,
                 )
 
             _log_financial_event(

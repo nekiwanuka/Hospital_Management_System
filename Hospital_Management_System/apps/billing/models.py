@@ -235,6 +235,16 @@ class Receipt(BranchScopedModel):
     receipt_type = models.CharField(
         max_length=20, choices=RECEIPT_TYPES, default="full"
     )
+    service_type = models.CharField(
+        max_length=40,
+        blank=True,
+        help_text="Service category: consultation, lab, radiology, pharmacy, referral, or mixed",
+    )
+    service_description = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="Human-readable description of services paid for",
+    )
     received_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,

@@ -29,6 +29,7 @@
     {% if clinic_city or clinic_country %}<p>{{ clinic_city }}{% if clinic_city and clinic_country %}, {% endif %}{{ clinic_country }}</p>{% endif %}
     {% if clinic_phone %}<p>Tel: {{ clinic_phone }}{% if clinic_email %} | Email: {{ clinic_email }}{% endif %}</p>{% endif %}
     <p class="doc-type">{{ receipt.get_receipt_type_display|upper }} RECEIPT — {{ receipt.receipt_number }}</p>
+    {% if receipt.service_type %}<p style="font-size:13px;margin-top:4px"><strong>Service:</strong> {{ receipt.service_type|upper }}</p>{% endif %}
   </div>
 
   <table style="border:none;margin-bottom:15px">
@@ -50,13 +51,17 @@
   <p><strong>Partial Payment:</strong> This receipt confirms a part payment on the invoice. Outstanding balance is {{ receipt.balance_due }}.</p>
   {% endif %}
 
+  {% if receipt.service_description %}
+  <p style="margin-bottom:12px"><strong>Reason for Payment:</strong> {{ receipt.service_description }}</p>
+  {% endif %}
+
   <table>
-    <thead><tr><th>#</th><th>Description</th><th style="text-align:right">Amount</th></tr></thead>
+    <thead><tr><th>#</th><th>Service</th><th>Description</th><th style="text-align:right">Amount</th></tr></thead>
     <tbody>
       {% for item in line_items %}
-      <tr><td>{{ forloop.counter }}</td><td>{{ item.description }}</td><td style="text-align:right">{{ item.amount }}</td></tr>
+      <tr><td>{{ forloop.counter }}</td><td>{{ item.get_service_type_display }}</td><td>{{ item.description }}</td><td style="text-align:right">{{ item.amount }}</td></tr>
       {% endfor %}
-      <tr class="total-row"><td colspan="2" style="text-align:right">Invoice Total</td><td style="text-align:right">{{ invoice.total_amount }}</td></tr>
+      <tr class="total-row"><td colspan="3" style="text-align:right">Invoice Total</td><td style="text-align:right">{{ invoice.total_amount }}</td></tr>
     </tbody>
   </table>
 
