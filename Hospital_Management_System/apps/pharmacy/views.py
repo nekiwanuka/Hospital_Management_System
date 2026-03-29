@@ -65,7 +65,10 @@ def index(request):
     )
     if query:
         medicines_qs = medicines_qs.filter(
-            Q(name__icontains=query) | Q(generic_name__icontains=query)
+            Q(name__icontains=query)
+            | Q(category__icontains=query)
+            | Q(manufacturer__icontains=query)
+            | Q(inventory_item__generic_name__icontains=query)
         )
     medicines = medicines_qs[:50]
 

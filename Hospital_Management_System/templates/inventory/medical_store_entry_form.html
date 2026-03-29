@@ -2,30 +2,496 @@
 {% block title %}Stock Entry — {{ clinic_name }}{% endblock %}
 {% block header_title %}Stock Entry{% endblock %}
 
+{% block extra_css %}
+<style>
+/* ── Stepper ───────────────────────────────────────────── */
+.step-wizard{display:flex;justify-content:center;gap:.5rem;margin-bottom:1.5rem;flex-wrap:wrap}
+.step-btn{display:flex;align-items:center;gap:.45rem;padding:.55rem 1.1rem;border-radius:50rem;font-size:.82rem;font-weight:600;border:2px solid var(--cl-primary);background:#fff;color:var(--cl-primary);cursor:pointer;transition:all .2s}
+.step-btn.active{background:var(--cl-primary);color:#fff;box-shadow:0 2px 8px rgba(13,110,253,.25)}
+.step-btn.done{background:#198754;border-color:#198754;color:#fff}
+.step-num{display:inline-flex;align-items:center;justify-content:center;width:1.5rem;height:1.5rem;border-radius:50%;background:rgba(0,0,0,.08);font-size:.75rem;font-weight:700}
+.step-btn.active .step-num,.step-btn.done .step-num{background:rgba(255,255,255,.25);color:#fff}
+
+/* ── Step panels ──────────────────────────────────────── */
+.step-panel{display:none}
+.step-panel.active{display:block;animation:fadeUp .25s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Tooltip icon ─────────────────────────────────────── */
+.field-tip{display:inline-flex;align-items:center;justify-content:center;width:1.15rem;height:1.15rem;border-radius:50%;background:var(--cl-primary);color:#fff;font-size:.65rem;font-weight:700;cursor:help;margin-left:.3rem;vertical-align:middle}
+
+/* ── Live preview card ────────────────────────────────── */
+.price-preview{background:linear-gradient(135deg,#f0f7ff,#e8f4fd);border:1px solid #b6d4fe;border-radius:.75rem;padding:1rem 1.25rem;margin-bottom:1rem}
+.price-preview h6{font-size:.82rem;text-transform:uppercase;letter-spacing:.04em;color:#0a58ca;margin-bottom:.7rem}
+.price-preview .row>div{text-align:center}
+.price-preview .val{font-size:1.3rem;font-weight:700;color:#0d6efd}
+.price-preview .lbl{font-size:.72rem;color:#555;text-transform:uppercase}
+
+/* ── Instruction panel ────────────────────────────────── */
+.instr-panel{background:#fffde7;border:1px solid #ffe082;border-radius:.75rem;padding:1.25rem;margin-top:2rem}
+.instr-panel h5{font-size:.95rem;font-weight:700;color:#f57f17;margin-bottom:.8rem}
+.instr-panel ol{padding-left:1.2rem;margin-bottom:0}
+.instr-panel li{font-size:.82rem;color:#333;margin-bottom:.45rem;line-height:1.5}
+.instr-panel .tip-badge{display:inline-block;background:#fff3e0;border:1px solid #ffcc80;border-radius:.25rem;padding:.1rem .4rem;font-size:.72rem;font-weight:600;color:#e65100;margin-right:.2rem}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="cl-page-header">
-  <div><h1>New Stock Entry</h1></div>
-  <a href="{% url 'inventory:medical_store_dashboard' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+  <div><h1><i class="bi bi-box-seam"></i> {{ page_title }}</h1>
+    <p class="text-muted mb-0" style="font-size:.85rem">Record new stock received from a supplier into <strong>{{ store_label }}</strong>.</p>
+  </div>
+  <a href="{% url 'inventory:medical_store_dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+</div>
+
+<!-- ═══ Progress Stepper ═══ -->
+<div class="step-wizard" id="stepWizard">
+  <button type="button" class="step-btn active" data-step="1"><span class="step-num">1</span> Item Identification</button>
+  <button type="button" class="step-btn" data-step="2"><span class="step-num">2</span> Batch &amp; Supplier</button>
+  <button type="button" class="step-btn" data-step="3"><span class="step-num">3</span> Pricing &amp; Quantities</button>
 </div>
 
 <div class="cl-card">
   <div class="cl-card-body">
-    <form method="post" novalidate>
+    <form method="post" novalidate id="stockEntryForm">
       {% csrf_token %}
-      {% for field in form %}
-      <div class="mb-3">
-        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}</label>
-        {{ field }}
-        {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-        {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+
+      {% if form.non_field_errors %}
+      <div class="alert alert-danger mb-3">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>
+      {% endif %}
+
+      <!-- ═══ STEP 1 — Item Identification ═══ -->
+      <div class="step-panel active" data-step="1">
+        <h5 class="mb-3 text-primary"><i class="bi bi-capsule"></i> Item Identification</h5>
+        <p class="text-muted mb-3" style="font-size:.82rem">Identify the medicine or supply item. If the item already exists, the system will update its record with any new information you provide here.</p>
+
+        <div class="row g-3">
+          {% with fld=form.item_name %}
+          <div class="col-md-6">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.generic_name %}
+          <div class="col-md-6">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.dosage_form %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.strength %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.unit_of_measure %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.category %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.new_category_name %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.brand %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.new_brand_name %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.pack_size %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.barcode %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.reorder_level %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.description %}
+          <div class="col-12">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+        </div>
+
+        <!-- hidden fields the store pre-selects -->
+        {{ form.store_department }}
+        {{ form.service_type }}
+        {{ form.service_code }}
+
+        <div class="d-flex justify-content-end mt-4">
+          <button type="button" class="btn btn-primary" onclick="goToStep(2)">Next: Batch &amp; Supplier <i class="bi bi-arrow-right"></i></button>
+        </div>
       </div>
-      {% endfor %}
-      {% if form.non_field_errors %}<div class="alert alert-danger">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>{% endif %}
-      <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Save Entry</button>
-        <a href="{% url 'inventory:medical_store_dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+
+      <!-- ═══ STEP 2 — Batch & Supplier ═══ -->
+      <div class="step-panel" data-step="2">
+        <h5 class="mb-3 text-primary"><i class="bi bi-truck"></i> Batch &amp; Supplier Details</h5>
+        <p class="text-muted mb-3" style="font-size:.82rem">Enter the batch information from the delivery note or invoice, and identify the supplier.</p>
+
+        <div class="row g-3">
+          {% with fld=form.batch_number %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.mfg_date %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.exp_date %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.batch_barcode %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.weight %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.volume %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+        </div>
+
+        <hr class="my-4">
+        <h6 class="text-secondary mb-3"><i class="bi bi-building"></i> Supplier Information</h6>
+        <div class="row g-3">
+          {% with fld=form.supplier %}
+          <div class="col-md-6">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.new_supplier_name %}
+          <div class="col-md-6">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.supplier_contact %}
+          <div class="col-md-6">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.supplier_address %}
+          <div class="col-md-6">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+        </div>
+
+        <div class="d-flex justify-content-between mt-4">
+          <button type="button" class="btn btn-outline-secondary" onclick="goToStep(1)"><i class="bi bi-arrow-left"></i> Back</button>
+          <button type="button" class="btn btn-primary" onclick="goToStep(3)">Next: Pricing &amp; Quantities <i class="bi bi-arrow-right"></i></button>
+        </div>
       </div>
+
+      <!-- ═══ STEP 3 — Pricing & Quantities ═══ -->
+      <div class="step-panel" data-step="3">
+        <h5 class="mb-3 text-primary"><i class="bi bi-calculator"></i> Pricing &amp; Quantities</h5>
+        <p class="text-muted mb-3" style="font-size:.82rem">Enter pack sizes, quantities received, and purchase price. The system auto-calculates unit cost and selling price from your target margin.</p>
+
+        <!-- Live price preview -->
+        <div class="price-preview" id="pricePreview">
+          <h6><i class="bi bi-graph-up-arrow"></i> Live Price Preview</h6>
+          <div class="row g-2">
+            <div class="col-4">
+              <div class="val" id="prevUnitCost">—</div>
+              <div class="lbl">Unit Cost</div>
+            </div>
+            <div class="col-4">
+              <div class="val" id="prevSelling">—</div>
+              <div class="lbl">Selling Price</div>
+            </div>
+            <div class="col-4">
+              <div class="val" id="prevProfit">—</div>
+              <div class="lbl">Profit / Unit</div>
+            </div>
+          </div>
+          <div class="row g-2 mt-2">
+            <div class="col-6">
+              <div class="val" id="prevTotalUnits">—</div>
+              <div class="lbl">Total Units</div>
+            </div>
+            <div class="col-6">
+              <div class="val" id="prevTotalCost">—</div>
+              <div class="lbl">Total Purchase Cost</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3">
+          {% with fld=form.pack_size_units %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.packs_received %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.purchase_price_per_pack %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.target_profit_margin %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <div class="input-group">
+              {{ fld }}
+              <span class="input-group-text">%</span>
+            </div>
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+        </div>
+
+        <div class="d-flex justify-content-between mt-4">
+          <button type="button" class="btn btn-outline-secondary" onclick="goToStep(2)"><i class="bi bi-arrow-left"></i> Back</button>
+          <button type="submit" class="btn btn-success btn-lg px-4"><i class="bi bi-check-circle"></i> Save Stock Entry</button>
+        </div>
+      </div>
+
     </form>
   </div>
 </div>
+
+<!-- ═══ Quick Reference Manual ═══ -->
+<div class="instr-panel" id="instrPanel">
+  <h5><i class="bi bi-info-circle"></i> Stock Entry — Quick Reference Guide</h5>
+  <ol>
+    <li>
+      <span class="tip-badge">Step 1</span>
+      <strong>Item Identification</strong> — Enter the product name exactly as it appears on the packaging. If the item already exists in the system, it will update the existing record rather than creating a duplicate. Fill in the generic name (INN), dosage form, strength, and unit of measure.
+    </li>
+    <li>
+      <span class="tip-badge">Step 1</span>
+      <strong>Category &amp; Brand</strong> — Select from existing options, or type a new one in the "new" field. You only need one or the other — not both.
+    </li>
+    <li>
+      <span class="tip-badge">Step 2</span>
+      <strong>Batch Number</strong> — Copy the batch/lot number <em>exactly</em> from the product label. This is used for FEFO (First Expiry, First Out) tracking and recall tracing.
+    </li>
+    <li>
+      <span class="tip-badge">Step 2</span>
+      <strong>Expiry Date</strong> — Must be a future date. Expired stock cannot be entered. Items approaching expiry (within 30 days) will appear in dashboard alerts.
+    </li>
+    <li>
+      <span class="tip-badge">Step 2</span>
+      <strong>Supplier</strong> — Select an existing supplier or add a new one. Supplier records help with purchase order tracking and auditing.
+    </li>
+    <li>
+      <span class="tip-badge">Step 3</span>
+      <strong>Pack Size Units</strong> — Number of individual sellable units in ONE pack. Example: a box of 100 tablets = 100 units.
+    </li>
+    <li>
+      <span class="tip-badge">Step 3</span>
+      <strong>Packs Received</strong> — How many packs arrived. Total units = Pack Size Units &times; Packs Received.
+    </li>
+    <li>
+      <span class="tip-badge">Step 3</span>
+      <strong>Purchase Price</strong> — The amount paid for ONE pack (not per unit). The system auto-calculates unit cost = purchase price &divide; pack size.
+    </li>
+    <li>
+      <span class="tip-badge">Step 3</span>
+      <strong>Target Profit Margin</strong> — Set as a percentage (0-99%). Selling price is calculated as: unit cost &divide; (1 &minus; margin/100). A 25% margin on a 100 UGX unit cost gives a 133 UGX selling price.
+    </li>
+    <li>
+      <span class="tip-badge">Tip</span>
+      <strong>Duplicate Batches</strong> — The same batch number cannot be entered twice for the same item. If you receive more of an existing batch, enter it as a new delivery with a different batch identifier.
+    </li>
+  </ol>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+  const form = document.getElementById('stockEntryForm');
+  const panels = form.querySelectorAll('.step-panel');
+  const btns = document.querySelectorAll('#stepWizard .step-btn');
+
+  // Track which step has errors from server-side validation
+  const stepFields = {
+    1: ['item_name','generic_name','dosage_form','strength','unit_of_measure','category','new_category_name','brand','new_brand_name','pack_size','barcode','reorder_level','description','store_department','service_type','service_code'],
+    2: ['batch_number','mfg_date','exp_date','batch_barcode','weight','volume','supplier','new_supplier_name','supplier_contact','supplier_address'],
+    3: ['pack_size_units','packs_received','purchase_price_per_pack','target_profit_margin']
+  };
+
+  function firstStepWithError(){
+    for(let s=1;s<=3;s++){
+      for(const name of stepFields[s]){
+        const el=form.querySelector('[name="'+name+'"]');
+        if(el){
+          const wrapper=el.closest('.col-md-4,.col-md-6,.col-12');
+          if(wrapper && wrapper.querySelector('.invalid-feedback')){return s;}
+        }
+      }
+    }
+    return null;
+  }
+
+  window.goToStep = function(n){
+    panels.forEach(p=>p.classList.remove('active'));
+    btns.forEach(b=>{
+      const bs=parseInt(b.dataset.step);
+      b.classList.remove('active');
+      if(bs<n) b.classList.add('done'); else b.classList.remove('done');
+    });
+    form.querySelector('.step-panel[data-step="'+n+'"]').classList.add('active');
+    btns[n-1].classList.add('active');
+    window.scrollTo({top:0,behavior:'smooth'});
+  };
+
+  btns.forEach(b=>b.addEventListener('click',()=>goToStep(parseInt(b.dataset.step))));
+
+  // On page load, jump to first step that has server errors
+  const errStep = firstStepWithError();
+  if(errStep) goToStep(errStep);
+
+  // ── Live price preview ──
+  const packSizeEl = document.getElementById('id_pack_size_units');
+  const packsEl = document.getElementById('id_packs_received');
+  const priceEl = document.getElementById('id_purchase_price_per_pack');
+  const marginEl = document.getElementById('id_target_profit_margin');
+
+  function updatePreview(){
+    const ps = parseFloat(packSizeEl?.value)||0;
+    const pk = parseFloat(packsEl?.value)||0;
+    const pp = parseFloat(priceEl?.value)||0;
+    const mg = parseFloat(marginEl?.value)||0;
+
+    if(ps>0 && pp>0){
+      const uc = pp/ps;
+      const sp = (mg>0&&mg<100) ? uc/(1-mg/100) : uc;
+      const pf = sp-uc;
+      const tu = ps*pk;
+      const tc = pk*pp;
+      document.getElementById('prevUnitCost').textContent = uc.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:4});
+      document.getElementById('prevSelling').textContent = sp.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+      document.getElementById('prevProfit').textContent = pf.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:4});
+      document.getElementById('prevTotalUnits').textContent = tu.toLocaleString();
+      document.getElementById('prevTotalCost').textContent = tc.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+    } else {
+      ['prevUnitCost','prevSelling','prevProfit','prevTotalUnits','prevTotalCost'].forEach(id=>{
+        document.getElementById(id).textContent='—';
+      });
+    }
+  }
+
+  [packSizeEl,packsEl,priceEl,marginEl].forEach(el=>{
+    if(el){el.addEventListener('input',updatePreview);el.addEventListener('change',updatePreview);}
+  });
+  updatePreview();
+
+  // ── Bootstrap tooltips init ──
+  document.querySelectorAll('.field-tip').forEach(el=>{
+    new bootstrap.Tooltip(el,{placement:'top',trigger:'hover focus'});
+  });
+})();
+</script>
 {% endblock %}

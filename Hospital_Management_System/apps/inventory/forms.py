@@ -93,42 +93,129 @@ class MedicalStoreEntryForm(forms.Form):
     STORE_DEPARTMENT_CHOICES = Item.STORE_DEPARTMENT_CHOICES
     SERVICE_TYPE_CHOICES = Item.SERVICE_TYPE_CHOICES
 
-    item_name = forms.CharField(max_length=255)
-    generic_name = forms.CharField(max_length=255, required=False)
-    category = forms.ModelChoiceField(queryset=Category.objects.none(), required=False)
-    new_category_name = forms.CharField(max_length=120, required=False)
-    brand = forms.ModelChoiceField(queryset=Brand.objects.none(), required=False)
-    new_brand_name = forms.CharField(max_length=120, required=False)
-    dosage_form = forms.ChoiceField(choices=DOSAGE_FORM_CHOICES)
-    strength = forms.CharField(max_length=120, required=False)
-    unit_of_measure = forms.CharField(max_length=60)
-    pack_size = forms.CharField(max_length=60, required=False)
-    barcode = forms.CharField(max_length=120, required=False)
+    item_name = forms.CharField(
+        max_length=255,
+        help_text="Trade/brand name as printed on the product packaging.",
+    )
+    generic_name = forms.CharField(
+        max_length=255,
+        required=False,
+        help_text="International Non-proprietary Name (INN), e.g. 'Paracetamol' for Panadol.",
+    )
+    category = forms.ModelChoiceField(
+        queryset=Category.objects.none(),
+        required=False,
+        help_text="Pick an existing category or type a new one below.",
+    )
+    new_category_name = forms.CharField(
+        max_length=120,
+        required=False,
+        help_text="Only fill this if the category above doesn't exist yet.",
+    )
+    brand = forms.ModelChoiceField(
+        queryset=Brand.objects.none(),
+        required=False,
+        help_text="Select the manufacturer/brand or add a new one below.",
+    )
+    new_brand_name = forms.CharField(
+        max_length=120,
+        required=False,
+        help_text="Only fill this if the brand above doesn't exist yet.",
+    )
+    dosage_form = forms.ChoiceField(
+        choices=DOSAGE_FORM_CHOICES,
+        help_text="Physical form: tablet, syrup, injection, cream, etc.",
+    )
+    strength = forms.CharField(
+        max_length=120,
+        required=False,
+        help_text="Active ingredient strength, e.g. '500mg', '250mg/5ml'.",
+    )
+    unit_of_measure = forms.CharField(
+        max_length=60,
+        help_text="Smallest dispensable unit, e.g. 'tablet', 'ml', 'vial'.",
+    )
+    pack_size = forms.CharField(
+        max_length=60,
+        required=False,
+        help_text="Label on the pack, e.g. '10x10', '100ml bottle'.",
+    )
+    barcode = forms.CharField(
+        max_length=120,
+        required=False,
+        help_text="Product barcode (EAN/UPC) — use scanner if available.",
+    )
     store_department = forms.ChoiceField(
         choices=STORE_DEPARTMENT_CHOICES,
         required=False,
         initial="pharmacy",
+        help_text="Which store department will hold this stock.",
     )
-    service_type = forms.ChoiceField(choices=SERVICE_TYPE_CHOICES, required=False)
-    service_code = forms.CharField(max_length=120, required=False)
-    reorder_level = forms.IntegerField(min_value=0, initial=10)
+    service_type = forms.ChoiceField(
+        choices=SERVICE_TYPE_CHOICES,
+        required=False,
+        help_text="Leave blank for pharmacy items. Set for lab/radiology billing.",
+    )
+    service_code = forms.CharField(
+        max_length=120,
+        required=False,
+        help_text="Internal billing code for services (auto-generated if left blank).",
+    )
+    reorder_level = forms.IntegerField(
+        min_value=0,
+        initial=10,
+        help_text="Minimum stock level before a low-stock alert triggers.",
+    )
     description = forms.CharField(
-        widget=forms.Textarea(attrs={"rows": 2}), required=False
+        widget=forms.Textarea(attrs={"rows": 2}),
+        required=False,
+        help_text="Any additional notes about this item.",
     )
 
-    batch_number = forms.CharField(max_length=120)
+    batch_number = forms.CharField(
+        max_length=120,
+        help_text="Unique batch/lot number printed on the packaging.",
+    )
     mfg_date = forms.DateField(
-        required=False, widget=forms.DateInput(attrs={"type": "date"})
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date"}),
+        help_text="Manufacturing date — leave blank if not printed.",
     )
-    exp_date = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
-    batch_barcode = forms.CharField(max_length=120, required=False)
-    weight = forms.CharField(max_length=60, required=False)
-    volume = forms.CharField(max_length=60, required=False)
+    exp_date = forms.DateField(
+        widget=forms.DateInput(attrs={"type": "date"}),
+        help_text="Expiry date — must be in the future.",
+    )
+    batch_barcode = forms.CharField(
+        max_length=120,
+        required=False,
+        help_text="Batch-specific barcode if different from product barcode.",
+    )
+    weight = forms.CharField(
+        max_length=60,
+        required=False,
+        help_text="Net weight per pack, e.g. '500g'.",
+    )
+    volume = forms.CharField(
+        max_length=60,
+        required=False,
+        help_text="Volume per pack, e.g. '100ml'.",
+    )
 
-    pack_size_units = forms.IntegerField(min_value=1, initial=100)
-    packs_received = forms.IntegerField(min_value=1, initial=1)
+    pack_size_units = forms.IntegerField(
+        min_value=1,
+        initial=100,
+        help_text="How many sellable units in one pack, e.g. 100 tablets per pack.",
+    )
+    packs_received = forms.IntegerField(
+        min_value=1,
+        initial=1,
+        help_text="Number of packs received in this delivery.",
+    )
     purchase_price_per_pack = forms.DecimalField(
-        max_digits=14, decimal_places=2, min_value=0.01
+        max_digits=14,
+        decimal_places=2,
+        min_value=0.01,
+        help_text="How much you paid for ONE pack (before markup).",
     )
     target_profit_margin = forms.DecimalField(
         max_digits=7,
@@ -136,12 +223,27 @@ class MedicalStoreEntryForm(forms.Form):
         min_value=0,
         max_value=Decimal("99.99"),
         initial=25,
+        help_text="Desired profit margin %. Selling price is auto-calculated.",
     )
-    supplier = forms.ModelChoiceField(queryset=Supplier.objects.none(), required=False)
-    new_supplier_name = forms.CharField(max_length=180, required=False)
-    supplier_contact = forms.CharField(max_length=120, required=False)
+    supplier = forms.ModelChoiceField(
+        queryset=Supplier.objects.none(),
+        required=False,
+        help_text="Select existing supplier or add a new one below.",
+    )
+    new_supplier_name = forms.CharField(
+        max_length=180,
+        required=False,
+        help_text="Only fill if the supplier above doesn't exist yet.",
+    )
+    supplier_contact = forms.CharField(
+        max_length=120,
+        required=False,
+        help_text="Phone or email for the new supplier.",
+    )
     supplier_address = forms.CharField(
-        widget=forms.Textarea(attrs={"rows": 2}), required=False
+        widget=forms.Textarea(attrs={"rows": 2}),
+        required=False,
+        help_text="Physical address for the new supplier.",
     )
 
     def __init__(self, *args, **kwargs):
