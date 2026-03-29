@@ -54,4 +54,9 @@ urlpatterns = [
         views.send_to_cashier,
         name="send_to_cashier",
     ),
+    path(
+        "api/medicine-search/",
+        views.medicine_search_api,
+        name="medicine_search_api",
+    ),
 ]

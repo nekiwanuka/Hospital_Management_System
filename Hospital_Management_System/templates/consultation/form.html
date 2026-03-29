@@ -244,74 +244,39 @@
                 </div>
 
                 <div class="tab-pane fade" id="action-rx" role="tabpanel">
-                  <div class="d-flex justify-content-between align-items-start gap-2 mb-3 flex-wrap">
-                    <div>
-                      <h5 class="mb-1 text-primary"><i class="bi bi-capsule"></i> Prescribe Medication</h5>
-                      <p class="consult-section-subtitle mb-0">Search medicines, add multiple lines, then send the full prescription to pharmacy.</p>
-                    </div>
-                    <button type="button" class="btn btn-outline-primary btn-sm" id="addPharmacyRow"><i class="bi bi-plus-circle me-1"></i>Add medicine</button>
+                  <div class="mb-3">
+                    <h5 class="mb-1 text-primary"><i class="bi bi-capsule"></i> Prescribe Medication</h5>
+                    <p class="consult-section-subtitle mb-0">Search medicines, add multiple lines, then send the full prescription to pharmacy.</p>
                   </div>
 
+                  <!-- Search box -->
+                  <div class="position-relative mb-3">
+                    <input type="search" id="rxMedicineSearch" class="form-control form-control-lg" placeholder="Search medicine by name..." autocomplete="off">
+                    <div id="rxSearchResults" class="list-group position-absolute w-100 shadow-sm" style="z-index:1050;max-height:280px;overflow-y:auto;display:none;"></div>
+                    <small class="text-muted">Type at least 2 characters to search</small>
+                  </div>
+
+                  <!-- Added medicine lines -->
                   <form method="post" action="{% url 'consultation:request_pharmacy' visit.pk %}" id="consultPharmacyForm">
                     {% csrf_token %}
                     <input type="hidden" name="panel" value="{{ selected_panel }}">
-                    {{ pharmacy_formset.management_form }}
-                    {% if pharmacy_formset.non_form_errors %}<div class="alert alert-danger py-2">{% for e in pharmacy_formset.non_form_errors %}{{ e }}<br>{% endfor %}</div>{% endif %}
+                    <input type="hidden" name="pharm-TOTAL_FORMS" id="id_pharm-TOTAL_FORMS" value="0">
+                    <input type="hidden" name="pharm-INITIAL_FORMS" value="0">
+                    <input type="hidden" name="pharm-MIN_NUM_FORMS" value="0">
+                    <input type="hidden" name="pharm-MAX_NUM_FORMS" value="20">
 
-                    <div class="consult-pharmacy-list" id="pharmacyRows">
-                      {% for f in pharmacy_formset %}
-                      <div class="consult-pharmacy-row" data-form-index="{{ forloop.counter0 }}">
-                        {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
-                        <div class="row g-2 align-items-end">
-                          <div class="col-12 col-xl-5">
-                            <label class="form-label small text-muted mb-1">Search medicine</label>
-                            <input type="search" class="form-control consult-medicine-search" placeholder="Type medicine name" autocomplete="off">
-                          </div>
-                          <div class="col-12 col-xl-4">
-                            <label class="form-label small text-muted mb-1">Medicine</label>
-                            {{ f.medicine }}
-                            {% for error in f.medicine.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-                          </div>
-                          <div class="col-8 col-xl-2">
-                            <label class="form-label small text-muted mb-1">Quantity</label>
-                            {{ f.quantity }}
-                            {% for error in f.quantity.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-                          </div>
-                          <div class="col-4 col-xl-1 d-grid">
-                            <button type="button" class="btn btn-outline-danger consult-remove-row" title="Remove medicine"><i class="bi bi-trash"></i></button>
-                          </div>
-                        </div>
-                      </div>
-                      {% endfor %}
+                    <div id="rxPrescriptionLines"></div>
+
+                    <div id="rxEmptyState" class="text-center text-muted py-4 border rounded mb-3" style="border-style:dashed!important;">
+                      <i class="bi bi-capsule fs-1 d-block mb-2 opacity-50"></i>
+                      <p class="mb-0">No medicines added yet. Use the search above to find and add medicines.</p>
                     </div>
 
-                    <template id="pharmacyEmptyRowTemplate">
-                      <div class="consult-pharmacy-row" data-form-index="__prefix__">
-                        <div class="row g-2 align-items-end">
-                          <div class="col-12 col-xl-5">
-                            <label class="form-label small text-muted mb-1">Search medicine</label>
-                            <input type="search" class="form-control consult-medicine-search" placeholder="Type medicine name" autocomplete="off">
-                          </div>
-                          <div class="col-12 col-xl-4">
-                            <label class="form-label small text-muted mb-1">Medicine</label>
-                            {{ pharmacy_formset.empty_form.medicine }}
-                          </div>
-                          <div class="col-8 col-xl-2">
-                            <label class="form-label small text-muted mb-1">Quantity</label>
-                            {{ pharmacy_formset.empty_form.quantity }}
-                          </div>
-                          <div class="col-4 col-xl-1 d-grid">
-                            <button type="button" class="btn btn-outline-danger consult-remove-row" title="Remove medicine"><i class="bi bi-trash"></i></button>
-                          </div>
-                        </div>
-                      </div>
-                    </template>
-
-                    <div class="mb-3 mt-3">
+                    <div class="mb-3">
                       <label class="form-label fw-medium">Prescription Notes / Dosage</label>
                       <textarea name="notes" class="form-control" rows="2" placeholder="e.g. 1x3 after meals"></textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send-check"></i> Send to Pharmacy</button>
+                    <button type="submit" class="btn btn-primary w-100" id="rxSubmitBtn" disabled><i class="bi bi-send-check"></i> Send to Pharmacy</button>
                   </form>
                 </div>
 
@@ -576,98 +541,135 @@
 
 {% block extra_js %}
 <script>
-  (function () {
-    const addButton = document.getElementById("addPharmacyRow");
-    const rowsContainer = document.getElementById("pharmacyRows");
-    const totalFormsInput = document.getElementById("id_pharm-TOTAL_FORMS");
-    const emptyTemplate = document.getElementById("pharmacyEmptyRowTemplate");
+(function(){
+  const searchInput = document.getElementById("rxMedicineSearch");
+  const resultsBox = document.getElementById("rxSearchResults");
+  const linesContainer = document.getElementById("rxPrescriptionLines");
+  const emptyState = document.getElementById("rxEmptyState");
+  const totalFormsInput = document.getElementById("id_pharm-TOTAL_FORMS");
+  const submitBtn = document.getElementById("rxSubmitBtn");
+  const searchUrl = "{% url 'consultation:medicine_search_api' %}";
 
-    if (!addButton || !rowsContainer || !totalFormsInput || !emptyTemplate) {
+  if (!searchInput || !resultsBox || !linesContainer) return;
+
+  let debounceTimer = null;
+  let addedMedicines = {};  // id -> true
+
+  function updateUI(){
+    const count = linesContainer.querySelectorAll(".rx-line").length;
+    totalFormsInput.value = count;
+    emptyState.style.display = count ? "none" : "block";
+    submitBtn.disabled = count === 0;
+    // re-index form fields
+    linesContainer.querySelectorAll(".rx-line").forEach((el, i) => {
+      el.querySelector("[data-field='medicine']").name = `pharm-${i}-medicine`;
+      el.querySelector("[data-field='quantity']").name = `pharm-${i}-quantity`;
+    });
+  }
+
+  function addMedicineLine(med){
+    if (addedMedicines[med.id]){
+      // focus existing line quantity
+      const existing = linesContainer.querySelector(`[data-med-id="${med.id}"]`);
+      if (existing) existing.querySelector("[data-field='quantity']").focus();
       return;
     }
+    addedMedicines[med.id] = true;
+    const idx = linesContainer.querySelectorAll(".rx-line").length;
+    const html = `
+      <div class="rx-line border rounded p-2 mb-2 bg-light" data-med-id="${med.id}">
+        <input type="hidden" data-field="medicine" name="pharm-${idx}-medicine" value="${med.id}">
+        <div class="row g-2 align-items-center">
+          <div class="col">
+            <strong>${escapeHtml(med.name)}</strong>
+            <br><small class="text-muted">${escapeHtml(med.category)} &bull; Batch: ${escapeHtml(med.batch)} &bull; Exp: ${escapeHtml(med.expiry)} &bull; Stock: ${med.stock} &bull; UGX ${med.price}</small>
+          </div>
+          <div class="col-auto" style="width:90px">
+            <input type="number" data-field="quantity" name="pharm-${idx}-quantity" class="form-control form-control-sm text-center" value="1" min="1" max="${med.stock}" placeholder="Qty">
+          </div>
+          <div class="col-auto">
+            <button type="button" class="btn btn-outline-danger btn-sm rx-remove" title="Remove"><i class="bi bi-x-lg"></i></button>
+          </div>
+        </div>
+      </div>`;
+    linesContainer.insertAdjacentHTML("beforeend", html);
+    const newLine = linesContainer.lastElementChild;
+    newLine.querySelector(".rx-remove").addEventListener("click", function(){
+      delete addedMedicines[med.id];
+      newLine.remove();
+      updateUI();
+    });
+    // auto-focus quantity
+    newLine.querySelector("[data-field='quantity']").focus();
+    updateUI();
+  }
 
-    function refreshSearchValue(row) {
-      const searchInput = row.querySelector(".consult-medicine-search");
-      const select = row.querySelector("select[data-role='medicine-select']");
-      if (!searchInput || !select) {
-        return;
-      }
-      const selectedOption = select.options[select.selectedIndex];
-      searchInput.value = selectedOption && selectedOption.value ? selectedOption.text : "";
+  function escapeHtml(str){
+    const d = document.createElement("div");
+    d.textContent = str || "";
+    return d.innerHTML;
+  }
+
+  function doSearch(q){
+    if (q.length < 2){
+      resultsBox.style.display = "none";
+      resultsBox.innerHTML = "";
+      return;
     }
-
-    function filterMedicineOptions(row, query) {
-      const select = row.querySelector("select[data-role='medicine-select']");
-      if (!select) {
-        return;
-      }
-      const search = query.trim().toLowerCase();
-      Array.from(select.options).forEach((option, index) => {
-        if (!option.value || index === 0) {
-          option.hidden = false;
+    fetch(`${searchUrl}?q=${encodeURIComponent(q)}`, {credentials:"same-origin"})
+      .then(r => r.json())
+      .then(data => {
+        if (!data.length){
+          resultsBox.innerHTML = '<div class="list-group-item text-muted py-3 text-center">No medicines found</div>';
+          resultsBox.style.display = "block";
           return;
         }
-        option.hidden = search ? !option.text.toLowerCase().includes(search) : false;
+        resultsBox.innerHTML = data.map(m => {
+          const added = addedMedicines[m.id];
+          return `<button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 ${added ? 'list-group-item-success' : ''}" data-med='${JSON.stringify(m).replace(/'/g,"&#39;")}'>
+            <div>
+              <strong>${escapeHtml(m.name)}</strong>
+              <br><small class="text-muted">${escapeHtml(m.category)} &bull; Stock: ${m.stock}</small>
+            </div>
+            <span class="badge ${added ? 'bg-success' : 'bg-primary'} rounded-pill">${added ? 'Added' : 'UGX ' + m.price}</span>
+          </button>`;
+        }).join("");
+        resultsBox.style.display = "block";
+      })
+      .catch(() => {
+        resultsBox.innerHTML = '<div class="list-group-item text-danger py-2">Search failed</div>';
+        resultsBox.style.display = "block";
       });
+  }
+
+  searchInput.addEventListener("input", function(){
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => doSearch(this.value.trim()), 300);
+  });
+
+  resultsBox.addEventListener("click", function(e){
+    const btn = e.target.closest("[data-med]");
+    if (!btn) return;
+    const med = JSON.parse(btn.dataset.med);
+    addMedicineLine(med);
+    searchInput.value = "";
+    resultsBox.style.display = "none";
+    resultsBox.innerHTML = "";
+  });
+
+  // Close dropdown on outside click
+  document.addEventListener("click", function(e){
+    if (!resultsBox.contains(e.target) && e.target !== searchInput){
+      resultsBox.style.display = "none";
     }
+  });
 
-    function reindexRows() {
-      const rows = Array.from(rowsContainer.querySelectorAll(".consult-pharmacy-row"));
-      rows.forEach((row, index) => {
-        row.dataset.formIndex = index;
-        row.querySelectorAll("[name], [id], label[for]").forEach((element) => {
-          ["name", "id", "for"].forEach((attribute) => {
-            const value = element.getAttribute(attribute);
-            if (value) {
-              element.setAttribute(attribute, value.replace(/pharm-(\d+|__prefix__)-/g, `pharm-${index}-`));
-            }
-          });
-        });
-      });
-      totalFormsInput.value = rows.length;
-      rows.forEach((row) => {
-        const removeButton = row.querySelector(".consult-remove-row");
-        if (removeButton) {
-          removeButton.disabled = rows.length === 1;
-        }
-      });
-    }
+  // Re-open on focus if value present
+  searchInput.addEventListener("focus", function(){
+    if (this.value.trim().length >= 2) doSearch(this.value.trim());
+  });
 
-    function bindRow(row) {
-      const searchInput = row.querySelector(".consult-medicine-search");
-      const select = row.querySelector("select[data-role='medicine-select']");
-      const removeButton = row.querySelector(".consult-remove-row");
-
-      if (searchInput && select) {
-        refreshSearchValue(row);
-        searchInput.addEventListener("input", () => filterMedicineOptions(row, searchInput.value));
-        select.addEventListener("change", () => refreshSearchValue(row));
-      }
-
-      if (removeButton) {
-        removeButton.addEventListener("click", () => {
-          const rows = rowsContainer.querySelectorAll(".consult-pharmacy-row");
-          if (rows.length === 1) {
-            return;
-          }
-          row.remove();
-          reindexRows();
-        });
-      }
-    }
-
-    addButton.addEventListener("click", () => {
-      const nextIndex = Number(totalFormsInput.value);
-      const markup = emptyTemplate.innerHTML.replace(/__prefix__/g, String(nextIndex));
-      rowsContainer.insertAdjacentHTML("beforeend", markup);
-      const newRow = rowsContainer.lastElementChild;
-      bindRow(newRow);
-      reindexRows();
-      newRow.querySelector(".consult-medicine-search")?.focus();
-    });
-
-    rowsContainer.querySelectorAll(".consult-pharmacy-row").forEach((row) => bindRow(row));
-    reindexRows();
-  })();
+  updateUI();
+})();
 </script>
 {% endblock %}

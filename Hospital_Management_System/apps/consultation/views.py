@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.db.models import Exists, OuterRef, Q
 from django.urls import reverse
@@ -25,6 +26,10 @@ from apps.core.permissions import (
 from apps.laboratory.models import LabRequest
 from apps.laboratory.forms import LAB_TEST_CHOICES
 from apps.pharmacy.models import DispenseRecord, PharmacyRequest
+from apps.pharmacy.services import (
+    available_medicines_queryset,
+    sync_branch_medicine_catalog,
+)
 from apps.radiology.models import ImagingRequest
 from apps.referrals.models import Referral
 from apps.triage.models import TriageRecord
@@ -602,6 +607,42 @@ def complete_visit(request, visit_id):
     )
     messages.success(request, "Visit marked complete.")
     return _redirect_consultation_index(selected_panel)
+
+
+@login_required
+@role_required("doctor", "system_admin", "director")
+def medicine_search_api(request):
+    """Return matching medicines as JSON for autocomplete."""
+    q = (request.GET.get("q") or "").strip()
+    if len(q) < 2:
+        return JsonResponse([], safe=False)
+
+    user = request.user
+    if getattr(user, "branch", None):
+        sync_branch_medicine_catalog(user.branch)
+
+    qs = available_medicines_queryset().order_by("name")
+    if not user.can_view_all_branches:
+        qs = qs.filter(branch_id=user.branch_id)
+
+    qs = qs.filter(Q(name__icontains=q) | Q(category__icontains=q))[:20]
+
+    results = []
+    for med in qs:
+        results.append(
+            {
+                "id": med.pk,
+                "name": med.name,
+                "category": med.category,
+                "stock": med.stock_quantity,
+                "price": str(med.selling_price),
+                "batch": med.batch_number,
+                "expiry": (
+                    med.expiry_date.strftime("%d %b %Y") if med.expiry_date else ""
+                ),
+            }
+        )
+    return JsonResponse(results, safe=False)
 
 
 @login_required
