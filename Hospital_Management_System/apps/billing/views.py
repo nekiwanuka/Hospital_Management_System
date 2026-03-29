@@ -2116,11 +2116,15 @@ def invoices(request):
     paginator = Paginator(queryset, 25)
     page = paginator.get_page(request.GET.get("page"))
 
-    return render(request, "billing/invoices.html", {
-        "invoices": page,
-        "query": query,
-        "status": status,
-    })
+    return render(
+        request,
+        "billing/invoices.html",
+        {
+            "invoices": page,
+            "query": query,
+            "status": status,
+        },
+    )
 
 
 @login_required
@@ -2156,3 +2160,23 @@ def update_payment(request, invoice_id):
         pass
 
     return redirect("billing:detail", invoice_id=invoice.pk)
+
+
+@login_required
+@role_required("receptionist", "cashier", "system_admin", "director")
+@module_permission_required("billing", "view")
+def receipts(request):
+    query = (request.GET.get("q") or "").strip()
+    queryset = branch_queryset_for_user(
+        request.user,
+        Receipt.objects.select_related("invoice", "invoice__patient").order_by("-created_at"),
+    )
+    if query:
+        queryset = queryset.filter(
+            Q(receipt_number__icontains=query)
+            | Q(invoice__patient__first_name__icontains=query)
+            | Q(invoice__patient__last_name__icontains=query)
+        )
+    paginator = Paginator(queryset, 25)
+    page = paginator.get_page(request.GET.get("page"))
+    return render(request, "billing/receipts.html", {"receipts": page, "query": query})

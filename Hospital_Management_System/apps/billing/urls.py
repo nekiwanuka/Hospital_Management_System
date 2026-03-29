@@ -26,4 +26,5 @@ urlpatterns = [
     path("<int:pk>/receipt/", views.receipt, name="receipt"),
     path("receipt/<int:receipt_pk>/", views.receipt_detail, name="receipt_detail"),
     path("invoices/", views.invoices, name="invoices"),
+    path("receipts/", views.receipts, name="receipts"),
 ]
