@@ -28,6 +28,7 @@ class Invoice(BranchScopedModel):
     )
     services = models.TextField()
     total_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    amount_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS)
     payment_status = models.CharField(
         max_length=20, choices=PAYMENT_STATUS, default="pending"
@@ -47,12 +48,11 @@ class Invoice(BranchScopedModel):
 
     @property
     def total_paid_amount(self):
-        total = self.line_items.aggregate(total=models.Sum("paid_amount")).get("total")
-        return total or Decimal("0.00")
+        return self.amount_paid
 
     @property
     def balance_due_amount(self):
-        balance = self.total_amount - self.total_paid_amount
+        balance = self.total_amount - self.amount_paid
         return balance if balance > 0 else Decimal("0.00")
 
 

@@ -396,10 +396,7 @@ def _create_receipt(
     notes="",
     transaction_id="",
 ):
-    total_paid = invoice.line_items.aggregate(total=Sum("paid_amount")).get(
-        "total"
-    ) or Decimal("0.00")
-    balance_due = invoice.total_amount - total_paid
+    balance_due = invoice.total_amount - invoice.amount_paid
     return Receipt.objects.create(
         branch=invoice.branch,
         receipt_number=_generate_receipt_number(invoice.branch),
@@ -1257,6 +1254,10 @@ def update_payment_status(request, pk):
                     transaction_id=transaction_id,
                 )
 
+                invoice.amount_paid = invoice.amount_paid + amount_to_apply
+                if "amount_paid" not in update_fields:
+                    update_fields.append("amount_paid")
+
                 if new_status == "paid":
                     invoice.payment_status = "paid"
                     invoice.save(update_fields=update_fields)
@@ -1415,6 +1416,8 @@ def pay_line_item(request, pk, line_id):
                 transaction_id=form.cleaned_data.get("transaction_id", ""),
             )
 
+            invoice.amount_paid = invoice.amount_paid + form.cleaned_data["amount_paid"]
+
             amounts = invoice.line_items.aggregate(
                 billed_total=Sum("amount"),
                 paid_total=Sum("paid_amount"),
@@ -1426,7 +1429,7 @@ def pay_line_item(request, pk, line_id):
                 invoice.payment_status = "paid"
                 invoice.payment_method = form.cleaned_data["payment_method"]
                 invoice.save(
-                    update_fields=["payment_status", "payment_method", "updated_at"]
+                    update_fields=["payment_status", "payment_method", "amount_paid", "updated_at"]
                 )
                 _consume_stock_for_invoice(invoice, consumed_by=request.user)
                 rcpt_type = "full"
@@ -1434,7 +1437,7 @@ def pay_line_item(request, pk, line_id):
                 invoice.payment_status = "partial"
                 invoice.payment_method = form.cleaned_data["payment_method"]
                 invoice.save(
-                    update_fields=["payment_status", "payment_method", "updated_at"]
+                    update_fields=["payment_status", "payment_method", "amount_paid", "updated_at"]
                 )
                 rcpt_type = "partial"
             else:
