@@ -567,9 +567,6 @@ def medical_store_entry(request, store=None):
                                     "purchase_price_total"
                                 ],
                                 target_margin=form.cleaned_data["target_profit_margin"],
-                                selling_price_per_unit=form.cleaned_data[
-                                    "_selling_price_per_unit"
-                                ],
                                 supplier=supplier,
                                 barcode=form.cleaned_data.get("batch_barcode", ""),
                                 weight=form.cleaned_data.get("weight", ""),
