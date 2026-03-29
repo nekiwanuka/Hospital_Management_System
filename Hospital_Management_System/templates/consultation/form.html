@@ -246,17 +246,19 @@
                 <div class="tab-pane fade" id="action-rx" role="tabpanel">
                   <div class="mb-3">
                     <h5 class="mb-1 text-primary"><i class="bi bi-capsule"></i> Prescribe Medication</h5>
-                    <p class="consult-section-subtitle mb-0">Search medicines, add multiple lines, then send the full prescription to pharmacy.</p>
+                    <p class="consult-section-subtitle mb-0">Search medicines, add to the prescription list, set quantities, then send to pharmacy.</p>
                   </div>
 
                   <!-- Search box -->
                   <div class="position-relative mb-3">
-                    <input type="search" id="rxMedicineSearch" class="form-control form-control-lg" placeholder="Search medicine by name..." autocomplete="off">
-                    <div id="rxSearchResults" class="list-group position-absolute w-100 shadow-sm" style="z-index:1050;max-height:280px;overflow-y:auto;display:none;"></div>
-                    <small class="text-muted">Type at least 2 characters to search</small>
+                    <div class="input-group">
+                      <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                      <input type="search" id="rxMedicineSearch" class="form-control" placeholder="Type medicine name e.g. Panadol..." autocomplete="off">
+                    </div>
+                    <div id="rxSearchResults" class="list-group position-absolute w-100 shadow" style="z-index:1050;max-height:300px;overflow-y:auto;display:none;"></div>
                   </div>
 
-                  <!-- Added medicine lines -->
+                  <!-- Prescription list -->
                   <form method="post" action="{% url 'consultation:request_pharmacy' visit.pk %}" id="consultPharmacyForm">
                     {% csrf_token %}
                     <input type="hidden" name="panel" value="{{ selected_panel }}">
@@ -269,14 +271,14 @@
 
                     <div id="rxEmptyState" class="text-center text-muted py-4 border rounded mb-3" style="border-style:dashed!important;">
                       <i class="bi bi-capsule fs-1 d-block mb-2 opacity-50"></i>
-                      <p class="mb-0">No medicines added yet. Use the search above to find and add medicines.</p>
+                      <p class="mb-0">No medicines added yet.<br><small>Search above to find and add medicines to this prescription.</small></p>
                     </div>
 
                     <div class="mb-3">
-                      <label class="form-label fw-medium">Prescription Notes / Dosage</label>
-                      <textarea name="notes" class="form-control" rows="2" placeholder="e.g. 1x3 after meals"></textarea>
+                      <label class="form-label fw-medium">Prescription Notes / Dosage Instructions</label>
+                      <textarea name="notes" class="form-control" rows="2" placeholder="e.g. 1x3 after meals for 5 days"></textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100" id="rxSubmitBtn" disabled><i class="bi bi-send-check"></i> Send to Pharmacy</button>
+                    <button type="submit" class="btn btn-primary w-100" id="rxSubmitBtn" disabled><i class="bi bi-send-check me-1"></i> Send Prescription to Pharmacy</button>
                   </form>
                 </div>
 
@@ -554,14 +556,15 @@
 
   let debounceTimer = null;
   let addedMedicines = {};  // id -> true
+  let lineCount = 0;
 
   function updateUI(){
-    const count = linesContainer.querySelectorAll(".rx-line").length;
-    totalFormsInput.value = count;
-    emptyState.style.display = count ? "none" : "block";
-    submitBtn.disabled = count === 0;
-    // re-index form fields
-    linesContainer.querySelectorAll(".rx-line").forEach((el, i) => {
+    const lines = linesContainer.querySelectorAll(".rx-line");
+    totalFormsInput.value = lines.length;
+    emptyState.style.display = lines.length ? "none" : "block";
+    submitBtn.disabled = lines.length === 0;
+    // re-index formset fields
+    lines.forEach((el, i) => {
       el.querySelector("[data-field='medicine']").name = `pharm-${i}-medicine`;
       el.querySelector("[data-field='quantity']").name = `pharm-${i}-quantity`;
     });
@@ -569,39 +572,42 @@
 
   function addMedicineLine(med){
     if (addedMedicines[med.id]){
-      // focus existing line quantity
       const existing = linesContainer.querySelector(`[data-med-id="${med.id}"]`);
       if (existing) existing.querySelector("[data-field='quantity']").focus();
       return;
     }
     addedMedicines[med.id] = true;
-    const idx = linesContainer.querySelectorAll(".rx-line").length;
+    lineCount++;
+    const num = lineCount;
     const html = `
-      <div class="rx-line border rounded p-2 mb-2 bg-light" data-med-id="${med.id}">
-        <input type="hidden" data-field="medicine" name="pharm-${idx}-medicine" value="${med.id}">
-        <div class="row g-2 align-items-center">
-          <div class="col">
-            <strong>${escapeHtml(med.name)}</strong>
-            <br><small class="text-muted">${escapeHtml(med.category)} &bull; Batch: ${escapeHtml(med.batch)} &bull; Exp: ${escapeHtml(med.expiry)} &bull; Stock: ${med.stock} &bull; UGX ${med.price}</small>
-          </div>
-          <div class="col-auto" style="width:90px">
-            <input type="number" data-field="quantity" name="pharm-${idx}-quantity" class="form-control form-control-sm text-center" value="1" min="1" max="${med.stock}" placeholder="Qty">
-          </div>
-          <div class="col-auto">
-            <button type="button" class="btn btn-outline-danger btn-sm rx-remove" title="Remove"><i class="bi bi-x-lg"></i></button>
-          </div>
+      <div class="rx-line d-flex align-items-center gap-2 border rounded px-3 py-2 mb-2 bg-white" data-med-id="${med.id}">
+        <input type="hidden" data-field="medicine" value="${med.id}">
+        <span class="badge bg-primary rounded-pill">${num}</span>
+        <div class="flex-grow-1">
+          <strong>${escapeHtml(med.name)}</strong>
+          <small class="text-muted d-block">${escapeHtml(med.category)}</small>
         </div>
+        <div style="width:80px">
+          <input type="number" data-field="quantity" class="form-control form-control-sm text-center" value="1" min="1" placeholder="Qty" title="Quantity">
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-danger rx-remove" title="Remove"><i class="bi bi-x-lg"></i></button>
       </div>`;
     linesContainer.insertAdjacentHTML("beforeend", html);
     const newLine = linesContainer.lastElementChild;
     newLine.querySelector(".rx-remove").addEventListener("click", function(){
       delete addedMedicines[med.id];
       newLine.remove();
+      renumberLines();
       updateUI();
     });
-    // auto-focus quantity
     newLine.querySelector("[data-field='quantity']").focus();
     updateUI();
+  }
+
+  function renumberLines(){
+    linesContainer.querySelectorAll(".rx-line").forEach((el, i) => {
+      el.querySelector(".badge").textContent = i + 1;
+    });
   }
 
   function escapeHtml(str){
@@ -620,24 +626,30 @@
       .then(r => r.json())
       .then(data => {
         if (!data.length){
-          resultsBox.innerHTML = '<div class="list-group-item text-muted py-3 text-center">No medicines found</div>';
+          resultsBox.innerHTML = '<div class="list-group-item text-muted py-3 text-center"><i class="bi bi-emoji-frown me-1"></i>No medicines found for "' + escapeHtml(q) + '"</div>';
           resultsBox.style.display = "block";
           return;
         }
         resultsBox.innerHTML = data.map(m => {
           const added = addedMedicines[m.id];
-          return `<button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 ${added ? 'list-group-item-success' : ''}" data-med='${JSON.stringify(m).replace(/'/g,"&#39;")}'>
-            <div>
-              <strong>${escapeHtml(m.name)}</strong>
-              <br><small class="text-muted">${escapeHtml(m.category)} &bull; Stock: ${m.stock}</small>
+          return `<button type="button" class="list-group-item list-group-item-action py-2 ${added ? 'list-group-item-light' : ''}" data-med='${JSON.stringify(m).replace(/'/g,"&#39;")}'>
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <i class="bi bi-capsule text-primary me-1"></i>
+                <strong>${escapeHtml(m.name)}</strong>
+                <small class="text-muted ms-2">${escapeHtml(m.category)}</small>
+              </div>
+              ${added
+                ? '<span class="badge bg-success"><i class="bi bi-check2"></i> Added</span>'
+                : '<span class="badge bg-primary"><i class="bi bi-plus"></i> Add</span>'
+              }
             </div>
-            <span class="badge ${added ? 'bg-success' : 'bg-primary'} rounded-pill">${added ? 'Added' : 'UGX ' + m.price}</span>
           </button>`;
         }).join("");
         resultsBox.style.display = "block";
       })
       .catch(() => {
-        resultsBox.innerHTML = '<div class="list-group-item text-danger py-2">Search failed</div>';
+        resultsBox.innerHTML = '<div class="list-group-item text-danger py-2">Search failed — try again</div>';
         resultsBox.style.display = "block";
       });
   }
@@ -653,18 +665,17 @@
     const med = JSON.parse(btn.dataset.med);
     addMedicineLine(med);
     searchInput.value = "";
+    searchInput.focus();
     resultsBox.style.display = "none";
     resultsBox.innerHTML = "";
   });
 
-  // Close dropdown on outside click
   document.addEventListener("click", function(e){
     if (!resultsBox.contains(e.target) && e.target !== searchInput){
       resultsBox.style.display = "none";
     }
   });
 
-  // Re-open on focus if value present
   searchInput.addEventListener("focus", function(){
     if (this.value.trim().length >= 2) doSearch(this.value.trim());
   });

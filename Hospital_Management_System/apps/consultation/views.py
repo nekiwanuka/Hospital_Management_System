@@ -621,7 +621,9 @@ def medicine_search_api(request):
     if getattr(user, "branch", None):
         sync_branch_medicine_catalog(user.branch)
 
-    qs = available_medicines_queryset().order_by("name")
+    qs = (
+        available_medicines_queryset().select_related("inventory_item").order_by("name")
+    )
     if not user.can_view_all_branches:
         qs = qs.filter(branch_id=user.branch_id)
 
@@ -629,17 +631,21 @@ def medicine_search_api(request):
 
     results = []
     for med in qs:
+        item = med.inventory_item
+        strength = getattr(item, "strength", "") if item else ""
+        dosage_form = (
+            getattr(item, "get_dosage_form_display", lambda: "")() if item else ""
+        )
+        label = med.name
+        if strength:
+            label = f"{med.name} {strength}"
+        if dosage_form:
+            label = f"{label} ({dosage_form})"
         results.append(
             {
                 "id": med.pk,
-                "name": med.name,
+                "name": label,
                 "category": med.category,
-                "stock": med.stock_quantity,
-                "price": str(med.selling_price),
-                "batch": med.batch_number,
-                "expiry": (
-                    med.expiry_date.strftime("%d %b %Y") if med.expiry_date else ""
-                ),
             }
         )
     return JsonResponse(results, safe=False)
