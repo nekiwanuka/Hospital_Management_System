@@ -106,6 +106,20 @@ def index(request):
         ).order_by("-created_at"),
     )[:10]
 
+    # Pending pharmacy requests from doctors
+    pending_rx = list(
+        branch_queryset_for_user(
+            request.user,
+            PharmacyRequest.objects.select_related(
+                "patient", "visit", "medicine", "requested_by"
+            )
+            .filter(status="requested")
+            .order_by("-date_requested"),
+        )[:50]
+    )
+    for pr in pending_rx:
+        pr.payment_cleared = _is_pharmacy_request_payment_cleared(pr)
+
     return render(
         request,
         "pharmacy/index.html",
@@ -117,6 +131,7 @@ def index(request):
             "recent_dispenses": recent_dispenses,
             "query": query,
             "recent_store_requests": recent_store_requests,
+            "pending_rx": pending_rx,
         },
     )
 

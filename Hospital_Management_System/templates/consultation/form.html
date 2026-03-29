@@ -555,58 +555,82 @@
   if (!searchInput || !resultsBox || !linesContainer) return;
 
   let debounceTimer = null;
-  let addedMedicines = {};  // id -> true
+  let addedMedicines = {};
   let lineCount = 0;
+  let highlightIdx = -1;
+  let lastQuery = "";
 
   function updateUI(){
     const lines = linesContainer.querySelectorAll(".rx-line");
     totalFormsInput.value = lines.length;
     emptyState.style.display = lines.length ? "none" : "block";
     submitBtn.disabled = lines.length === 0;
-    // re-index formset fields
     lines.forEach((el, i) => {
       el.querySelector("[data-field='medicine']").name = `pharm-${i}-medicine`;
       el.querySelector("[data-field='quantity']").name = `pharm-${i}-quantity`;
     });
   }
 
+  function flashLine(el){
+    el.style.transition = "background .3s";
+    el.style.background = "#d1e7dd";
+    setTimeout(() => { el.style.background = ""; }, 600);
+  }
+
   function addMedicineLine(med){
     if (addedMedicines[med.id]){
       const existing = linesContainer.querySelector(`[data-med-id="${med.id}"]`);
-      if (existing) existing.querySelector("[data-field='quantity']").focus();
+      if (existing){
+        flashLine(existing);
+        existing.querySelector("[data-field='quantity']").select();
+      }
+      refreshResults();
       return;
     }
     addedMedicines[med.id] = true;
     lineCount++;
-    const num = lineCount;
     const html = `
       <div class="rx-line d-flex align-items-center gap-2 border rounded px-3 py-2 mb-2 bg-white" data-med-id="${med.id}">
         <input type="hidden" data-field="medicine" value="${med.id}">
-        <span class="badge bg-primary rounded-pill">${num}</span>
+        <span class="badge bg-primary rounded-pill rx-num">${lineCount}</span>
         <div class="flex-grow-1">
           <strong>${escapeHtml(med.name)}</strong>
           <small class="text-muted d-block">${escapeHtml(med.category)}</small>
         </div>
-        <div style="width:80px">
-          <input type="number" data-field="quantity" class="form-control form-control-sm text-center" value="1" min="1" placeholder="Qty" title="Quantity">
+        <div class="d-flex align-items-center gap-1" style="width:110px">
+          <button type="button" class="btn btn-sm btn-outline-secondary rx-qty-btn" data-delta="-1" title="Decrease">−</button>
+          <input type="number" data-field="quantity" class="form-control form-control-sm text-center" value="1" min="1" style="width:50px" title="Quantity">
+          <button type="button" class="btn btn-sm btn-outline-secondary rx-qty-btn" data-delta="1" title="Increase">+</button>
         </div>
         <button type="button" class="btn btn-sm btn-outline-danger rx-remove" title="Remove"><i class="bi bi-x-lg"></i></button>
       </div>`;
     linesContainer.insertAdjacentHTML("beforeend", html);
     const newLine = linesContainer.lastElementChild;
+    flashLine(newLine);
+
     newLine.querySelector(".rx-remove").addEventListener("click", function(){
       delete addedMedicines[med.id];
       newLine.remove();
       renumberLines();
       updateUI();
+      refreshResults();
     });
-    newLine.querySelector("[data-field='quantity']").focus();
+
+    newLine.querySelectorAll(".rx-qty-btn").forEach(btn => {
+      btn.addEventListener("click", function(){
+        const inp = newLine.querySelector("[data-field='quantity']");
+        const v = Math.max(1, parseInt(inp.value || "1") + parseInt(this.dataset.delta));
+        inp.value = v;
+      });
+    });
+
     updateUI();
+    refreshResults();
   }
 
   function renumberLines(){
     linesContainer.querySelectorAll(".rx-line").forEach((el, i) => {
-      el.querySelector(".badge").textContent = i + 1;
+      el.querySelector(".rx-num").textContent = i + 1;
     });
   }
 
@@ -616,15 +640,36 @@
     return d.innerHTML;
   }
 
+  function refreshResults(){
+    if (lastQuery.length >= 2) doSearch(lastQuery);
+  }
+
+  function getResultButtons(){
+    return resultsBox.querySelectorAll("[data-med]");
+  }
+
+  function setHighlight(idx){
+    const btns = getResultButtons();
+    btns.forEach(b => b.classList.remove("active"));
+    highlightIdx = idx;
+    if (idx >= 0 && idx < btns.length){
+      btns[idx].classList.add("active");
+      btns[idx].scrollIntoView({block:"nearest"});
+    }
+  }
+
   function doSearch(q){
+    lastQuery = q;
     if (q.length < 2){
       resultsBox.style.display = "none";
       resultsBox.innerHTML = "";
+      highlightIdx = -1;
       return;
     }
     fetch(`${searchUrl}?q=${encodeURIComponent(q)}`, {credentials:"same-origin"})
       .then(r => r.json())
       .then(data => {
+        highlightIdx = -1;
         if (!data.length){
           resultsBox.innerHTML = '<div class="list-group-item text-muted py-3 text-center"><i class="bi bi-emoji-frown me-1"></i>No medicines found for "' + escapeHtml(q) + '"</div>';
           resultsBox.style.display = "block";
@@ -632,7 +677,7 @@
         }
         resultsBox.innerHTML = data.map(m => {
           const added = addedMedicines[m.id];
-          return `<button type="button" class="list-group-item list-group-item-action py-2 ${added ? 'list-group-item-light' : ''}" data-med='${JSON.stringify(m).replace(/'/g,"&#39;")}'>
+          return `<button type="button" class="list-group-item list-group-item-action py-2 ${added ? 'list-group-item-success' : ''}" data-med='${JSON.stringify(m).replace(/'/g,"&#39;")}'>
             <div class="d-flex justify-content-between align-items-center">
               <div>
                 <i class="bi bi-capsule text-primary me-1"></i>
@@ -641,7 +686,7 @@
               </div>
               ${added
                 ? '<span class="badge bg-success"><i class="bi bi-check2"></i> Added</span>'
-                : '<span class="badge bg-primary"><i class="bi bi-plus"></i> Add</span>'
+                : '<span class="badge bg-primary"><i class="bi bi-plus-lg"></i> Add</span>'
               }
             </div>
           </button>`;
@@ -656,7 +701,30 @@
 
   searchInput.addEventListener("input", function(){
     clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => doSearch(this.value.trim()), 300);
+    debounceTimer = setTimeout(() => doSearch(this.value.trim()), 250);
+  });
+
+  searchInput.addEventListener("keydown", function(e){
+    const btns = getResultButtons();
+    if (!btns.length) return;
+    if (e.key === "ArrowDown"){
+      e.preventDefault();
+      setHighlight(Math.min(highlightIdx + 1, btns.length - 1));
+    } else if (e.key === "ArrowUp"){
+      e.preventDefault();
+      setHighlight(Math.max(highlightIdx - 1, 0));
+    } else if (e.key === "Enter"){
+      e.preventDefault();
+      if (highlightIdx >= 0 && highlightIdx < btns.length){
+        const med = JSON.parse(btns[highlightIdx].dataset.med);
+        addMedicineLine(med);
+        searchInput.value = "";
+        lastQuery = "";
+        resultsBox.style.display = "none";
+        resultsBox.innerHTML = "";
+        searchInput.focus();
+      }
+    }
   });
 
   resultsBox.addEventListener("click", function(e){
@@ -664,10 +732,8 @@
     if (!btn) return;
     const med = JSON.parse(btn.dataset.med);
     addMedicineLine(med);
-    searchInput.value = "";
+    // Keep search open so doctor can add more from same result set
     searchInput.focus();
-    resultsBox.style.display = "none";
-    resultsBox.innerHTML = "";
   });
 
   document.addEventListener("click", function(e){
