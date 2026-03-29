@@ -167,59 +167,21 @@ class MedicalStoreRequestForm(forms.ModelForm):
         self.requested_for = requested_for
         self.requested_unit = requested_unit
 
-        if requested_for == "radiology":
-            queryset = (
-                Item.objects.filter(
-                    store_department__in=["radiology", "xray", "ultrasound"],
-                    is_active=True,
-                    batches__quantity_remaining__gt=0,
-                    batches__exp_date__gte=timezone.localdate(),
-                )
-                .select_related("category", "brand")
-                .distinct()
-                .order_by("item_name")
+        queryset = (
+            Item.objects.filter(
+                is_active=True,
+                batches__quantity_remaining__gt=0,
+                batches__exp_date__gte=timezone.localdate(),
             )
-        else:
-            queryset = (
-                Item.objects.exclude(
-                    store_department=requested_for,
-                )
-                .filter(
-                    is_active=True,
-                    batches__quantity_remaining__gt=0,
-                    batches__exp_date__gte=timezone.localdate(),
-                )
-                .select_related("category", "brand")
-                .distinct()
-                .order_by("item_name")
-            )
+            .select_related("category", "brand")
+            .distinct()
+            .order_by("item_name")
+        )
         if user is not None and getattr(user, "branch_id", None):
             queryset = queryset.filter(branch_id=user.branch_id)
 
-        if requested_for == "radiology" and requested_unit in {"xray", "ultrasound"}:
-            queryset = (
-                Item.objects.filter(
-                    store_department=requested_unit,
-                    is_active=True,
-                    batches__quantity_remaining__gt=0,
-                    batches__exp_date__gte=timezone.localdate(),
-                )
-                .select_related("category", "brand")
-                .distinct()
-                .order_by("item_name")
-            )
-            if user is not None and getattr(user, "branch_id", None):
-                queryset = queryset.filter(branch_id=user.branch_id)
-
         self.fields["item"].queryset = queryset
-        scope_suffix = ""
-        if requested_for == "radiology" and requested_unit in {"xray", "ultrasound"}:
-            scope_suffix = f" ({dict(MedicalStoreRequest.REQUESTED_UNIT_CHOICES).get(requested_unit)})"
-            self.fields["item"].label = (
-                f"Available {requested_for.title()} Store Item{scope_suffix}"
-            )
-        else:
-            self.fields["item"].label = "Source Store Item (select item to request)"
+        self.fields["item"].label = "Source Store Item (select item to request)"
         self.fields["item"].label_from_instance = (
             lambda item: f"{item.item_name} ({item.category.name}) [{item.get_store_department_display()}] - available: {sellable_quantity_for_item(item)}"
         )
@@ -234,19 +196,6 @@ class MedicalStoreRequestForm(forms.ModelForm):
         cleaned_data = super().clean()
         item = cleaned_data.get("item")
         qty = cleaned_data.get("quantity_requested") or 0
-
-        if item:
-            allowed_departments = {self.requested_for}
-            if self.requested_for == "radiology":
-                allowed_departments = {"radiology", "xray", "ultrasound"}
-            if self.requested_unit in {"xray", "ultrasound"}:
-                allowed_departments = {self.requested_unit}
-
-            if item.store_department not in allowed_departments:
-                self.add_error(
-                    "item",
-                    f"Select an item from the {self.requested_for} store only.",
-                )
 
         if item and qty > sellable_quantity_for_item(item):
             self.add_error(
