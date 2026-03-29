@@ -34,35 +34,165 @@
 </div>
 
 <!-- Stock Requests -->
-{% if store_requests %}
-<div class="cl-card mb-4">
-  <div class="cl-card-header">
-    <h2 class="cl-card-title">Stock Requests</h2>
-    <div class="ms-auto d-flex gap-1">
+{% if store_requests or request_summary.pending > 0 %}
+<div class="cl-card mb-4 {% if request_summary.pending > 0 %}border-warning{% endif %}">
+  <div class="cl-card-header d-flex justify-content-between align-items-center">
+    <h2 class="cl-card-title mb-0"><i class="bi bi-inbox text-warning me-1"></i> Stock Requests</h2>
+    <div class="d-flex gap-1 align-items-center">
       <span class="badge bg-warning">Pending: {{ request_summary.pending }}</span>
       <span class="badge bg-success">Approved: {{ request_summary.approved }}</span>
       <span class="badge bg-info">Fulfilled: {{ request_summary.fulfilled }}</span>
+      {% if request_summary.rejected %}<span class="badge bg-danger">Rejected: {{ request_summary.rejected }}</span>{% endif %}
+      <!-- Status filter -->
+      <form method="get" class="d-flex gap-1 ms-2">
+        {% if selected_store != 'all' %}<input type="hidden" name="store" value="{{ selected_store }}">{% endif %}
+        <select name="request_status" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+          <option value="pending" {% if status_filter == "pending" %}selected{% endif %}>Pending</option>
+          <option value="approved" {% if status_filter == "approved" %}selected{% endif %}>Approved</option>
+          <option value="fulfilled" {% if status_filter == "fulfilled" %}selected{% endif %}>Fulfilled</option>
+          <option value="rejected" {% if status_filter == "rejected" %}selected{% endif %}>Rejected</option>
+          <option value="all" {% if status_filter == "all" %}selected{% endif %}>All</option>
+        </select>
+      </form>
     </div>
   </div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
-      <table class="table table-sm">
-        <thead><tr><th>Item</th><th>Qty</th><th>Requested By</th><th>Status</th><th>Date</th></tr></thead>
+      <table class="table table-sm table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Qty</th>
+            <th>Store</th>
+            <th>Requested By</th>
+            <th>Notes</th>
+            <th>Status</th>
+            <th>Date</th>
+            {% if can_manage_store_requests %}<th class="text-center">Actions</th>{% endif %}
+          </tr>
+        </thead>
         <tbody>
           {% for sr in store_requests %}
           <tr>
-            <td>{% if sr.item %}{{ sr.item.item_name }}{% elif sr.stock_item %}{{ sr.stock_item }}{% else %}—{% endif %}</td>
+            <td><strong>{% if sr.item %}{{ sr.item.item_name }}{% elif sr.stock_item %}{{ sr.stock_item }}{% else %}{{ sr.medicine_name|default:"—" }}{% endif %}</strong></td>
             <td>{{ sr.quantity_requested }}</td>
-            <td>{{ sr.requested_by|default:"—" }}</td>
-            <td><span class="badge bg-{% if sr.status == 'pending' %}warning{% elif sr.status == 'approved' %}success{% elif sr.status == 'fulfilled' %}info{% else %}danger{% endif %}">{{ sr.get_status_display }}</span></td>
+            <td>{{ sr.get_requested_for_display }}</td>
+            <td>{{ sr.requested_by.get_full_name|default:sr.requested_by.username }}</td>
+            <td><small>{{ sr.notes|truncatewords:10|default:"—" }}</small></td>
+            <td>
+              <span class="badge bg-{% if sr.status == 'pending' %}warning text-dark{% elif sr.status == 'approved' %}success{% elif sr.status == 'fulfilled' %}info{% else %}danger{% endif %}">
+                {{ sr.get_status_display }}
+              </span>
+            </td>
             <td>{{ sr.created_at|date:"d M H:i" }}</td>
+            {% if can_manage_store_requests %}
+            <td class="text-center">
+              {% if sr.status == 'pending' %}
+              <div class="d-flex gap-1 justify-content-center">
+                <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#approveModal{{ sr.pk }}" title="Approve"><i class="bi bi-check-lg"></i></button>
+                <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal{{ sr.pk }}" title="Reject"><i class="bi bi-x-lg"></i></button>
+              </div>
+              {% elif sr.status == 'approved' %}
+              <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#fulfillModal{{ sr.pk }}" title="Mark Fulfilled"><i class="bi bi-box-arrow-right"></i> Fulfill</button>
+              {% else %}
+              <small class="text-muted">{{ sr.handled_by.get_full_name|default:"—" }}</small>
+              {% endif %}
+            </td>
+            {% endif %}
           </tr>
+          {% empty %}
+          <tr><td colspan="{% if can_manage_store_requests %}8{% else %}7{% endif %}" class="text-center text-muted py-4">No stock requests found.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
 </div>
+
+<!-- Approve / Reject / Fulfill Modals -->
+{% if can_manage_store_requests %}
+{% for sr in store_requests %}
+{% if sr.status == 'pending' %}
+<!-- Approve Modal -->
+<div class="modal fade" id="approveModal{{ sr.pk }}" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <form method="post" action="{% url 'inventory:update_store_request_status' sr.pk 'approve' %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <div class="modal-content">
+        <div class="modal-header bg-success bg-opacity-10">
+          <h5 class="modal-title"><i class="bi bi-check-circle text-success"></i> Approve Request</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2"><strong>{% if sr.item %}{{ sr.item.item_name }}{% elif sr.stock_item %}{{ sr.stock_item }}{% else %}{{ sr.medicine_name }}{% endif %}</strong> &times; {{ sr.quantity_requested }}</p>
+          <p class="mb-2 text-muted small">Requested by {{ sr.requested_by.get_full_name|default:sr.requested_by.username }}</p>
+          <label class="form-label">Remarks <span class="text-danger">*</span></label>
+          <textarea name="remarks" class="form-control form-control-sm" rows="2" required placeholder="Approval remarks..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check-lg"></i> Approve</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectModal{{ sr.pk }}" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <form method="post" action="{% url 'inventory:update_store_request_status' sr.pk 'reject' %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <div class="modal-content">
+        <div class="modal-header bg-danger bg-opacity-10">
+          <h5 class="modal-title"><i class="bi bi-x-circle text-danger"></i> Reject Request</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2"><strong>{% if sr.item %}{{ sr.item.item_name }}{% elif sr.stock_item %}{{ sr.stock_item }}{% else %}{{ sr.medicine_name }}{% endif %}</strong> &times; {{ sr.quantity_requested }}</p>
+          <p class="mb-2 text-muted small">Requested by {{ sr.requested_by.get_full_name|default:sr.requested_by.username }}</p>
+          <label class="form-label">Reason for rejection <span class="text-danger">*</span></label>
+          <textarea name="remarks" class="form-control form-control-sm" rows="2" required placeholder="Reason..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-x-lg"></i> Reject</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% if sr.status == 'approved' %}
+<!-- Fulfill Modal -->
+<div class="modal fade" id="fulfillModal{{ sr.pk }}" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <form method="post" action="{% url 'inventory:update_store_request_status' sr.pk 'fulfill' %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <div class="modal-content">
+        <div class="modal-header bg-info bg-opacity-10">
+          <h5 class="modal-title"><i class="bi bi-box-arrow-right text-info"></i> Fulfill &amp; Release Stock</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2"><strong>{% if sr.item %}{{ sr.item.item_name }}{% elif sr.stock_item %}{{ sr.stock_item }}{% else %}{{ sr.medicine_name }}{% endif %}</strong> &times; {{ sr.quantity_requested }}</p>
+          <p class="mb-2 text-muted small">Approved for {{ sr.get_requested_for_display }}</p>
+          <label class="form-label">Fulfillment notes</label>
+          <textarea name="remarks" class="form-control form-control-sm" rows="2" placeholder="Optional notes..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-sm btn-info"><i class="bi bi-box-arrow-right"></i> Fulfill</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+{% endif %}
 {% endif %}
 
 <!-- Stock Search -->
