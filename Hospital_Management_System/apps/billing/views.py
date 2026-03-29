@@ -9,6 +9,7 @@ from django.db import transaction
 from django.db.models import Q, Sum
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.dateparse import parse_date
@@ -1139,7 +1140,14 @@ def detail(request, pk):
 @module_permission_required("billing", "update")
 def update_payment_status(request, pk):
     return_to = _safe_return_url(request)
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
     if request.method != "POST":
+        return _redirect_with_return_to(reverse("billing:detail", args=[pk]), return_to)
+
+    def _error_response(msg):
+        if is_ajax:
+            return JsonResponse({"ok": False, "error": msg}, status=400)
+        messages.error(request, msg)
         return _redirect_with_return_to(reverse("billing:detail", args=[pk]), return_to)
 
     invoice = _get_invoice_for_user_or_404(request.user, pk)
@@ -1152,12 +1160,8 @@ def update_payment_status(request, pk):
 
     if previous_status == "paid" and new_status in {"pending", "partial"}:
         if not reason:
-            messages.error(
-                request,
-                "Reason is required when requesting a paid invoice rollback.",
-            )
-            return _redirect_with_return_to(
-                reverse("billing:detail", args=[pk]), return_to
+            return _error_response(
+                "Reason is required when requesting a paid invoice rollback."
             )
 
         approval_request, created = _create_paid_rollback_request(
@@ -1198,9 +1202,11 @@ def update_payment_status(request, pk):
     payment_notes = (request.POST.get("notes") or "").strip()
     payment_form = InvoicePaymentForm(request.POST)
     if new_status in {"paid", "partial"} and not payment_form.is_valid():
-        for error_list in payment_form.errors.values():
-            for error in error_list:
-                messages.error(request, error)
+        errs = [e for el in payment_form.errors.values() for e in el]
+        if is_ajax:
+            return JsonResponse({"ok": False, "error": "; ".join(errs)}, status=400)
+        for error in errs:
+            messages.error(request, error)
         return _redirect_with_return_to(reverse("billing:detail", args=[pk]), return_to)
 
     if request.user.role in {"cashier", "receptionist"} and new_status in {
@@ -1209,12 +1215,8 @@ def update_payment_status(request, pk):
     }:
         shift = _get_open_shift_for_user(request.user)
         if not shift:
-            messages.error(
-                request,
-                "Open a cashier shift and capture opening float before posting a payment.",
-            )
-            return _redirect_with_return_to(
-                reverse("billing:detail", args=[pk]), return_to
+            return _error_response(
+                "Open a cashier shift and capture opening float before posting a payment."
             )
 
     rcpt = None
@@ -1303,8 +1305,7 @@ def update_payment_status(request, pk):
                 reason=payment_notes or reason,
             )
     except ValidationError as exc:
-        messages.error(request, str(exc))
-        return _redirect_with_return_to(reverse("billing:detail", args=[pk]), return_to)
+        return _error_response(str(exc))
 
     if invoice.visit:
         if new_status in ("paid", "post_payment"):
@@ -1344,6 +1345,36 @@ def update_payment_status(request, pk):
                 transition_visit(invoice.visit, "waiting_doctor", request.user)
         elif invoice.visit.status != "billing_queue":
             transition_visit(invoice.visit, "billing_queue", request.user)
+
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+    if is_ajax:
+        receipt_html = ""
+        if rcpt:
+            receipt_html = render_to_string(
+                "billing/receipt_detail.html",
+                {
+                    "receipt": rcpt,
+                    "invoice": invoice,
+                    "line_items": invoice.line_items.all(),
+                },
+                request=request,
+            )
+        msg = ""
+        if invoice.payment_status == "partial":
+            msg = "Partial payment recorded. The invoice balance has been updated."
+        elif invoice.payment_status == "post_payment":
+            msg = "Invoice marked as Post Payment. Patient may proceed; payment is deferred."
+        elif invoice.payment_status == "paid":
+            msg = "Payment recorded successfully."
+        return JsonResponse(
+            {
+                "ok": True,
+                "receipt_html": receipt_html,
+                "status": invoice.payment_status,
+                "message": msg,
+            }
+        )
 
     if invoice.payment_status == "paid" and rcpt:
         return _redirect_with_return_to(

@@ -333,6 +333,23 @@
 </div>
 {% endif %}
 
+<!-- Receipt Modal -->
+<div class="modal fade" id="receiptModal" tabindex="-1" aria-labelledby="receiptModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title" id="receiptModalLabel"><i class="bi bi-check-circle me-2"></i>Payment Receipt</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0" id="receiptModalBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1"></i>Close</button>
+        <button type="button" class="btn btn-primary" id="printReceiptBtn"><i class="bi bi-printer me-1"></i>Print Receipt</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -353,7 +370,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!selected) return;
     const val = selected.value;
 
-    // Hide all guides, show the relevant one
     guides.forEach(g => g.style.display = 'none');
     const guide = document.getElementById('guide_' + (val === 'post_payment' ? 'post' : val));
     if (guide) guide.style.display = 'block';
@@ -376,7 +392,6 @@ document.addEventListener('DOMContentLoaded', function() {
       submitLabel.textContent = 'Confirm Partial Payment';
       submitBtn.className = 'btn btn-warning';
     } else {
-      // Full payment
       paymentFields.style.display = 'block';
       postPayMessage.style.display = 'none';
       amountField.style.display = 'block';
@@ -391,6 +406,83 @@ document.addEventListener('DOMContentLoaded', function() {
 
   radios.forEach(r => r.addEventListener('change', updateUI));
   updateUI();
+
+  // AJAX payment submission
+  const paymentForm = document.getElementById('paymentForm');
+  if (paymentForm) {
+    paymentForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      submitBtn.disabled = true;
+      submitLabel.textContent = 'Processing...';
+
+      const formData = new FormData(paymentForm);
+
+      fetch(paymentForm.action, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'same-origin',
+      })
+      .then(r => {
+        if (r.redirected) {
+          window.location.href = r.url;
+          return null;
+        }
+        return r.json();
+      })
+      .then(data => {
+        if (!data) return;
+        if (data.ok) {
+          if (data.receipt_html) {
+            const body = document.getElementById('receiptModalBody');
+            body.innerHTML = '<iframe id="receiptIframe" style="width:100%;min-height:500px;border:none;"></iframe>';
+            const iframe = document.getElementById('receiptIframe');
+            iframe.onload = function() {
+              try {
+                const h = iframe.contentDocument.body.scrollHeight + 40;
+                iframe.style.height = h + 'px';
+              } catch(e) {}
+            };
+            iframe.srcdoc = data.receipt_html;
+
+            const modal = new bootstrap.Modal(document.getElementById('receiptModal'));
+            modal.show();
+
+            document.getElementById('printReceiptBtn').onclick = function() {
+              iframe.contentWindow.print();
+            };
+          }
+          if (data.message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show shadow-sm';
+            alertDiv.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>' + data.message +
+              '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+            paymentForm.closest('.cl-card').parentElement.prepend(alertDiv);
+          }
+          document.getElementById('receiptModal').addEventListener('hidden.bs.modal', function() {
+            window.location.reload();
+          }, { once: true });
+          if (!data.receipt_html) {
+            setTimeout(function() { window.location.reload(); }, 800);
+          }
+        } else {
+          // Validation error from server
+          const alertDiv = document.createElement('div');
+          alertDiv.className = 'alert alert-danger alert-dismissible fade show shadow-sm';
+          alertDiv.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i>' + (data.error || 'An error occurred.') +
+            '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+          paymentForm.closest('.cl-card').parentElement.prepend(alertDiv);
+          submitBtn.disabled = false;
+          updateUI();
+        }
+      })
+      .catch(() => {
+        submitBtn.disabled = false;
+        updateUI();
+        paymentForm.submit();
+      });
+    });
+  }
 });
 </script>
 {% endblock %}
