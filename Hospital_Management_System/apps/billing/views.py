@@ -2092,6 +2092,40 @@ def receipt_detail(request, receipt_pk):
 @login_required
 @role_required("receptionist", "cashier", "system_admin", "director")
 @module_permission_required("billing", "view")
+def invoices(request):
+    query = (request.GET.get("q") or "").strip()
+    status = (request.GET.get("status") or "all").strip().lower()
+
+    queryset = branch_queryset_for_user(
+        request.user,
+        Invoice.objects.select_related("patient", "cashier").order_by("-created_at"),
+    )
+
+    if status in {"pending", "paid", "partial", "post_payment"}:
+        queryset = queryset.filter(payment_status=status)
+    else:
+        status = "all"
+
+    if query:
+        queryset = queryset.filter(
+            Q(invoice_number__icontains=query)
+            | Q(patient__first_name__icontains=query)
+            | Q(patient__last_name__icontains=query)
+        )
+
+    paginator = Paginator(queryset, 25)
+    page = paginator.get_page(request.GET.get("page"))
+
+    return render(request, "billing/invoices.html", {
+        "invoices": page,
+        "query": query,
+        "status": status,
+    })
+
+
+@login_required
+@role_required("receptionist", "cashier", "system_admin", "director")
+@module_permission_required("billing", "view")
 def create_invoice(request):
     # Logic to create an invoice when a request is initiated
     pass
