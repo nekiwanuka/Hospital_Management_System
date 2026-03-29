@@ -181,8 +181,10 @@ class MedicalStoreRequestForm(forms.ModelForm):
             )
         else:
             queryset = (
-                Item.objects.filter(
+                Item.objects.exclude(
                     store_department=requested_for,
+                )
+                .filter(
                     is_active=True,
                     batches__quantity_remaining__gt=0,
                     batches__exp_date__gte=timezone.localdate(),
@@ -213,11 +215,13 @@ class MedicalStoreRequestForm(forms.ModelForm):
         scope_suffix = ""
         if requested_for == "radiology" and requested_unit in {"xray", "ultrasound"}:
             scope_suffix = f" ({dict(MedicalStoreRequest.REQUESTED_UNIT_CHOICES).get(requested_unit)})"
-        self.fields["item"].label = (
-            f"Available {requested_for.title()} Store Item{scope_suffix}"
-        )
+            self.fields["item"].label = (
+                f"Available {requested_for.title()} Store Item{scope_suffix}"
+            )
+        else:
+            self.fields["item"].label = "Source Store Item (select item to request)"
         self.fields["item"].label_from_instance = (
-            lambda item: f"{item.item_name} ({item.category.name}) - available: {sellable_quantity_for_item(item)}"
+            lambda item: f"{item.item_name} ({item.category.name}) [{item.get_store_department_display()}] - available: {sellable_quantity_for_item(item)}"
         )
 
         for field in self.fields.values():

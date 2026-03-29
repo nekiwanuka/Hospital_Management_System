@@ -579,3 +579,196 @@ def create_dispense_with_items(
 
         dispense.refresh_total_amount()
         return dispense
+
+
+def fulfill_store_request(store_request, fulfilled_by, remarks=""):
+    """Transfer stock from source item batches to the destination department.
+
+    Deducts quantity from the source item's batches (FIFO), finds or creates
+    a matching item + batch in the destination store, and increments stock.
+    Records StockMovement and StockTransfer for full audit trail.
+    """
+    from apps.inventory.models import StockTransfer
+    from apps.pharmacy.services import sync_medicine_catalog_for_item
+
+    source_item = store_request.item
+    if not source_item:
+        raise ValidationError("This request has no linked inventory item.")
+
+    quantity = store_request.quantity_requested
+    if quantity <= 0:
+        raise ValidationError("Requested quantity must be positive.")
+
+    dest_department = store_request.requested_for  # e.g. "pharmacy"
+
+    with transaction.atomic():
+        # --- Source: deduct via FIFO ---
+        source_batches = list(_eligible_fifo_batches(source_item))
+        available = sum(b.quantity_remaining for b in source_batches)
+        if available < quantity:
+            raise ValidationError(
+                f"Insufficient stock for {source_item.item_name}. "
+                f"Available: {available}, requested: {quantity}."
+            )
+
+        # --- Destination: find or create matching item ---
+        dest_item = (
+            Item.objects.filter(
+                branch=source_item.branch,
+                item_name=source_item.item_name,
+                strength=source_item.strength,
+                brand=source_item.brand,
+                store_department=dest_department,
+            )
+            .order_by("id")
+            .first()
+        )
+        if not dest_item:
+            dest_item = Item.objects.create(
+                branch=source_item.branch,
+                item_name=source_item.item_name,
+                generic_name=source_item.generic_name,
+                category=source_item.category,
+                brand=source_item.brand,
+                dosage_form=source_item.dosage_form,
+                strength=source_item.strength,
+                unit_of_measure=source_item.unit_of_measure,
+                pack_size=source_item.pack_size,
+                store_department=dest_department,
+                reorder_level=source_item.reorder_level,
+                description=source_item.description,
+                is_active=True,
+                default_pack_size_units=source_item.default_pack_size_units,
+            )
+
+        transfers = []
+        remaining = quantity
+        for src_batch in source_batches:
+            if remaining <= 0:
+                break
+
+            take_qty = min(remaining, src_batch.quantity_remaining)
+
+            # Deduct from source
+            src_batch.quantity_remaining -= take_qty
+            src_batch.save(update_fields=["quantity_remaining", "updated_at"])
+
+            StockMovement.objects.create(
+                branch=source_item.branch,
+                item=source_item,
+                batch=src_batch,
+                movement_type="TRANSFER_OUT",
+                quantity=take_qty,
+                reference=f"Transfer to {dest_department} (Request #{store_request.pk})",
+                user=fulfilled_by,
+            )
+
+            # --- Destination: merge into existing batch or create ---
+            dest_batch = (
+                Batch.objects.select_for_update()
+                .filter(
+                    branch=dest_item.branch,
+                    item=dest_item,
+                    batch_number=src_batch.batch_number,
+                )
+                .first()
+            )
+
+            if dest_batch:
+                # Merge: increment existing batch
+                dest_batch.quantity_remaining += take_qty
+                dest_batch.quantity_received += take_qty
+                dest_batch.save(
+                    update_fields=[
+                        "quantity_remaining",
+                        "quantity_received",
+                        "updated_at",
+                    ]
+                )
+            else:
+                # Create new batch in destination with same pricing
+                dest_batch = Batch(
+                    branch=dest_item.branch,
+                    item=dest_item,
+                    batch_number=src_batch.batch_number,
+                    mfg_date=src_batch.mfg_date,
+                    exp_date=src_batch.exp_date,
+                    pack_size_units=src_batch.pack_size_units,
+                    packs_received=max(take_qty // src_batch.pack_size_units, 1),
+                    quantity_received=take_qty,
+                    quantity_remaining=take_qty,
+                    purchase_price_per_pack=src_batch.purchase_price_per_pack,
+                    purchase_price_total=(
+                        src_batch.unit_cost * Decimal(take_qty)
+                    ).quantize(Decimal("0.01")),
+                    unit_cost=src_batch.unit_cost,
+                    selling_price_per_unit=src_batch.selling_price_per_unit,
+                    target_margin=src_batch.target_margin,
+                    supplier=src_batch.supplier,
+                    date_received=timezone.localdate(),
+                    created_by=fulfilled_by,
+                )
+                # Save without full_clean to skip expiry validation on transfers
+                dest_batch.quantity_received = take_qty
+                dest_batch.purchase_price_total = (
+                    src_batch.unit_cost * Decimal(take_qty)
+                ).quantize(Decimal("0.01"))
+                dest_batch.profit_margin = src_batch.profit_margin
+                dest_batch.wholesale_price_per_pack = src_batch.wholesale_price_per_pack
+                super(Batch, dest_batch).save()
+
+            StockMovement.objects.create(
+                branch=dest_item.branch,
+                item=dest_item,
+                batch=dest_batch,
+                movement_type="TRANSFER_IN",
+                quantity=take_qty,
+                reference=f"Transfer from {source_item.store_department} (Request #{store_request.pk})",
+                user=fulfilled_by,
+            )
+
+            StockTransfer.objects.create(
+                branch=source_item.branch,
+                store_request=store_request,
+                source_item=source_item,
+                source_batch=src_batch,
+                destination_item=dest_item,
+                destination_batch=dest_batch,
+                quantity=take_qty,
+                unit_cost=src_batch.unit_cost,
+                selling_price_per_unit=src_batch.selling_price_per_unit,
+                transferred_by=fulfilled_by,
+                notes=remarks,
+            )
+            transfers.append(
+                {
+                    "source_batch": src_batch,
+                    "dest_batch": dest_batch,
+                    "quantity": take_qty,
+                }
+            )
+            remaining -= take_qty
+
+        # Sync pharmacy medicine catalog if destination is pharmacy
+        if dest_department == "pharmacy":
+            sync_medicine_catalog_for_item(dest_item)
+        # Also sync source item catalog (to reflect reduced stock)
+        if source_item.store_department == "pharmacy":
+            sync_medicine_catalog_for_item(source_item)
+
+        # Mark the store request as fulfilled
+        store_request.status = "fulfilled"
+        store_request.handled_by = fulfilled_by
+        store_request.handled_at = timezone.now()
+        store_request.decision_remarks = remarks
+        store_request.save(
+            update_fields=[
+                "status",
+                "handled_by",
+                "handled_at",
+                "decision_remarks",
+                "updated_at",
+            ]
+        )
+
+        return transfers

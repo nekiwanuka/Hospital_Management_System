@@ -477,6 +477,8 @@ class StockMovement(BranchScopedModel):
         ("OUT", "OUT"),
         ("ADJUSTMENT", "ADJUSTMENT"),
         ("EXPIRED", "EXPIRED"),
+        ("TRANSFER_OUT", "TRANSFER_OUT"),
+        ("TRANSFER_IN", "TRANSFER_IN"),
     ]
 
     item = models.ForeignKey(Item, on_delete=models.PROTECT, related_name="movements")
@@ -623,3 +625,55 @@ class DispenseItem(BranchScopedModel):
         self.total_price = self.unit_price * self.quantity
         self.full_clean()
         super().save(*args, **kwargs)
+
+
+class StockTransfer(BranchScopedModel):
+    """Audit record for stock transferred between stores (e.g. medical store → pharmacy)."""
+
+    store_request = models.ForeignKey(
+        "pharmacy.MedicalStoreRequest",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="stock_transfers",
+    )
+    source_item = models.ForeignKey(
+        Item,
+        on_delete=models.PROTECT,
+        related_name="transfers_out",
+    )
+    source_batch = models.ForeignKey(
+        Batch,
+        on_delete=models.PROTECT,
+        related_name="transfers_out",
+    )
+    destination_item = models.ForeignKey(
+        Item,
+        on_delete=models.PROTECT,
+        related_name="transfers_in",
+    )
+    destination_batch = models.ForeignKey(
+        Batch,
+        on_delete=models.PROTECT,
+        related_name="transfers_in",
+    )
+    quantity = models.PositiveIntegerField()
+    unit_cost = models.DecimalField(max_digits=14, decimal_places=4)
+    selling_price_per_unit = models.DecimalField(max_digits=14, decimal_places=2)
+    transferred_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.PROTECT,
+        related_name="stock_transfers",
+    )
+    transferred_at = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True)
+
+    class Meta(BranchScopedModel.Meta):
+        indexes = [
+            models.Index(fields=["branch", "transferred_at"]),
+            models.Index(fields=["branch", "source_item"]),
+            models.Index(fields=["branch", "destination_item"]),
+        ]
+
+    def __str__(self):
+        return f"Transfer {self.source_item.item_name} x{self.quantity} → {self.destination_item.store_department}"

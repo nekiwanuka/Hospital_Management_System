@@ -27,7 +27,7 @@ from apps.inventory.models import (
 )
 from apps.pharmacy.models import MedicalStoreRequest
 from apps.pharmacy.services import sync_medicine_catalog_for_item
-from apps.inventory.services import record_stock_entry
+from apps.inventory.services import fulfill_store_request, record_stock_entry
 
 
 STORE_LABELS = {
@@ -667,24 +667,33 @@ def _update_store_request_status(request, pk, action):
         )
         return redirect_target
 
-    store_request.status = {
-        "approve": "approved",
-        "reject": "rejected",
-        "fulfill": "fulfilled",
-    }[action]
-    if action in {"approve", "reject"}:
-        store_request.decision_remarks = remarks
-    store_request.handled_by = request.user
-    store_request.handled_at = timezone.now()
-    store_request.save(
-        update_fields=[
-            "status",
-            "decision_remarks",
-            "handled_by",
-            "handled_at",
-            "updated_at",
-        ]
-    )
+    if action == "fulfill":
+        try:
+            with transaction.atomic():
+                fulfill_store_request(store_request, request.user, remarks=remarks)
+        except ValidationError as exc:
+            error_msg = exc.message if hasattr(exc, "message") else str(exc)
+            messages.error(request, f"Cannot fulfill request: {error_msg}")
+            return redirect_target
+    else:
+        store_request.status = {
+            "approve": "approved",
+            "reject": "rejected",
+        }[action]
+        if action in {"approve", "reject"}:
+            store_request.decision_remarks = remarks
+        store_request.handled_by = request.user
+        store_request.handled_at = timezone.now()
+        store_request.save(
+            update_fields=[
+                "status",
+                "decision_remarks",
+                "handled_by",
+                "handled_at",
+                "updated_at",
+            ]
+        )
+
     _log_store_request_event(request, store_request, action, remarks=remarks)
 
     action_label = {
