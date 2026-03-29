@@ -1187,10 +1187,7 @@ def update_payment_status(request, pk):
     transaction_id = (request.POST.get("transaction_id") or "").strip()
     payment_notes = (request.POST.get("notes") or "").strip()
     payment_form = InvoicePaymentForm(request.POST)
-    if (
-        new_status in {"paid", "partial", "post_payment"}
-        and not payment_form.is_valid()
-    ):
+    if new_status in {"paid", "partial"} and not payment_form.is_valid():
         for error_list in payment_form.errors.values():
             for error in error_list:
                 messages.error(request, error)
@@ -2169,7 +2166,9 @@ def receipts(request):
     query = (request.GET.get("q") or "").strip()
     queryset = branch_queryset_for_user(
         request.user,
-        Receipt.objects.select_related("invoice", "invoice__patient").order_by("-created_at"),
+        Receipt.objects.select_related("invoice", "invoice__patient").order_by(
+            "-created_at"
+        ),
     )
     if query:
         queryset = queryset.filter(

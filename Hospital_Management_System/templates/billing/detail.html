@@ -1,124 +1,260 @@
 {% extends "base.html" %}
+{% load currency %}
 {% block title %}Payment {{ invoice.invoice_number }} — {{ clinic_name }}{% endblock %}
 {% block header_title %}Payment Page{% endblock %}
 
 {% block content %}
-<div class="cl-page-header">
+<div class="cl-page-header d-flex flex-wrap align-items-center justify-content-between mb-4">
   <div>
-    <h1>{{ invoice.invoice_number }}</h1>
-    <p>{{ invoice.patient.first_name }} {{ invoice.patient.last_name }} &bull; {{ invoice.created_at|date:"d M Y H:i" }}</p>
+    <h1 class="mb-1"><i class="bi bi-receipt me-2 text-primary"></i>{{ invoice.invoice_number }}</h1>
+    <p class="text-muted mb-0">{{ invoice.patient.first_name }} {{ invoice.patient.last_name }} &bull; {{ invoice.created_at|date:"d M Y H:i" }}</p>
   </div>
-  <div class="d-flex gap-2">
+  <div class="d-flex flex-wrap gap-2">
     <a href="{% url 'billing:invoice_document' invoice.pk %}" class="btn btn-outline-secondary btn-sm" target="_blank"><i class="bi bi-printer"></i> Print</a>
     <a href="{% url 'billing:quotation_document' invoice.pk %}" class="btn btn-outline-secondary btn-sm" target="_blank"><i class="bi bi-file-text"></i> Quotation</a>
     <a href="{% if return_to %}{{ return_to }}{% else %}{% url 'billing:index' %}{% endif %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
   </div>
 </div>
 
+<!-- Status Banner -->
+{% if invoice.payment_status == 'paid' %}
+<div class="alert alert-success d-flex align-items-center mb-4 shadow-sm">
+  <i class="bi bi-check-circle-fill fs-4 me-3"></i>
+  <div><strong>Fully Paid</strong> &mdash; This invoice has been settled in full.</div>
+</div>
+{% elif invoice.payment_status == 'partial' %}
+<div class="alert alert-warning d-flex align-items-center mb-4 shadow-sm">
+  <i class="bi bi-exclamation-circle-fill fs-4 me-3"></i>
+  <div><strong>Partially Paid</strong> &mdash; Outstanding balance: <strong>{{ invoice.balance_due_amount|floatformat:0 }}</strong></div>
+</div>
+{% elif invoice.payment_status == 'post_payment' %}
+<div class="alert alert-info d-flex align-items-center mb-4 shadow-sm">
+  <i class="bi bi-clock-fill fs-4 me-3"></i>
+  <div><strong>Post Payment (Deferred)</strong> &mdash; Patient has been allowed to proceed. Payment of <strong>{{ invoice.balance_due_amount|floatformat:0 }}</strong> is still outstanding.</div>
+</div>
+{% else %}
+<div class="alert alert-danger d-flex align-items-center mb-4 shadow-sm">
+  <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+  <div><strong>Payment Pending</strong> &mdash; Amount due: <strong>{{ invoice.total_amount|floatformat:0 }}</strong></div>
+</div>
+{% endif %}
+
 <div class="row g-3 mb-4">
-  <div class="col-md-6">
-    <div class="cl-card">
-      <div class="cl-card-header"><h2 class="cl-card-title">Invoice Summary</h2></div>
+  <!-- Invoice Summary -->
+  <div class="col-md-5">
+    <div class="cl-card shadow-sm h-100">
+      <div class="cl-card-header bg-light"><h2 class="cl-card-title mb-0"><i class="bi bi-file-earmark-text text-primary me-2"></i>Invoice Summary</h2></div>
       <div class="cl-card-body">
         <dl class="row mb-0">
-          <dt class="col-sm-4">Patient</dt><dd class="col-sm-8"><a href="{% url 'patients:detail' invoice.patient.pk %}">{{ invoice.patient.first_name }} {{ invoice.patient.last_name }}</a></dd>
-          <dt class="col-sm-4">Total Amount</dt><dd class="col-sm-8"><strong>{{ invoice.total_amount }}</strong></dd>
-          <dt class="col-sm-4">Paid So Far</dt><dd class="col-sm-8">{{ invoice.total_paid_amount }}</dd>
-          <dt class="col-sm-4">Balance</dt><dd class="col-sm-8"><strong>{{ invoice.balance_due_amount }}</strong></dd>
-          <dt class="col-sm-4">Payment Status</dt><dd class="col-sm-8"><span class="badge bg-{% if invoice.payment_status == 'paid' %}success{% elif invoice.payment_status == 'post_payment' %}info{% elif invoice.payment_status == 'partial' %}warning{% else %}danger{% endif %}">{{ invoice.get_payment_status_display }}</span></dd>
-          <dt class="col-sm-4">Payment Method</dt><dd class="col-sm-8">{{ invoice.get_payment_method_display|default:"—" }}</dd>
-          <dt class="col-sm-4">Cashier</dt><dd class="col-sm-8">{{ invoice.cashier|default:"—" }}</dd>
-          <dt class="col-sm-4">Branch</dt><dd class="col-sm-8">{{ invoice.branch|default:"—" }}</dd>
+          <dt class="col-sm-5 text-muted">Patient</dt>
+          <dd class="col-sm-7"><a href="{% url 'patients:detail' invoice.patient.pk %}" class="text-decoration-none fw-medium">{{ invoice.patient.first_name }} {{ invoice.patient.last_name }}</a></dd>
+
+          <dt class="col-sm-5 text-muted">Total Amount</dt>
+          <dd class="col-sm-7"><span class="fs-5 fw-bold text-dark">{{ invoice.total_amount|floatformat:0 }}</span></dd>
+
+          <dt class="col-sm-5 text-muted">Paid So Far</dt>
+          <dd class="col-sm-7"><span class="text-success fw-semibold">{{ invoice.total_paid_amount|floatformat:0 }}</span></dd>
+
+          <dt class="col-sm-5 text-muted">Balance Due</dt>
+          <dd class="col-sm-7">
+            <span class="fs-5 fw-bold {% if invoice.balance_due_amount > 0 %}text-danger{% else %}text-success{% endif %}">
+              {{ invoice.balance_due_amount|floatformat:0 }}
+            </span>
+          </dd>
+
+          <dt class="col-sm-5 text-muted">Status</dt>
+          <dd class="col-sm-7">
+            <span class="badge rounded-pill bg-{% if invoice.payment_status == 'paid' %}success{% elif invoice.payment_status == 'post_payment' %}info{% elif invoice.payment_status == 'partial' %}warning text-dark{% else %}danger{% endif %} px-3">
+              {{ invoice.get_payment_status_display }}
+            </span>
+          </dd>
+
+          <dt class="col-sm-5 text-muted">Method</dt>
+          <dd class="col-sm-7">{{ invoice.get_payment_method_display|default:"—" }}</dd>
+
+          <dt class="col-sm-5 text-muted">Cashier</dt>
+          <dd class="col-sm-7">{{ invoice.cashier|default:"—" }}</dd>
+
+          <dt class="col-sm-5 text-muted">Branch</dt>
+          <dd class="col-sm-7">{{ invoice.branch|default:"—" }}</dd>
         </dl>
         {% if invoice.visit and invoice.payment_status != 'paid' %}
-        <div class="alert alert-info mt-3 mb-0 py-2">
-          <i class="bi bi-info-circle"></i> After you mark this visit invoice as paid, the patient will be forwarded to triage first before returning to the doctor workflow.
+        <div class="alert alert-info mt-3 mb-0 py-2 small">
+          <i class="bi bi-info-circle"></i> After payment, the patient will be forwarded to triage before returning to the doctor workflow.
         </div>
         {% endif %}
       </div>
     </div>
   </div>
-  <div class="col-md-6">
+
+  <!-- Payment Actions -->
+  <div class="col-md-7">
     {% if invoice.payment_status != 'paid' %}
-    <div class="cl-card">
-      <div class="cl-card-header"><h2 class="cl-card-title">Payment Actions</h2></div>
+    <div class="cl-card shadow-sm h-100">
+      <div class="cl-card-header bg-light"><h2 class="cl-card-title mb-0"><i class="bi bi-credit-card text-success me-2"></i>Process Payment</h2></div>
       <div class="cl-card-body">
-        <form method="post" action="{% url 'billing:update_payment' invoice.pk %}">
+        <form method="post" action="{% url 'billing:update_payment' invoice.pk %}" id="paymentForm">
           {% csrf_token %}
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label fw-semibold" for="{{ payment_form.payment_status.id_for_label }}">Payment Option</label>
-              {{ payment_form.payment_status }}
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-semibold" for="{{ payment_form.payment_method.id_for_label }}">Payment Method</label>
-              {{ payment_form.payment_method }}
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-semibold" for="{{ payment_form.amount_paid.id_for_label }}">Amount Received</label>
-              {{ payment_form.amount_paid }}
-              <small class="text-muted">Required for partial payment. Full payment uses the full balance automatically.</small>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-semibold" for="{{ payment_form.transaction_id.id_for_label }}">Transaction ID</label>
-              {{ payment_form.transaction_id }}
-              <small class="text-muted">Required for all non-cash payments.</small>
-            </div>
-            <div class="col-12">
-              <label class="form-label fw-semibold" for="{{ payment_form.notes.id_for_label }}">Notes</label>
-              {{ payment_form.notes }}
+
+          <!-- Payment Type Selection (Tabs) -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Payment Type</label>
+            <div class="btn-group w-100" role="group">
+              <input type="radio" class="btn-check" name="payment_status" id="opt_paid" value="paid" {% if payment_form.initial.payment_status == 'paid' %}checked{% endif %} autocomplete="off">
+              <label class="btn btn-outline-success" for="opt_paid">
+                <i class="bi bi-check-circle me-1"></i>Full Payment
+              </label>
+
+              <input type="radio" class="btn-check" name="payment_status" id="opt_partial" value="partial" autocomplete="off">
+              <label class="btn btn-outline-warning" for="opt_partial">
+                <i class="bi bi-pie-chart me-1"></i>Partial Payment
+              </label>
+
+              <input type="radio" class="btn-check" name="payment_status" id="opt_post" value="post_payment" autocomplete="off">
+              <label class="btn btn-outline-info" for="opt_post">
+                <i class="bi bi-clock-history me-1"></i>Post Pay (Defer)
+              </label>
             </div>
           </div>
-          <div class="d-flex flex-wrap gap-2 mt-3">
-            <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-cash-coin"></i> Submit Payment</button>
+
+          <!-- Payment Type Guidance -->
+          <div id="guide_paid" class="alert alert-success py-2 small payment-guide">
+            <i class="bi bi-check-circle-fill me-1"></i>
+            <strong>Full Payment:</strong> Collects the entire outstanding balance of <strong>{{ invoice.balance_due_amount|floatformat:0 }}</strong>. Invoice will be marked as <strong>Paid</strong>.
+          </div>
+          <div id="guide_partial" class="alert alert-warning py-2 small payment-guide" style="display:none;">
+            <i class="bi bi-exclamation-circle-fill me-1"></i>
+            <strong>Partial Payment:</strong> Collects a portion of the balance. The invoice stays open with the remaining amount due. Enter the exact amount received.
+          </div>
+          <div id="guide_post" class="alert alert-info py-2 small payment-guide" style="display:none;">
+            <i class="bi bi-clock-fill me-1"></i>
+            <strong>Post Payment (Deferred):</strong> The patient proceeds without paying now. The invoice remains <strong>open</strong> with the full balance of <strong>{{ invoice.balance_due_amount|floatformat:0 }}</strong> outstanding. No money is collected at this time.
+          </div>
+
+          <!-- Payment Details (hidden for post_payment) -->
+          <div id="paymentFields">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Payment Method</label>
+                {{ payment_form.payment_method }}
+              </div>
+              <div class="col-md-6" id="amountField">
+                <label class="form-label fw-semibold">Amount Received</label>
+                {{ payment_form.amount_paid }}
+                <div id="amountHelp_paid" class="form-text text-success">Full balance will be applied automatically.</div>
+                <div id="amountHelp_partial" class="form-text text-warning" style="display:none;">Enter the partial amount being paid now.</div>
+              </div>
+              <div class="col-md-6" id="transactionField">
+                <label class="form-label fw-semibold">Transaction ID</label>
+                {{ payment_form.transaction_id }}
+                <div class="form-text">Required for Mobile Money and Insurance payments.</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Notes</label>
+                {{ payment_form.notes }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Post Payment Message (shown only for post_payment) -->
+          <div id="postPayMessage" style="display:none;">
+            <div class="text-center py-4">
+              <i class="bi bi-clock-history fs-1 text-info d-block mb-2"></i>
+              <p class="text-muted mb-1">No payment will be collected at this time.</p>
+              <p class="fw-semibold">The invoice will remain open with a balance of <strong class="text-danger">{{ invoice.balance_due_amount|floatformat:0 }}</strong></p>
+              <p class="small text-muted">Patient can proceed with services. Payment can be collected later.</p>
+            </div>
+          </div>
+
+          <!-- Submit -->
+          <div class="d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
+            <button type="submit" id="submitBtn" class="btn btn-success">
+              <i class="bi bi-cash-coin me-1"></i> <span id="submitLabel">Confirm Full Payment</span>
+            </button>
+            <a href="{% if return_to %}{{ return_to }}{% else %}{% url 'billing:index' %}{% endif %}" class="btn btn-outline-secondary">Cancel</a>
           </div>
         </form>
-        {% if invoice.payment_status == 'post_payment' %}
-        <div class="alert alert-warning mt-3 mb-0 py-2">
-          <i class="bi bi-exclamation-triangle"></i> This invoice has deferred payment. The patient may proceed, but payment is still outstanding.
-        </div>
-        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <!-- Paid Invoice - Show receipt link -->
+    <div class="cl-card shadow-sm h-100">
+      <div class="cl-card-header bg-success text-white"><h2 class="cl-card-title mb-0 text-white"><i class="bi bi-check-circle me-2"></i>Payment Complete</h2></div>
+      <div class="cl-card-body text-center py-5">
+        <i class="bi bi-check-circle-fill text-success" style="font-size:3rem;"></i>
+        <h4 class="mt-3">Invoice Fully Paid</h4>
+        <p class="text-muted">Total: <strong>{{ invoice.total_amount|floatformat:0 }}</strong> | Method: {{ invoice.get_payment_method_display }}</p>
+        <a href="{% url 'billing:receipt' invoice.pk %}" class="btn btn-outline-success"><i class="bi bi-printer me-1"></i>View Receipt</a>
       </div>
     </div>
     {% endif %}
   </div>
 </div>
 
+<!-- Line Items -->
 {% if line_items %}
-<div class="cl-card mb-4">
-  <div class="cl-card-header"><h2 class="cl-card-title">Line Items</h2></div>
+<div class="cl-card mb-4 shadow-sm">
+  <div class="cl-card-header bg-light"><h2 class="cl-card-title mb-0"><i class="bi bi-list-ul text-primary me-2"></i>Line Items</h2></div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
-      <table class="table">
-        <thead><tr><th>Service</th><th>Description</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Status</th></tr></thead>
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr><th>Service</th><th>Description</th><th class="text-end">Amount</th><th class="text-end">Paid</th><th class="text-end">Balance</th><th class="text-center">Status</th></tr>
+        </thead>
         <tbody>
           {% for line in line_items %}
           <tr>
             <td><span class="badge bg-secondary">{{ line.get_service_type_display }}</span></td>
             <td>{{ line.description }}</td>
-            <td>{{ line.amount }}</td>
-            <td>{{ line.paid_amount }}</td>
-            <td>{{ line.balance_due_amount }}</td>
-            <td><span class="badge bg-{% if line.payment_status == 'paid' %}success{% elif line.payment_status == 'partial' %}warning{% else %}danger{% endif %}">{{ line.get_payment_status_display }}</span></td>
+            <td class="text-end">{{ line.amount|floatformat:0 }}</td>
+            <td class="text-end text-success">{{ line.paid_amount|floatformat:0 }}</td>
+            <td class="text-end {% if line.balance_due_amount > 0 %}text-danger fw-semibold{% else %}text-muted{% endif %}">{{ line.balance_due_amount|floatformat:0 }}</td>
+            <td class="text-center">
+              <span class="badge rounded-pill bg-{% if line.payment_status == 'paid' %}success{% elif line.payment_status == 'partial' %}warning text-dark{% else %}danger{% endif %}">
+                {{ line.get_payment_status_display }}
+              </span>
+            </td>
           </tr>
           {% endfor %}
         </tbody>
+        <tfoot class="table-light">
+          <tr class="fw-bold">
+            <td colspan="2">Total</td>
+            <td class="text-end">{{ invoice.total_amount|floatformat:0 }}</td>
+            <td class="text-end text-success">{{ invoice.total_paid_amount|floatformat:0 }}</td>
+            <td class="text-end text-danger">{{ invoice.balance_due_amount|floatformat:0 }}</td>
+            <td></td>
+          </tr>
+        </tfoot>
       </table>
     </div>
   </div>
 </div>
 {% endif %}
 
+<!-- Payment History -->
 {% if line_payments %}
-<div class="cl-card mb-4">
-  <div class="cl-card-header"><h2 class="cl-card-title">Payment History</h2><span class="ms-auto text-muted small">Last 3 transactions per page</span></div>
+<div class="cl-card mb-4 shadow-sm">
+  <div class="cl-card-header bg-light">
+    <h2 class="cl-card-title mb-0"><i class="bi bi-clock-history text-info me-2"></i>Payment History</h2>
+    <span class="ms-auto text-muted small">Last 3 per page</span>
+  </div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
-      <table class="table table-sm">
-        <thead><tr><th>Date</th><th>Line Item</th><th>Amount</th><th>Method</th><th>Transaction ID</th><th>Received By</th></tr></thead>
+      <table class="table table-hover table-sm align-middle mb-0">
+        <thead class="table-light">
+          <tr><th>Date</th><th>Line Item</th><th class="text-end">Amount</th><th>Method</th><th>Transaction ID</th><th>Received By</th></tr>
+        </thead>
         <tbody>
           {% for p in line_payments %}
-          <tr><td>{{ p.paid_at|date:"d M Y H:i" }}</td><td>{{ p.line_item.description|truncatechars:40 }}</td><td>{{ p.amount_paid }}</td><td>{{ p.get_payment_method_display }}</td><td>{{ p.transaction_id|default:"—" }}</td><td>{{ p.received_by }}</td></tr>
+          <tr>
+            <td class="text-muted">{{ p.paid_at|date:"d M Y H:i" }}</td>
+            <td>{{ p.line_item.description|truncatechars:40 }}</td>
+            <td class="text-end fw-semibold text-success">{{ p.amount_paid|floatformat:0 }}</td>
+            <td>{{ p.get_payment_method_display }}</td>
+            <td class="text-muted small">{{ p.transaction_id|default:"—" }}</td>
+            <td class="text-muted">{{ p.received_by }}</td>
+          </tr>
           {% endfor %}
         </tbody>
       </table>
@@ -142,22 +278,30 @@
 </div>
 {% endif %}
 
+<!-- Receipt History -->
 {% if receipt_history %}
-<div class="cl-card mb-4">
-  <div class="cl-card-header"><h2 class="cl-card-title">Receipt History</h2><span class="ms-auto text-muted small">Last 3 transactions per page</span></div>
+<div class="cl-card mb-4 shadow-sm">
+  <div class="cl-card-header bg-light">
+    <h2 class="cl-card-title mb-0"><i class="bi bi-journal-check text-success me-2"></i>Receipt History</h2>
+    <span class="ms-auto text-muted small">Last 3 per page</span>
+  </div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
-      <table class="table table-sm">
-        <thead><tr><th>Date</th><th>Receipt</th><th>Type</th><th>Amount</th><th>Balance</th><th>Action</th></tr></thead>
+      <table class="table table-hover table-sm align-middle mb-0">
+        <thead class="table-light">
+          <tr><th>Date</th><th>Receipt #</th><th class="text-center">Type</th><th class="text-end">Amount</th><th class="text-end">Balance</th><th class="text-end">Action</th></tr>
+        </thead>
         <tbody>
           {% for receipt in receipt_history %}
           <tr>
-            <td>{{ receipt.created_at|date:"d M Y H:i" }}</td>
-            <td>{{ receipt.receipt_number }}</td>
-            <td>{{ receipt.get_receipt_type_display }}</td>
-            <td>{{ receipt.amount_paid }}</td>
-            <td>{{ receipt.balance_due }}</td>
-            <td><a href="{% url 'billing:receipt_detail' receipt.pk %}" class="btn btn-sm btn-outline-primary" target="_blank">Open</a></td>
+            <td class="text-muted">{{ receipt.created_at|date:"d M Y H:i" }}</td>
+            <td><code>{{ receipt.receipt_number }}</code></td>
+            <td class="text-center">
+              <span class="badge rounded-pill bg-{% if receipt.receipt_type == 'full' %}success{% else %}warning text-dark{% endif %}">{{ receipt.get_receipt_type_display }}</span>
+            </td>
+            <td class="text-end fw-semibold text-success">{{ receipt.amount_paid|floatformat:0 }}</td>
+            <td class="text-end {% if receipt.balance_due > 0 %}text-danger{% else %}text-muted{% endif %}">{{ receipt.balance_due|floatformat:0 }}</td>
+            <td class="text-end"><a href="{% url 'billing:receipt_detail' receipt.pk %}" class="btn btn-sm btn-outline-primary" target="_blank"><i class="bi bi-eye"></i></a></td>
           </tr>
           {% endfor %}
         </tbody>
@@ -183,9 +327,71 @@
 {% endif %}
 
 {% if invoice.services %}
-<div class="cl-card">
-  <div class="cl-card-header"><h2 class="cl-card-title">Services Summary</h2></div>
+<div class="cl-card shadow-sm">
+  <div class="cl-card-header bg-light"><h2 class="cl-card-title mb-0"><i class="bi bi-card-list text-secondary me-2"></i>Services Summary</h2></div>
   <div class="cl-card-body"><pre class="mb-0" style="white-space:pre-wrap">{{ invoice.services }}</pre></div>
 </div>
 {% endif %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const radios = document.querySelectorAll('input[name="payment_status"]');
+  const paymentFields = document.getElementById('paymentFields');
+  const postPayMessage = document.getElementById('postPayMessage');
+  const amountField = document.getElementById('amountField');
+  const amountInput = document.querySelector('[name="amount_paid"]');
+  const submitBtn = document.getElementById('submitBtn');
+  const submitLabel = document.getElementById('submitLabel');
+  const guides = document.querySelectorAll('.payment-guide');
+  const amountHelpPaid = document.getElementById('amountHelp_paid');
+  const amountHelpPartial = document.getElementById('amountHelp_partial');
+  const balanceDue = {{ invoice.balance_due_amount|default:"0" }};
+
+  function updateUI() {
+    const selected = document.querySelector('input[name="payment_status"]:checked');
+    if (!selected) return;
+    const val = selected.value;
+
+    // Hide all guides, show the relevant one
+    guides.forEach(g => g.style.display = 'none');
+    const guide = document.getElementById('guide_' + (val === 'post_payment' ? 'post' : val));
+    if (guide) guide.style.display = 'block';
+
+    if (val === 'post_payment') {
+      paymentFields.style.display = 'none';
+      postPayMessage.style.display = 'block';
+      submitLabel.textContent = 'Confirm Post Payment (Defer)';
+      submitBtn.className = 'btn btn-info';
+    } else if (val === 'partial') {
+      paymentFields.style.display = 'block';
+      postPayMessage.style.display = 'none';
+      amountField.style.display = 'block';
+      amountInput.readOnly = false;
+      amountInput.value = '';
+      amountInput.placeholder = 'Enter partial amount...';
+      amountInput.focus();
+      amountHelpPaid.style.display = 'none';
+      amountHelpPartial.style.display = 'block';
+      submitLabel.textContent = 'Confirm Partial Payment';
+      submitBtn.className = 'btn btn-warning';
+    } else {
+      // Full payment
+      paymentFields.style.display = 'block';
+      postPayMessage.style.display = 'none';
+      amountField.style.display = 'block';
+      amountInput.readOnly = true;
+      amountInput.value = balanceDue;
+      amountHelpPaid.style.display = 'block';
+      amountHelpPartial.style.display = 'none';
+      submitLabel.textContent = 'Confirm Full Payment';
+      submitBtn.className = 'btn btn-success';
+    }
+  }
+
+  radios.forEach(r => r.addEventListener('change', updateUI));
+  updateUI();
+});
+</script>
+{% endblock %}
 {% endblock %}
