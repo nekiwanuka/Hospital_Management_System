@@ -6,7 +6,9 @@
   <style>
     body{font-family:Arial,sans-serif;font-size:13px;color:#333;margin:0;padding:20px}
     .header{text-align:center;margin-bottom:20px;border-bottom:2px solid #333;padding-bottom:10px}
-    .header h1{margin:0;font-size:20px} .header p{margin:2px 0}
+    .header h1{margin:0;font-size:20px} .header p{margin:2px 0;font-size:12px;color:#555}
+    .header .logo{max-height:70px;margin-bottom:6px}
+    .header .doc-type{font-size:16px;font-weight:bold;margin-top:6px;letter-spacing:2px}
     table{width:100%;border-collapse:collapse;margin-bottom:20px}
     table th,table td{border:1px solid #ddd;padding:8px;text-align:left}
     table th{background:#f5f5f5} .total-row{font-weight:bold;background:#f5f5f5}
@@ -21,8 +23,12 @@
   </div>
 
   <div class="header">
+    {% if clinic_logo %}<img src="{{ clinic_logo.url }}" alt="Logo" class="logo">{% endif %}
     <h1>{{ clinic_name|default:"Hospital" }}</h1>
-    <p>INVOICE</p>
+    {% if clinic_address %}<p>{{ clinic_address }}</p>{% endif %}
+    {% if clinic_city or clinic_country %}<p>{{ clinic_city }}{% if clinic_city and clinic_country %}, {% endif %}{{ clinic_country }}</p>{% endif %}
+    {% if clinic_phone %}<p>Tel: {{ clinic_phone }}{% if clinic_email %} | Email: {{ clinic_email }}{% endif %}</p>{% endif %}
+    <p class="doc-type">INVOICE</p>
   </div>
 
   <table style="border:none;margin-bottom:15px">
@@ -47,6 +53,9 @@
     </tbody>
   </table>
 
-  <div class="footer"><p>Thank you for choosing {{ clinic_name|default:"our hospital" }}.</p></div>
+  <div class="footer">
+    <p>Thank you for choosing {{ clinic_name|default:"our hospital" }}.</p>
+    {% if clinic_phone %}<p>Tel: {{ clinic_phone }}{% if clinic_email %} | {{ clinic_email }}{% endif %}</p>{% endif %}
+  </div>
 </body>
 </html>

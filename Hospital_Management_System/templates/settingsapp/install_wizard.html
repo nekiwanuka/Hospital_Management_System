@@ -47,6 +47,26 @@
           {% for e in form.system_email.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
         </div>
         <div class="col-md-6">
+          <label for="{{ form.phone.id_for_label }}" class="form-label">Phone</label>
+          {{ form.phone }}
+          {% for e in form.phone.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-6">
+          <label for="{{ form.address.id_for_label }}" class="form-label">Address</label>
+          {{ form.address }}
+          {% for e in form.address.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-3">
+          <label for="{{ form.city.id_for_label }}" class="form-label">City</label>
+          {{ form.city }}
+          {% for e in form.city.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-3">
+          <label for="{{ form.country.id_for_label }}" class="form-label">Country</label>
+          {{ form.country }}
+          {% for e in form.country.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-6">
           <label for="{{ form.timezone.id_for_label }}" class="form-label">Timezone</label>
           {{ form.timezone }}
           {% for e in form.timezone.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}

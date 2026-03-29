@@ -41,6 +41,12 @@ def system_context(request):
     return {
         "system_settings": settings_obj,
         "clinic_name": settings_obj.clinic_name if settings_obj else "ClinicMS",
+        "clinic_address": settings_obj.address if settings_obj else "",
+        "clinic_city": settings_obj.city if settings_obj else "",
+        "clinic_country": settings_obj.country if settings_obj else "",
+        "clinic_phone": settings_obj.phone if settings_obj else "",
+        "clinic_email": settings_obj.system_email if settings_obj else "",
+        "clinic_logo": settings_obj.logo if settings_obj else None,
         "user_modules": user_modules,
         "can_view_revenue": can_view_revenue,
     }

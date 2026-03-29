@@ -1429,7 +1429,12 @@ def pay_line_item(request, pk, line_id):
                 invoice.payment_status = "paid"
                 invoice.payment_method = form.cleaned_data["payment_method"]
                 invoice.save(
-                    update_fields=["payment_status", "payment_method", "amount_paid", "updated_at"]
+                    update_fields=[
+                        "payment_status",
+                        "payment_method",
+                        "amount_paid",
+                        "updated_at",
+                    ]
                 )
                 _consume_stock_for_invoice(invoice, consumed_by=request.user)
                 rcpt_type = "full"
@@ -1437,7 +1442,12 @@ def pay_line_item(request, pk, line_id):
                 invoice.payment_status = "partial"
                 invoice.payment_method = form.cleaned_data["payment_method"]
                 invoice.save(
-                    update_fields=["payment_status", "payment_method", "amount_paid", "updated_at"]
+                    update_fields=[
+                        "payment_status",
+                        "payment_method",
+                        "amount_paid",
+                        "updated_at",
+                    ]
                 )
                 rcpt_type = "partial"
             else:

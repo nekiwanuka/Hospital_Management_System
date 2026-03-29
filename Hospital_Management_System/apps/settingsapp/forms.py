@@ -26,6 +26,10 @@ class SystemSettingsForm(forms.ModelForm):
         model = SystemSettings
         fields = [
             "clinic_name",
+            "address",
+            "city",
+            "country",
+            "phone",
             "logo",
             "primary_color",
             "secondary_color",
@@ -179,6 +183,10 @@ class InstallationWizardForm(forms.ModelForm):
         model = SystemSettings
         fields = [
             "clinic_name",
+            "address",
+            "city",
+            "country",
+            "phone",
             "logo",
             "primary_color",
             "secondary_color",

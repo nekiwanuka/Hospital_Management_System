@@ -4,6 +4,10 @@ from apps.core.models import TimeStampedModel
 
 class SystemSettings(TimeStampedModel):
     clinic_name = models.CharField(max_length=255)
+    address = models.TextField(blank=True, default="")
+    city = models.CharField(max_length=100, blank=True, default="")
+    country = models.CharField(max_length=100, blank=True, default="Uganda")
+    phone = models.CharField(max_length=30, blank=True, default="")
     logo = models.ImageField(upload_to="branding/", null=True, blank=True)
     primary_color = models.CharField(max_length=32, default="#125ea8")
     secondary_color = models.CharField(max_length=32, default="#16a085")
