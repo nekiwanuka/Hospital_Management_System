@@ -3,87 +3,291 @@
 {% block header_title %}Dashboard{% endblock %}
 
 {% block content %}
-<div class="cl-page-header">
+<div class="cl-page-header d-flex flex-wrap align-items-center justify-content-between mb-4">
   <div>
-    <h1>Welcome, {{ user.get_full_name|default:user.username }}</h1>
-    <p>{{ clinic_name }} — {{ user.get_role_display }}</p>
+    <h1 class="mb-1"><i class="bi bi-speedometer2 me-2 text-primary"></i>Welcome, {{ user.get_full_name|default:user.username }}</h1>
+    <p class="text-muted mb-0">{{ clinic_name }} &mdash; {{ user.get_role_display }}</p>
   </div>
 </div>
 
 {% if is_director %}
-<div class="alert alert-info"><i class="bi bi-info-circle"></i> You have Director access. <a href="{% url 'core:director_dashboard' %}">View Director Dashboard</a></div>
+<div class="alert alert-info d-flex align-items-center shadow-sm mb-3">
+  <i class="bi bi-shield-check fs-5 me-2"></i>
+  <div>You have <strong>Director</strong> access. <a href="{% url 'core:director_dashboard' %}" class="alert-link">View Director Dashboard &rarr;</a></div>
+</div>
 {% endif %}
 
 {% if is_system_admin %}
-<div class="alert alert-info"><i class="bi bi-info-circle"></i> You have System Admin access. <a href="{% url 'core:system_admin_dashboard' %}">View Admin Dashboard</a></div>
+<div class="alert alert-info d-flex align-items-center shadow-sm mb-3">
+  <i class="bi bi-gear-fill fs-5 me-2"></i>
+  <div>You have <strong>System Admin</strong> access. <a href="{% url 'core:system_admin_dashboard' %}" class="alert-link">View Admin Dashboard &rarr;</a></div>
+</div>
 {% endif %}
 
+<!-- ===== Quick Navigation Cards ===== -->
+<h5 class="text-muted fw-semibold mb-3"><i class="bi bi-grid-3x3-gap me-1"></i> Quick Navigation</h5>
 <div class="row g-3 mb-4">
-  {% if user_modules.patients %}
-  <div class="col-6 col-md-4 col-xl-3">
-    <a href="{% url 'patients:index' %}" class="text-decoration-none">
-      <div class="cl-stat">
-        <div class="cl-stat-icon primary"><i class="bi bi-people"></i></div>
-        <div><div class="cl-stat-label">Patients</div><div class="cl-stat-value">View</div></div>
-      </div>
-    </a>
-  </div>
-  {% endif %}
-  {% if user_modules.visits %}
-  <div class="col-6 col-md-4 col-xl-3">
-    <a href="{% url 'visits:index' %}" class="text-decoration-none">
-      <div class="cl-stat">
-        <div class="cl-stat-icon info"><i class="bi bi-clipboard2-pulse"></i></div>
-        <div><div class="cl-stat-label">Visits Queue</div><div class="cl-stat-value">View</div></div>
-      </div>
-    </a>
-  </div>
-  {% endif %}
-  {% if user_modules.billing %}
-  <div class="col-6 col-md-4 col-xl-3">
-    <a href="{% url 'billing:index' %}" class="text-decoration-none">
-      <div class="cl-stat">
-        <div class="cl-stat-icon success"><i class="bi bi-receipt"></i></div>
-        <div><div class="cl-stat-label">Billing</div><div class="cl-stat-value">View</div></div>
-      </div>
-    </a>
-  </div>
-  {% endif %}
-  {% if user_modules.laboratory %}
-  <div class="col-6 col-md-4 col-xl-3">
-    <a href="{% url 'laboratory:index' %}" class="text-decoration-none">
-      <div class="cl-stat">
-        <div class="cl-stat-icon warning"><i class="bi bi-droplet"></i></div>
-        <div><div class="cl-stat-label">Laboratory</div><div class="cl-stat-value">View</div></div>
-      </div>
-    </a>
-  </div>
-  {% endif %}
-  <div class="col-6 col-md-4 col-xl-3">
-    <a href="{% url 'billing:invoices' %}" class="btn btn-primary">Invoices</a>
-  </div>
-  <div class="col-6 col-md-4 col-xl-3">
-    <a href="{% url 'billing:receipts' %}" class="btn btn-success">Receipts</a>
-  </div>
-</div>
 
-{% if exception_counts %}
-<div class="cl-card">
-  <div class="cl-card-header"><h2 class="cl-card-title">Pending Actions</h2></div>
-  <div class="cl-card-body">
-    <div class="row g-3">
-      {% for label, count in exception_counts.items %}
-      {% if count %}
-      <div class="col-md-4">
-        <div class="cl-stat">
-          <div class="cl-stat-icon warning"><i class="bi bi-exclamation-circle"></i></div>
-          <div><div class="cl-stat-label">{{ label }}</div><div class="cl-stat-value">{{ count }}</div></div>
+  {% if user_modules.patients %}
+  <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+    <a href="{% url 'patients:index' %}" class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #0d6efd !important;">
+        <div class="card-body py-4">
+          <div class="mb-2"><i class="bi bi-people-fill fs-1 text-primary"></i></div>
+          <h6 class="card-title fw-bold mb-1">Patients</h6>
+          <small class="text-muted">Register &amp; manage</small>
         </div>
       </div>
-      {% endif %}
-      {% endfor %}
-    </div>
+    </a>
+  </div>
+  {% endif %}
+
+  {% if user_modules.visits %}
+  <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+    <a href="{% url 'visits:index' %}" class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #0dcaf0 !important;">
+        <div class="card-body py-4">
+          <div class="mb-2"><i class="bi bi-clipboard2-pulse-fill fs-1 text-info"></i></div>
+          <h6 class="card-title fw-bold mb-1">Visits</h6>
+          <small class="text-muted">Patient queue</small>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endif %}
+
+  {% if user_modules.triage %}
+  <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+    <a href="{% url 'triage:index' %}" class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #6f42c1 !important;">
+        <div class="card-body py-4">
+          <div class="mb-2"><i class="bi bi-heart-pulse-fill fs-1" style="color:#6f42c1;"></i></div>
+          <h6 class="card-title fw-bold mb-1">Triage</h6>
+          <small class="text-muted">Vitals &amp; screening</small>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endif %}
+
+  {% if user_modules.consultation %}
+  <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+    <a href="{% url 'consultation:index' %}" class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #20c997 !important;">
+        <div class="card-body py-4">
+          <div class="mb-2"><i class="bi bi-stethoscope fs-1" style="color:#20c997;"></i></div>
+          <h6 class="card-title fw-bold mb-1">Consultation</h6>
+          <small class="text-muted">Doctor visits</small>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endif %}
+
+  {% if user_modules.billing %}
+  <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+    <a href="{% url 'billing:index' %}" class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #198754 !important;">
+        <div class="card-body py-4">
+          <div class="mb-2"><i class="bi bi-cash-stack fs-1 text-success"></i></div>
+          <h6 class="card-title fw-bold mb-1">Billing</h6>
+          <small class="text-muted">Payments &amp; invoices</small>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endif %}
+
+  {% if user_modules.laboratory %}
+  <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+    <a href="{% url 'laboratory:index' %}" class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #ffc107 !important;">
+        <div class="card-body py-4">
+          <div class="mb-2"><i class="bi bi-droplet-fill fs-1 text-warning"></i></div>
+          <h6 class="card-title fw-bold mb-1">Laboratory</h6>
+          <small class="text-muted">Tests &amp; results</small>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endif %}
+
+  {% if user_modules.radiology %}
+  <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+    <a href="{% url 'radiology:index' %}" class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #fd7e14 !important;">
+        <div class="card-body py-4">
+          <div class="mb-2"><i class="bi bi-radioactive fs-1" style="color:#fd7e14;"></i></div>
+          <h6 class="card-title fw-bold mb-1">Radiology</h6>
+          <small class="text-muted">Imaging &amp; scans</small>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endif %}
+
+  {% if user_modules.pharmacy %}
+  <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+    <a href="{% url 'pharmacy:index' %}" class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #d63384 !important;">
+        <div class="card-body py-4">
+          <div class="mb-2"><i class="bi bi-capsule fs-1" style="color:#d63384;"></i></div>
+          <h6 class="card-title fw-bold mb-1">Pharmacy</h6>
+          <small class="text-muted">Dispense medicines</small>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endif %}
+
+  {% if user_modules.inventory %}
+  <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+    <a href="{% url 'inventory:index' %}" class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #6c757d !important;">
+        <div class="card-body py-4">
+          <div class="mb-2"><i class="bi bi-box-seam-fill fs-1 text-secondary"></i></div>
+          <h6 class="card-title fw-bold mb-1">Inventory</h6>
+          <small class="text-muted">Stock &amp; supplies</small>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endif %}
+
+  {% if user_modules.emergency %}
+  <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+    <a href="{% url 'emergency:index' %}" class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #dc3545 !important;">
+        <div class="card-body py-4">
+          <div class="mb-2"><i class="bi bi-exclamation-triangle-fill fs-1 text-danger"></i></div>
+          <h6 class="card-title fw-bold mb-1">Emergency</h6>
+          <small class="text-muted">Urgent cases</small>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endif %}
+
+  {% if user_modules.admission %}
+  <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+    <a href="{% url 'admission:index' %}" class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #0d6efd !important;">
+        <div class="card-body py-4">
+          <div class="mb-2"><i class="bi bi-building-fill fs-1 text-primary"></i></div>
+          <h6 class="card-title fw-bold mb-1">Admission</h6>
+          <small class="text-muted">Inpatient wards</small>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endif %}
+
+  {% if user_modules.referrals %}
+  <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+    <a href="{% url 'referrals:index' %}" class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #0dcaf0 !important;">
+        <div class="card-body py-4">
+          <div class="mb-2"><i class="bi bi-send-fill fs-1 text-info"></i></div>
+          <h6 class="card-title fw-bold mb-1">Referrals</h6>
+          <small class="text-muted">Transfer patients</small>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endif %}
+
+  {% if user_modules.reports %}
+  <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+    <a href="{% url 'reports:index' %}" class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #6610f2 !important;">
+        <div class="card-body py-4">
+          <div class="mb-2"><i class="bi bi-graph-up-arrow fs-1" style="color:#6610f2;"></i></div>
+          <h6 class="card-title fw-bold mb-1">Reports</h6>
+          <small class="text-muted">Analytics &amp; stats</small>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- ===== Billing Shortcuts ===== -->
+{% if user_modules.billing %}
+<h5 class="text-muted fw-semibold mb-3"><i class="bi bi-lightning-charge me-1"></i> Billing Shortcuts</h5>
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+    <a href="{% url 'billing:invoices' %}" class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #198754 !important;">
+        <div class="card-body py-3">
+          <div class="mb-2"><i class="bi bi-file-earmark-text-fill fs-2 text-success"></i></div>
+          <h6 class="card-title fw-bold mb-0">Invoices</h6>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+    <a href="{% url 'billing:receipts' %}" class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #198754 !important;">
+        <div class="card-body py-3">
+          <div class="mb-2"><i class="bi bi-receipt-cutoff fs-2 text-success"></i></div>
+          <h6 class="card-title fw-bold mb-0">Receipts</h6>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+    <a href="{% url 'billing:payments_register' %}" class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #198754 !important;">
+        <div class="card-body py-3">
+          <div class="mb-2"><i class="bi bi-journal-check fs-2 text-success"></i></div>
+          <h6 class="card-title fw-bold mb-0">Payments</h6>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+    <a href="{% url 'billing:shift_sessions_report' %}" class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #198754 !important;">
+        <div class="card-body py-3">
+          <div class="mb-2"><i class="bi bi-clock-history fs-2 text-success"></i></div>
+          <h6 class="card-title fw-bold mb-0">Shifts</h6>
+        </div>
+      </div>
+    </a>
   </div>
 </div>
 {% endif %}
+
+<!-- ===== Pending Actions ===== -->
+{% if exception_counts %}
+<h5 class="text-muted fw-semibold mb-3"><i class="bi bi-bell me-1"></i> Pending Actions</h5>
+<div class="row g-3 mb-4">
+  {% for label, count in exception_counts.items %}
+  {% if count %}
+  <div class="col-6 col-md-4 col-lg-3">
+    <div class="card border-0 shadow-sm text-center" style="border-left: 4px solid #ffc107 !important;">
+      <div class="card-body py-3">
+        <div class="mb-1"><i class="bi bi-exclamation-circle-fill fs-2 text-warning"></i></div>
+        <h6 class="card-title fw-bold mb-1">{{ label }}</h6>
+        <span class="badge bg-warning text-dark fs-6">{{ count }}</span>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
+<style>
+  .dash-card {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    cursor: pointer;
+    border-radius: 0.75rem;
+  }
+  .dash-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 .5rem 1.5rem rgba(0,0,0,.12) !important;
+  }
+</style>
 {% endblock %}
