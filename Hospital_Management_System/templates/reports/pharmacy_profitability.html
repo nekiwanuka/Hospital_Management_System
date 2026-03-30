@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}{{ report_title }} — {{ clinic_name }}{% endblock %}
+{% block header_title %}{{ report_title }}{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>{{ report_title }}</h1><small class="text-muted">Pharmacy sales profitability and stock working capital statement.</small></div>
+  <a href="{% url 'reports:profit' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Profit Report</a>
+</div>
+
+<!-- Filters -->
+<div class="cl-card mb-4">
+  <div class="cl-card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3"><label class="form-label">From</label><input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+      <div class="col-md-3"><label class="form-label">To</label><input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+      <div class="col-md-4">
+        <label class="form-label">Branch</label>
+        <select name="branch" class="form-select form-select-sm">
+          <option value="">All Branches</option>
+          {% for b in branch_options %}<option value="{{ b.pk }}" {% if selected_branch == b.pk %}selected{% endif %}>{{ b.branch_name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2"><button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-filter"></i> Filter</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- Profitability Summary -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-3">
+    <div class="cl-stat">
+      <div class="cl-stat-icon success"><i class="bi bi-cash-stack"></i></div>
+      <div class="cl-stat-label">Sales Revenue</div>
+      <div class="cl-stat-value">{{ totals.total_fee }}</div>
+    </div>
+  </div>
+  <div class="col-sm-3">
+    <div class="cl-stat">
+      <div class="cl-stat-icon warning"><i class="bi bi-box-seam"></i></div>
+      <div class="cl-stat-label">Cost of Goods Sold</div>
+      <div class="cl-stat-value">{{ totals.total_cost }}</div>
+    </div>
+  </div>
+  <div class="col-sm-3">
+    <div class="cl-stat">
+      <div class="cl-stat-icon primary"><i class="bi bi-graph-up-arrow"></i></div>
+      <div class="cl-stat-label">Gross Profit</div>
+      <div class="cl-stat-value">{{ totals.total_profit }}</div>
+    </div>
+  </div>
+  <div class="col-sm-3">
+    <div class="cl-stat">
+      <div class="cl-stat-icon {% if margin_pct >= 0 %}success{% else %}danger{% endif %}"><i class="bi bi-percent"></i></div>
+      <div class="cl-stat-label">Profit Margin</div>
+      <div class="cl-stat-value">{{ margin_pct }}%</div>
+    </div>
+  </div>
+</div>
+
+<!-- Working Capital Statement -->
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-bank"></i> Working Capital Statement</h2></div>
+  <div class="cl-card-body p-0">
+    <table class="table table-sm mb-0">
+      <tbody>
+        <tr><td class="fw-semibold">Stock on Hand (units)</td><td class="text-end">{{ working_capital.total_units }}</td></tr>
+        <tr><td class="fw-semibold">Stock at Cost (purchase value)</td><td class="text-end">{{ working_capital.stock_cost }}</td></tr>
+        <tr><td class="fw-semibold">Stock at Retail (selling value)</td><td class="text-end">{{ working_capital.stock_retail }}</td></tr>
+        <tr class="table-info"><td class="fw-bold">Unrealised Margin in Stock</td><td class="text-end fw-bold">{{ working_capital.stock_retail|floatformat:2 }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Financial Statement -->
+<div class="cl-card mb-4">
+  <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-journal-text"></i> Pharmacy Income Statement ({{ date_from|date:"d M Y" }} — {{ date_to|date:"d M Y" }})</h2></div>
+  <div class="cl-card-body p-0">
+    <table class="table table-sm mb-0">
+      <tbody>
+        <tr><td>Sales Revenue</td><td class="text-end">{{ totals.total_fee }}</td></tr>
+        <tr><td>Less: Cost of Goods Sold</td><td class="text-end">({{ totals.total_cost }})</td></tr>
+        <tr class="table-success fw-bold"><td>Gross Profit</td><td class="text-end">{{ totals.total_profit }}</td></tr>
+        <tr><td colspan="2">&nbsp;</td></tr>
+        <tr class="table-light fw-semibold"><td colspan="2">Working Capital Position</td></tr>
+        <tr><td>Current Stock at Cost</td><td class="text-end">{{ working_capital.stock_cost }}</td></tr>
+        <tr><td>Current Stock at Retail</td><td class="text-end">{{ working_capital.stock_retail }}</td></tr>
+        <tr><td>Profit Margin</td><td class="text-end">{{ margin_pct }}%</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Sales Detail Table -->
+<div class="cl-card">
+  <div class="cl-card-header"><h2 class="cl-card-title">Sales Detail</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Branch</th>
+            <th>Patient</th>
+            <th>Medicine</th>
+            <th>Qty</th>
+            <th>Unit Price</th>
+            <th>Revenue</th>
+            <th>Cost</th>
+            <th>Profit</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td>{{ row.date|date:"d M Y" }}</td>
+            <td>{{ row.branch }}</td>
+            <td>{{ row.patient }}</td>
+            <td>{{ row.service }}</td>
+            <td>{{ row.quantity }}</td>
+            <td>{{ row.unit_price }}</td>
+            <td>{{ row.fee }}</td>
+            <td>{{ row.cost }}</td>
+            <td>{{ row.profit }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="9" class="text-center text-muted py-4">No pharmacy sales for the selected period.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.paginator.num_pages > 1 %}
+<nav class="mt-3">
+  <ul class="pagination pagination-sm justify-content-center">
+    {% if page_obj.has_previous %}
+    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}&branch={{ selected_branch }}">Previous</a></li>
+    {% endif %}
+    {% for num in page_obj.paginator.page_range %}
+    <li class="page-item {% if num == page_obj.number %}active{% endif %}"><a class="page-link" href="?page={{ num }}&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}&branch={{ selected_branch }}">{{ num }}</a></li>
+    {% endfor %}
+    {% if page_obj.has_next %}
+    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}&branch={{ selected_branch }}">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+{% endblock %}

@@ -16,6 +16,7 @@
     <a href="{% url 'pharmacy:dispense_walkin' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-person"></i> Walk-In</a>
     <a href="{% url 'pharmacy:dispense_prescription' %}" class="btn btn-outline-info btn-sm"><i class="bi bi-file-medical"></i> Prescription</a>
     <a href="{% url 'pharmacy:pharmacy_receipts' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-receipt"></i> Receipts</a>
+    <a href="{% url 'inventory:stock_transfer_report' %}" class="btn btn-outline-info btn-sm"><i class="bi bi-arrow-left-right"></i> Transfer Report</a>
   </div>
 </div>
 
@@ -112,18 +113,17 @@
   <div class="cl-card-body p-0">
     <div class="table-responsive">
       <table class="table table-sm">
-        <thead><tr><th>Name</th><th>Stock</th><th>Purchase Price</th><th>Selling Price</th><th>Expiry</th></tr></thead>
+        <thead><tr><th>Name</th><th>Stock</th><th>Selling Price</th><th>Expiry</th></tr></thead>
         <tbody>
           {% for m in medicines %}
           <tr>
             <td>{{ m.name }}</td>
             <td>{{ m.stock_quantity }}</td>
-            <td>{{ m.current_purchase_price }}</td>
             <td>{{ m.current_selling_price }}</td>
             <td>{{ m.expiry_date|date:"d M Y"|default:"—" }}</td>
           </tr>
           {% empty %}
-          <tr><td colspan="5" class="text-center text-muted py-4">No medicines found.</td></tr>
+          <tr><td colspan="4" class="text-center text-muted py-4">No medicines found.</td></tr>
           {% endfor %}
         </tbody>
       </table>

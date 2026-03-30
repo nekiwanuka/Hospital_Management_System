@@ -4,7 +4,8 @@ from datetime import timedelta
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import models, transaction
+from django.db.models import Sum
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -23,6 +24,7 @@ from apps.inventory.models import (
     Category,
     InventoryStoreProfile,
     Item,
+    StockTransfer,
     Supplier,
 )
 from apps.pharmacy.models import MedicalStoreRequest
@@ -747,3 +749,77 @@ def issue_stock(request):
         "Direct stock issue from legacy inventory items is disabled. Departments should be served from medical stores workflows.",
     )
     return redirect("inventory:medical_store_dashboard")
+
+
+@login_required
+@role_required(
+    "pharmacist",
+    "lab_technician",
+    "radiology_technician",
+    "system_admin",
+    "director",
+)
+@module_permission_required("inventory", "view")
+def stock_transfer_report(request):
+    today = timezone.localdate()
+    default_start = today - timedelta(days=30)
+    date_from = request.GET.get("date_from", "")
+    date_to = request.GET.get("date_to", "")
+    try:
+        date_from = timezone.datetime.strptime(date_from, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        date_from = default_start
+    try:
+        date_to = timezone.datetime.strptime(date_to, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        date_to = today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    transfers = branch_queryset_for_user(
+        request.user,
+        StockTransfer.objects.select_related(
+            "source_item",
+            "source_batch",
+            "destination_item",
+            "destination_batch",
+            "transferred_by",
+            "store_request",
+        )
+        .filter(
+            transferred_at__date__range=(date_from, date_to),
+        )
+        .order_by("-transferred_at"),
+    )[:200]
+
+    summary = branch_queryset_for_user(
+        request.user,
+        StockTransfer.objects.filter(
+            transferred_at__date__range=(date_from, date_to),
+        ),
+    ).aggregate(
+        total_qty=Sum("quantity"),
+        total_cost_value=Sum(
+            models.F("quantity") * models.F("unit_cost"),
+            output_field=models.DecimalField(),
+        ),
+        total_retail_value=Sum(
+            models.F("quantity") * models.F("selling_price_per_unit"),
+            output_field=models.DecimalField(),
+        ),
+    )
+
+    return render(
+        request,
+        "inventory/stock_transfer_report.html",
+        {
+            "transfers": transfers,
+            "date_from": date_from,
+            "date_to": date_to,
+            "summary": {
+                "total_qty": summary["total_qty"] or 0,
+                "total_cost_value": summary["total_cost_value"] or Decimal("0.00"),
+                "total_retail_value": summary["total_retail_value"] or Decimal("0.00"),
+            },
+        },
+    )

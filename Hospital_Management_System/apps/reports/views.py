@@ -22,7 +22,7 @@ from apps.core.permissions import (
     role_required,
 )
 from apps.emergency.models import EmergencyCase
-from apps.inventory.models import Item
+from apps.inventory.models import Batch, Item
 from apps.laboratory.models import LabRequest
 from apps.pharmacy.models import DispenseRecord
 from apps.radiology.models import ImagingRequest
@@ -968,6 +968,139 @@ def radiology_profitability_report(request):
             "rows": page_obj.object_list,
             "page_obj": page_obj,
             "totals": totals,
+            "date_from": date_from,
+            "date_to": date_to,
+            "branch_options": _report_branch_options(request.user),
+            "selected_branch": selected_branch or "",
+        },
+    )
+
+
+def _build_pharmacy_profitability_detail(user, start, end, branch_id=None):
+    records = branch_queryset_for_user(
+        user,
+        DispenseRecord.objects.select_related(
+            "medicine",
+            "patient",
+            "dispensed_by",
+            "branch",
+        )
+        .filter(dispensed_at__date__range=(start, end))
+        .order_by("-dispensed_at"),
+    )
+    if branch_id:
+        records = records.filter(branch_id=branch_id)
+
+    rows = []
+    for rec in records:
+        patient_name = (
+            f"{rec.patient.first_name} {rec.patient.last_name}".strip()
+            if rec.patient
+            else rec.walk_in_name or "Walk-in"
+        )
+        revenue = rec.total_amount
+        cost = rec.total_cost_snapshot
+        profit = rec.profit_amount
+        rows.append(
+            {
+                "date": timezone.localtime(rec.dispensed_at).date(),
+                "branch": rec.branch.branch_name if rec.branch else "-",
+                "patient": patient_name,
+                "service": rec.medicine.name,
+                "quantity": rec.quantity,
+                "unit_price": rec.unit_price,
+                "fee": revenue,
+                "cost": cost,
+                "profit": profit,
+            }
+        )
+
+    totals = records.aggregate(
+        total_fee=Coalesce(
+            Sum(
+                ExpressionWrapper(
+                    F("unit_price") * F("quantity"),
+                    output_field=DecimalField(),
+                )
+            ),
+            Decimal("0.00"),
+        ),
+        total_cost=Coalesce(Sum("total_cost_snapshot"), Decimal("0.00")),
+        total_profit=Coalesce(Sum("profit_amount"), Decimal("0.00")),
+    )
+    return rows, totals
+
+
+def _compute_pharmacy_working_capital(user, branch_id=None):
+    """Working capital = retail value of pharmacy stock on hand."""
+    batches = branch_queryset_for_user(
+        user,
+        Batch.objects.filter(
+            item__store_department="pharmacy",
+            quantity_remaining__gt=0,
+        ),
+    )
+    if branch_id:
+        batches = batches.filter(branch_id=branch_id)
+
+    agg = batches.aggregate(
+        stock_cost=Coalesce(
+            Sum(
+                ExpressionWrapper(
+                    F("quantity_remaining") * F("unit_cost"),
+                    output_field=DecimalField(),
+                )
+            ),
+            Decimal("0.00"),
+        ),
+        stock_retail=Coalesce(
+            Sum(
+                ExpressionWrapper(
+                    F("quantity_remaining") * F("selling_price_per_unit"),
+                    output_field=DecimalField(),
+                )
+            ),
+            Decimal("0.00"),
+        ),
+        total_units=Coalesce(Sum("quantity_remaining"), 0),
+    )
+    return agg
+
+
+@login_required
+@role_required("receptionist", "system_admin", "director")
+@module_permission_required("reports", "view")
+def pharmacy_profitability_report(request):
+    date_from, date_to = _date_range_from_request(request)
+    selected_branch = _parse_branch_filter(request.user, request.GET.get("branch"))
+    rows, totals = _build_pharmacy_profitability_detail(
+        request.user,
+        date_from,
+        date_to,
+        branch_id=selected_branch,
+    )
+    working_capital = _compute_pharmacy_working_capital(
+        request.user,
+        branch_id=selected_branch,
+    )
+    page_obj = Paginator(rows, 25).get_page(request.GET.get("page"))
+
+    margin_pct = Decimal("0.00")
+    if totals["total_fee"] > 0:
+        margin_pct = (
+            totals["total_profit"] / totals["total_fee"] * Decimal("100")
+        ).quantize(Decimal("0.01"))
+
+    return render(
+        request,
+        "reports/pharmacy_profitability.html",
+        {
+            "report_title": "Pharmacy Profitability & Working Capital",
+            "rows": page_obj.object_list,
+            "page_obj": page_obj,
+            "totals": totals,
+            "working_capital": working_capital,
+            "margin_pct": margin_pct,
             "date_from": date_from,
             "date_to": date_to,
             "branch_options": _report_branch_options(request.user),

@@ -5,7 +5,12 @@
 {% block content %}
 <div class="cl-page-header">
   <div><h1>Gross Profit Report</h1></div>
-  <a href="{% url 'reports:index' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Reports</a>
+  <div>
+    <a href="{% url 'reports:laboratory_profitability' %}" class="btn btn-outline-info btn-sm"><i class="bi bi-droplet"></i> Lab Detail</a>
+    <a href="{% url 'reports:radiology_profitability' %}" class="btn btn-outline-info btn-sm"><i class="bi bi-radioactive"></i> Radiology Detail</a>
+    <a href="{% url 'reports:pharmacy_profitability' %}" class="btn btn-outline-success btn-sm"><i class="bi bi-capsule"></i> Pharmacy Profitability</a>
+    <a href="{% url 'reports:index' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Reports</a>
+  </div>
 </div>
 
 <!-- Filters -->

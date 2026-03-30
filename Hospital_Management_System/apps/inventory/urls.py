@@ -34,4 +34,9 @@ urlpatterns = [
         views.update_store_request_status,
         name="update_store_request_status",
     ),
+    path(
+        "transfers/",
+        views.stock_transfer_report,
+        name="stock_transfer_report",
+    ),
 ]

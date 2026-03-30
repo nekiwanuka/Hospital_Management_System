@@ -17,5 +17,10 @@ urlpatterns = [
         views.radiology_profitability_report,
         name="radiology_profitability",
     ),
+    path(
+        "profit/pharmacy/",
+        views.pharmacy_profitability_report,
+        name="pharmacy_profitability",
+    ),
     path("export/", views.export_report, name="export"),
 ]
