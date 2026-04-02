@@ -11,6 +11,10 @@ VENV="/home/jbeiqmqv/virtualenv/hms/Hospital_Management_System/3.13"
 PYTHON="$VENV/bin/python"
 PIP="$VENV/bin/pip"
 
+echo "── Clearing Python bytecode cache ──"
+find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+find . -type f -name '*.pyc' -delete 2>/dev/null || true
+
 echo "── Installing / upgrading dependencies ──"
 $PIP install --upgrade pip
 $PIP install -r requirements.txt

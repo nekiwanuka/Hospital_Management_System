@@ -90,11 +90,11 @@
             <td class="text-center">
               {% if sr.status == 'pending' %}
               <div class="d-flex gap-1 justify-content-center">
-                <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#approveModal{{ sr.pk }}" title="Approve"><i class="bi bi-check-lg"></i></button>
+                <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#fulfillModal{{ sr.pk }}" title="Approve &amp; Release Stock"><i class="bi bi-box-arrow-right"></i> Fulfill</button>
                 <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal{{ sr.pk }}" title="Reject"><i class="bi bi-x-lg"></i></button>
               </div>
               {% elif sr.status == 'approved' %}
-              <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#fulfillModal{{ sr.pk }}" title="Mark Fulfilled"><i class="bi bi-box-arrow-right"></i> Fulfill</button>
+              <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#fulfillModal{{ sr.pk }}" title="Release Stock"><i class="bi bi-box-arrow-right"></i> Fulfill</button>
               {% else %}
               <small class="text-muted">{{ sr.handled_by.get_full_name|default:"—" }}</small>
               {% endif %}
@@ -114,31 +114,6 @@
 {% if can_manage_store_requests %}
 {% for sr in store_requests %}
 {% if sr.status == 'pending' %}
-<!-- Approve Modal -->
-<div class="modal fade" id="approveModal{{ sr.pk }}" tabindex="-1">
-  <div class="modal-dialog modal-sm">
-    <form method="post" action="{% url 'inventory:update_store_request_status' sr.pk 'approve' %}">
-      {% csrf_token %}
-      <input type="hidden" name="next" value="{{ request.get_full_path }}">
-      <div class="modal-content">
-        <div class="modal-header bg-success bg-opacity-10">
-          <h5 class="modal-title"><i class="bi bi-check-circle text-success"></i> Approve Request</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <p class="mb-2"><strong>{% if sr.item %}{{ sr.item.item_name }}{% elif sr.stock_item %}{{ sr.stock_item }}{% else %}{{ sr.medicine_name }}{% endif %}</strong> &times; {{ sr.quantity_requested }}</p>
-          <p class="mb-2 text-muted small">Requested by {{ sr.requested_by.get_full_name|default:sr.requested_by.username }}</p>
-          <label class="form-label">Remarks <span class="text-danger">*</span></label>
-          <textarea name="remarks" class="form-control form-control-sm" rows="2" required placeholder="Approval remarks..."></textarea>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check-lg"></i> Approve</button>
-        </div>
-      </div>
-    </form>
-  </div>
-</div>
 <!-- Reject Modal -->
 <div class="modal fade" id="rejectModal{{ sr.pk }}" tabindex="-1">
   <div class="modal-dialog modal-sm">
@@ -165,7 +140,7 @@
   </div>
 </div>
 {% endif %}
-{% if sr.status == 'approved' %}
+{% if sr.status == 'pending' or sr.status == 'approved' %}
 <!-- Fulfill Modal -->
 <div class="modal fade" id="fulfillModal{{ sr.pk }}" tabindex="-1">
   <div class="modal-dialog modal-sm">
@@ -174,18 +149,19 @@
       <input type="hidden" name="next" value="{{ request.get_full_path }}">
       <div class="modal-content">
         <div class="modal-header bg-info bg-opacity-10">
-          <h5 class="modal-title"><i class="bi bi-box-arrow-right text-info"></i> Fulfill &amp; Release Stock</h5>
+          <h5 class="modal-title"><i class="bi bi-box-arrow-right text-info"></i> Approve &amp; Release Stock</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
           <p class="mb-2"><strong>{% if sr.item %}{{ sr.item.item_name }}{% elif sr.stock_item %}{{ sr.stock_item }}{% else %}{{ sr.medicine_name }}{% endif %}</strong> &times; {{ sr.quantity_requested }}</p>
-          <p class="mb-2 text-muted small">Approved for {{ sr.get_requested_for_display }}</p>
+          <p class="mb-2 text-muted small">Requested for {{ sr.get_requested_for_display }} by {{ sr.requested_by.get_full_name|default:sr.requested_by.username }}</p>
+          <div class="alert alert-info py-1 px-2 small mb-2"><i class="bi bi-info-circle"></i> This will deduct {{ sr.quantity_requested }} units from the source store and add them to {{ sr.get_requested_for_display }}.</div>
           <label class="form-label">Fulfillment notes</label>
           <textarea name="remarks" class="form-control form-control-sm" rows="2" placeholder="Optional notes..."></textarea>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-sm btn-info"><i class="bi bi-box-arrow-right"></i> Fulfill</button>
+          <button type="submit" class="btn btn-sm btn-info"><i class="bi bi-box-arrow-right"></i> Approve &amp; Fulfill</button>
         </div>
       </div>
     </form>
