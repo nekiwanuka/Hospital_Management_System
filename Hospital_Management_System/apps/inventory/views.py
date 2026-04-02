@@ -452,15 +452,17 @@ def medical_store_entry(request, store=None):
                 form.add_error(None, "Your user account has no branch assigned.")
             else:
                 with transaction.atomic():
+                    existing_item_id = form.cleaned_data.get("existing_item_id")
+
                     category = form.cleaned_data["category"]
-                    if not category:
+                    if not category and not existing_item_id:
                         category, _ = Category.objects.get_or_create(
                             branch=request.user.branch,
                             name=form.cleaned_data["_new_category_name"],
                         )
 
                     brand = form.cleaned_data["brand"]
-                    if not brand:
+                    if not brand and not existing_item_id:
                         brand, _ = Brand.objects.get_or_create(
                             branch=request.user.branch,
                             name=form.cleaned_data["_new_brand_name"],
@@ -481,22 +483,34 @@ def medical_store_entry(request, store=None):
                             },
                         )
 
-                    item = (
-                        Item.objects.filter(
+                    # Resolve item: existing catalogue item or find/create
+                    item = None
+                    if existing_item_id:
+                        item = Item.objects.filter(
                             branch=request.user.branch,
-                            item_name=form.cleaned_data["item_name"],
-                            strength=form.cleaned_data.get("strength", ""),
-                            brand=brand,
-                            store_department=store,
+                            pk=existing_item_id,
+                        ).first()
+
+                    if not item:
+                        item = (
+                            Item.objects.filter(
+                                branch=request.user.branch,
+                                item_name=form.cleaned_data["item_name"],
+                                strength=form.cleaned_data.get("strength", ""),
+                                brand=brand,
+                                store_department=store,
+                            )
+                            .order_by("id")
+                            .first()
                         )
-                        .order_by("id")
-                        .first()
-                    )
+
                     if not item:
                         item = Item.objects.create(
                             branch=request.user.branch,
                             item_name=form.cleaned_data["item_name"],
+                            sku=form.cleaned_data.get("sku", ""),
                             generic_name=form.cleaned_data.get("generic_name", ""),
+                            item_type=form.cleaned_data.get("item_type", "medicine"),
                             category=category,
                             brand=brand,
                             dosage_form=form.cleaned_data["dosage_form"],
@@ -509,6 +523,15 @@ def medical_store_entry(request, store=None):
                             service_code=form.cleaned_data.get("service_code", ""),
                             reorder_level=form.cleaned_data["reorder_level"],
                             description=form.cleaned_data.get("description", ""),
+                            control_status=form.cleaned_data.get(
+                                "control_status", "none"
+                            ),
+                            storage_class=form.cleaned_data.get(
+                                "storage_class", "room_temp"
+                            ),
+                            batch_tracking=form.cleaned_data.get(
+                                "batch_tracking", True
+                            ),
                             is_active=True,
                             default_pack_size_units=form.cleaned_data[
                                 "pack_size_units"
@@ -518,7 +541,9 @@ def medical_store_entry(request, store=None):
                         update_fields = []
                         updates = {
                             "generic_name": form.cleaned_data.get("generic_name", ""),
-                            "category": category,
+                            "item_type": form.cleaned_data.get(
+                                "item_type", item.item_type
+                            ),
                             "dosage_form": form.cleaned_data["dosage_form"],
                             "unit_of_measure": form.cleaned_data["unit_of_measure"],
                             "pack_size": form.cleaned_data.get("pack_size", ""),
@@ -527,10 +552,24 @@ def medical_store_entry(request, store=None):
                             "service_code": form.cleaned_data.get("service_code", ""),
                             "reorder_level": form.cleaned_data["reorder_level"],
                             "description": form.cleaned_data.get("description", ""),
+                            "control_status": form.cleaned_data.get(
+                                "control_status", item.control_status
+                            ),
+                            "storage_class": form.cleaned_data.get(
+                                "storage_class", item.storage_class
+                            ),
+                            "batch_tracking": form.cleaned_data.get(
+                                "batch_tracking", item.batch_tracking
+                            ),
                             "default_pack_size_units": form.cleaned_data[
                                 "pack_size_units"
                             ],
                         }
+                        if not existing_item_id:
+                            updates["category"] = category
+                        if form.cleaned_data.get("sku"):
+                            updates["sku"] = form.cleaned_data["sku"]
+
                         for field_name, field_value in updates.items():
                             if getattr(item, field_name) != field_value:
                                 setattr(item, field_name, field_value)
@@ -551,7 +590,10 @@ def medical_store_entry(request, store=None):
                         )
                     else:
                         try:
-                            batch = Batch.objects.create(
+                            selling_override = form.cleaned_data.get(
+                                "selling_price_override", False
+                            )
+                            batch_kwargs = dict(
                                 branch=request.user.branch,
                                 item=item,
                                 batch_number=form.cleaned_data["batch_number"],
@@ -569,12 +611,22 @@ def medical_store_entry(request, store=None):
                                     "purchase_price_total"
                                 ],
                                 target_margin=form.cleaned_data["target_profit_margin"],
+                                selling_price_override=selling_override,
                                 supplier=supplier,
                                 barcode=form.cleaned_data.get("batch_barcode", ""),
                                 weight=form.cleaned_data.get("weight", ""),
                                 volume=form.cleaned_data.get("volume", ""),
+                                location=form.cleaned_data.get("location", ""),
                                 created_by=request.user,
                             )
+                            if selling_override and form.cleaned_data.get(
+                                "manual_selling_price"
+                            ):
+                                batch_kwargs["selling_price_per_unit"] = (
+                                    form.cleaned_data["manual_selling_price"]
+                                )
+
+                            batch = Batch.objects.create(**batch_kwargs)
                             record_stock_entry(
                                 batch,
                                 request.user,

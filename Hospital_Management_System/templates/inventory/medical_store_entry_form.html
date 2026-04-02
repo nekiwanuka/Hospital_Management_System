@@ -27,6 +27,31 @@
 .price-preview .val{font-size:1.3rem;font-weight:700;color:#0d6efd}
 .price-preview .lbl{font-size:.72rem;color:#555;text-transform:uppercase}
 
+/* ── Autocomplete ─────────────────────────────────────── */
+.ac-wrapper{position:relative}
+.ac-list{position:absolute;z-index:999;width:100%;max-height:260px;overflow-y:auto;background:#fff;border:1px solid #dee2e6;border-radius:.5rem;margin-top:2px;box-shadow:0 4px 16px rgba(0,0,0,.12);display:none}
+.ac-list.show{display:block}
+.ac-item{padding:.5rem .75rem;cursor:pointer;font-size:.85rem;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center}
+.ac-item:hover,.ac-item.active{background:#e8f4fd}
+.ac-item .ac-meta{font-size:.72rem;color:#888}
+.ac-item .ac-stock{font-size:.72rem;padding:.15rem .45rem;border-radius:.25rem;background:#e8f4fd;color:#0a58ca;font-weight:600}
+.ac-empty{padding:.75rem;text-align:center;color:#888;font-size:.82rem}
+.ac-create-btn{padding:.5rem .75rem;cursor:pointer;font-size:.85rem;background:#f0f7ff;color:#0d6efd;font-weight:600;border-top:2px solid #b6d4fe}
+.ac-create-btn:hover{background:#d4eafc}
+
+/* ── Medicine-specific fields ─────────────────────────── */
+.med-field{transition:opacity .3s,max-height .3s;overflow:hidden}
+.med-field.hidden-field{opacity:.4;pointer-events:none}
+
+/* ── Override section ─────────────────────────────────── */
+.override-section{background:#fff8e1;border:1px solid #ffe082;border-radius:.5rem;padding:.75rem;margin-top:.5rem;display:none}
+.override-section.show{display:block}
+
+/* ── Keyboard shortcut badge ──────────────────────────── */
+.kbd-hint{position:fixed;bottom:1rem;right:1rem;z-index:1000;background:rgba(0,0,0,.8);color:#fff;padding:.75rem 1rem;border-radius:.5rem;font-size:.75rem;display:none}
+.kbd-hint.show{display:block}
+.kbd-hint kbd{display:inline-block;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);border-radius:.2rem;padding:.1rem .35rem;font-size:.7rem;margin:0 .1rem}
+
 /* ── Instruction panel ────────────────────────────────── */
 .instr-panel{background:#fffde7;border:1px solid #ffe082;border-radius:.75rem;padding:1.25rem;margin-top:2rem}
 .instr-panel h5{font-size:.95rem;font-weight:700;color:#f57f17;margin-bottom:.8rem}
@@ -41,58 +66,90 @@
   <div><h1><i class="bi bi-box-seam"></i> {{ page_title }}</h1>
     <p class="text-muted mb-0" style="font-size:.85rem">Record new stock received from a supplier into <strong>{{ store_label }}</strong>.</p>
   </div>
-  <a href="{% url 'inventory:medical_store_dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+  <div class="d-flex gap-2">
+    <button type="button" class="btn btn-outline-info btn-sm" id="kbdToggle" title="Keyboard shortcuts"><i class="bi bi-keyboard"></i></button>
+    <a href="{% url 'inventory:medical_store_dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+  </div>
 </div>
 
 <!-- ═══ Progress Stepper ═══ -->
-<div class="step-wizard" id="stepWizard">
-  <button type="button" class="step-btn active" data-step="1"><span class="step-num">1</span> Item Identification</button>
-  <button type="button" class="step-btn" data-step="2"><span class="step-num">2</span> Batch &amp; Supplier</button>
-  <button type="button" class="step-btn" data-step="3"><span class="step-num">3</span> Pricing &amp; Quantities</button>
+<div class="step-wizard" id="stepWizard" role="tablist" aria-label="Stock entry steps">
+  <button type="button" class="step-btn active" data-step="1" role="tab" aria-selected="true" aria-controls="panel-1"><span class="step-num">1</span> Item Identification</button>
+  <button type="button" class="step-btn" data-step="2" role="tab" aria-selected="false" aria-controls="panel-2"><span class="step-num">2</span> Batch &amp; Supplier</button>
+  <button type="button" class="step-btn" data-step="3" role="tab" aria-selected="false" aria-controls="panel-3"><span class="step-num">3</span> Pricing &amp; Quantities</button>
 </div>
 
 <div class="cl-card">
   <div class="cl-card-body">
     <form method="post" novalidate id="stockEntryForm">
       {% csrf_token %}
+      {{ form.existing_item_id }}
 
       {% if form.non_field_errors %}
-      <div class="alert alert-danger mb-3">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>
+      <div class="alert alert-danger mb-3" role="alert">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>
       {% endif %}
 
       <!-- ═══ STEP 1 — Item Identification ═══ -->
-      <div class="step-panel active" data-step="1">
+      <div class="step-panel active" data-step="1" id="panel-1" role="tabpanel">
         <h5 class="mb-3 text-primary"><i class="bi bi-capsule"></i> Item Identification</h5>
-        <p class="text-muted mb-3" style="font-size:.82rem">Identify the medicine or supply item. If the item already exists, the system will update its record with any new information you provide here.</p>
+        <p class="text-muted mb-3" style="font-size:.82rem">Search for an existing catalogue item or enter a new one. Press <kbd>/</kbd> to focus search, <kbd>N</kbd> to add a new item.</p>
+
+        <!-- Autocomplete search wrapper -->
+        <div class="row g-3 mb-3">
+          <div class="col-12">
+            <label for="{{ form.item_name.id_for_label }}" class="form-label">
+              Item Name / Search
+              <span class="text-danger">*</span>
+              <span class="field-tip" tabindex="0" role="button" aria-label="Help: Trade/brand name as printed on packaging. Type to search existing items or scan a barcode." title="Trade/brand name as printed on packaging. Type to search existing items or scan a barcode.">?</span>
+            </label>
+            <div class="ac-wrapper">
+              {{ form.item_name }}
+              <div class="ac-list" id="acList" role="listbox" aria-label="Item suggestions"></div>
+            </div>
+            {% for err in form.item_name.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+            <div class="form-text" id="selectedItemInfo" style="display:none">
+              <i class="bi bi-check-circle text-success"></i> <span id="selectedItemLabel"></span>
+              <button type="button" class="btn btn-link btn-sm p-0 ms-2" id="clearSelectedItem">Clear</button>
+            </div>
+          </div>
+        </div>
 
         <div class="row g-3">
-          {% with fld=form.item_name %}
-          <div class="col-md-6">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+          {% with fld=form.item_type %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.sku %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
           {% endwith %}
 
           {% with fld=form.generic_name %}
-          <div class="col-md-6">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+          <div class="col-md-4 med-field">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
           {% endwith %}
 
           {% with fld=form.dosage_form %}
-          <div class="col-md-4">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+          <div class="col-md-4 med-field">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
           {% endwith %}
 
           {% with fld=form.strength %}
-          <div class="col-md-4">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+          <div class="col-md-4 med-field">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
@@ -100,7 +157,7 @@
 
           {% with fld=form.unit_of_measure %}
           <div class="col-md-4">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
@@ -108,7 +165,7 @@
 
           {% with fld=form.category %}
           <div class="col-md-4">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
@@ -116,7 +173,7 @@
 
           {% with fld=form.new_category_name %}
           <div class="col-md-4">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
@@ -124,7 +181,7 @@
 
           {% with fld=form.brand %}
           <div class="col-md-4">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
@@ -132,7 +189,7 @@
 
           {% with fld=form.new_brand_name %}
           <div class="col-md-4">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
@@ -140,7 +197,7 @@
 
           {% with fld=form.pack_size %}
           <div class="col-md-4">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
@@ -148,15 +205,40 @@
 
           {% with fld=form.barcode %}
           <div class="col-md-4">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
           {% endwith %}
 
+          {% with fld=form.control_status %}
+          <div class="col-md-4 med-field">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.storage_class %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.batch_tracking %}
+          <div class="col-md-4 d-flex align-items-end">
+            <div class="form-check">
+              {{ fld }}
+              <label for="{{ fld.id_for_label }}" class="form-check-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
+            </div>
+          </div>
+          {% endwith %}
+
           {% with fld=form.reorder_level %}
           <div class="col-md-4">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
@@ -164,7 +246,7 @@
 
           {% with fld=form.description %}
           <div class="col-12">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
@@ -182,14 +264,14 @@
       </div>
 
       <!-- ═══ STEP 2 — Batch & Supplier ═══ -->
-      <div class="step-panel" data-step="2">
+      <div class="step-panel" data-step="2" id="panel-2" role="tabpanel">
         <h5 class="mb-3 text-primary"><i class="bi bi-truck"></i> Batch &amp; Supplier Details</h5>
         <p class="text-muted mb-3" style="font-size:.82rem">Enter the batch information from the delivery note or invoice, and identify the supplier.</p>
 
         <div class="row g-3">
           {% with fld=form.batch_number %}
           <div class="col-md-4">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
@@ -197,7 +279,7 @@
 
           {% with fld=form.mfg_date %}
           <div class="col-md-4">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
@@ -205,7 +287,7 @@
 
           {% with fld=form.exp_date %}
           <div class="col-md-4">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
@@ -213,7 +295,7 @@
 
           {% with fld=form.batch_barcode %}
           <div class="col-md-4">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
@@ -221,7 +303,7 @@
 
           {% with fld=form.weight %}
           <div class="col-md-4">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
@@ -229,7 +311,15 @@
 
           {% with fld=form.volume %}
           <div class="col-md-4">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.location %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
@@ -241,7 +331,7 @@
         <div class="row g-3">
           {% with fld=form.supplier %}
           <div class="col-md-6">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
@@ -249,7 +339,7 @@
 
           {% with fld=form.new_supplier_name %}
           <div class="col-md-6">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
@@ -257,7 +347,7 @@
 
           {% with fld=form.supplier_contact %}
           <div class="col-md-6">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
@@ -265,7 +355,7 @@
 
           {% with fld=form.supplier_address %}
           <div class="col-md-6">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
@@ -279,35 +369,39 @@
       </div>
 
       <!-- ═══ STEP 3 — Pricing & Quantities ═══ -->
-      <div class="step-panel" data-step="3">
+      <div class="step-panel" data-step="3" id="panel-3" role="tabpanel">
         <h5 class="mb-3 text-primary"><i class="bi bi-calculator"></i> Pricing &amp; Quantities</h5>
-        <p class="text-muted mb-3" style="font-size:.82rem">Enter pack sizes, quantities received, and purchase price. The system auto-calculates unit cost and selling price from your target margin.</p>
+        <p class="text-muted mb-3" style="font-size:.82rem">Enter pack sizes, quantities, and purchase price. The system auto-calculates unit cost and selling price from your target margin. Press <kbd>M</kbd> to focus margin input.</p>
 
         <!-- Live price preview -->
-        <div class="price-preview" id="pricePreview">
+        <div class="price-preview" id="pricePreview" aria-live="polite">
           <h6><i class="bi bi-graph-up-arrow"></i> Live Price Preview</h6>
           <div class="row g-2">
             <div class="col-4">
-              <div class="val" id="prevUnitCost">—</div>
+              <div class="val" id="prevUnitCost" aria-label="Calculated unit cost">—</div>
               <div class="lbl">Unit Cost</div>
             </div>
             <div class="col-4">
-              <div class="val" id="prevSelling">—</div>
+              <div class="val" id="prevSelling" aria-label="Calculated selling price">—</div>
               <div class="lbl">Selling Price</div>
             </div>
             <div class="col-4">
-              <div class="val" id="prevProfit">—</div>
+              <div class="val" id="prevProfit" aria-label="Calculated profit per unit">—</div>
               <div class="lbl">Profit / Unit</div>
             </div>
           </div>
           <div class="row g-2 mt-2">
-            <div class="col-6">
-              <div class="val" id="prevTotalUnits">—</div>
+            <div class="col-4">
+              <div class="val" id="prevTotalUnits" aria-label="Total units received">—</div>
               <div class="lbl">Total Units</div>
             </div>
-            <div class="col-6">
-              <div class="val" id="prevTotalCost">—</div>
+            <div class="col-4">
+              <div class="val" id="prevTotalCost" aria-label="Total purchase cost">—</div>
               <div class="lbl">Total Purchase Cost</div>
+            </div>
+            <div class="col-4">
+              <div class="val" id="prevGrossProfit" aria-label="Estimated gross profit">—</div>
+              <div class="lbl">Est. Gross Profit</div>
             </div>
           </div>
         </div>
@@ -315,7 +409,7 @@
         <div class="row g-3">
           {% with fld=form.pack_size_units %}
           <div class="col-md-4">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
@@ -323,7 +417,7 @@
 
           {% with fld=form.packs_received %}
           <div class="col-md-4">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
@@ -331,7 +425,7 @@
 
           {% with fld=form.purchase_price_per_pack %}
           <div class="col-md-4">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             {{ fld }}
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
@@ -339,7 +433,7 @@
 
           {% with fld=form.target_profit_margin %}
           <div class="col-md-4">
-            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" title="{{ fld.help_text }}">?</span></label>
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             <div class="input-group">
               {{ fld }}
               <span class="input-group-text">%</span>
@@ -347,6 +441,29 @@
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
           {% endwith %}
+
+          <!-- Selling price override -->
+          <div class="col-md-8">
+            <div class="override-section" id="overrideSection">
+              <div class="row g-2 align-items-end">
+                <div class="col-auto">
+                  <div class="form-check">
+                    {{ form.selling_price_override }}
+                    <label for="{{ form.selling_price_override.id_for_label }}" class="form-check-label">
+                      Override auto-calculated price
+                      <span class="field-tip" tabindex="0" role="button" aria-label="Help: Set a manual selling price instead of margin-based calculation" title="Set a manual selling price instead of margin-based calculation">?</span>
+                    </label>
+                  </div>
+                </div>
+                <div class="col" id="manualPriceCol" style="display:none">
+                  <label for="{{ form.manual_selling_price.id_for_label }}" class="form-label">Selling Price Per Unit</label>
+                  {{ form.manual_selling_price }}
+                  {% for err in form.manual_selling_price.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+                </div>
+              </div>
+            </div>
+            <button type="button" class="btn btn-outline-warning btn-sm mt-2" id="showOverrideBtn"><i class="bi bi-pencil-square"></i> Manual price override</button>
+          </div>
         </div>
 
         <div class="d-flex justify-content-between mt-4">
@@ -359,17 +476,141 @@
   </div>
 </div>
 
+<!-- ═══ New Catalogue Item Modal ═══ -->
+<div class="modal fade" id="newItemModal" tabindex="-1" aria-labelledby="newItemModalLabel" aria-modal="true" role="dialog">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="newItemModalLabel"><i class="bi bi-plus-circle"></i> Add New Catalogue Item</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Display Name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="modalItemName" required aria-required="true">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">SKU</label>
+            <input type="text" class="form-control" id="modalSku">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Item Type <span class="text-danger">*</span></label>
+            <select class="form-select" id="modalItemType" aria-required="true">
+              <option value="medicine">Medicine</option>
+              <option value="supply">Healthcare Supply</option>
+              <option value="device">Medical Device</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Unit of Measure <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="modalUom" required aria-required="true" placeholder="e.g. tablet, ml, vial">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Barcode</label>
+            <input type="text" class="form-control" id="modalBarcode">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Category</label>
+            <select class="form-select" id="modalCategory"><option value="">— Select or type new —</option></select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">New Category Name</label>
+            <input type="text" class="form-control" id="modalNewCategory" placeholder="If not in list above">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Brand</label>
+            <select class="form-select" id="modalBrand"><option value="">— Select or type new —</option></select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">New Brand Name</label>
+            <input type="text" class="form-control" id="modalNewBrand" placeholder="If not in list above">
+          </div>
+          <!-- Medicine-specific fields -->
+          <div class="col-12" id="modalMedFields">
+            <hr><h6 class="text-secondary">Medicine-specific Fields</h6>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label">Generic Name</label>
+                <input type="text" class="form-control" id="modalGenericName">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Dosage Form</label>
+                <select class="form-select" id="modalDosageForm">
+                  <option value="tablet">Tablet</option><option value="syrup">Syrup</option><option value="injection">Injection</option>
+                  <option value="cream">Cream</option><option value="capsule">Capsule</option><option value="drops">Drops</option>
+                  <option value="ointment">Ointment</option><option value="solution">Solution</option><option value="suspension">Suspension</option>
+                  <option value="powder">Powder</option><option value="gel">Gel</option><option value="suppository">Suppository</option>
+                  <option value="inhaler">Inhaler</option><option value="patch">Patch</option><option value="device">Device</option>
+                  <option value="reagent">Reagent</option><option value="consumable">Consumable</option><option value="other">Other</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Strength</label>
+                <input type="text" class="form-control" id="modalStrength" placeholder="e.g. 500mg">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Control Status</label>
+                <select class="form-select" id="modalControlStatus">
+                  <option value="none">Not Controlled</option><option value="prescription">Prescription Only</option>
+                  <option value="controlled">Controlled Substance</option><option value="narcotic">Narcotic</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Storage Class</label>
+            <select class="form-select" id="modalStorageClass">
+              <option value="room_temp">Room Temperature</option><option value="cool">Cool (8-15°C)</option>
+              <option value="refrigerated">Refrigerated (2-8°C)</option><option value="frozen">Frozen (&lt;-10°C)</option>
+              <option value="protected_light">Protected from Light</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Pack Size</label>
+            <input type="text" class="form-control" id="modalPackSize" placeholder="e.g. 10x10">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Default Pack Units</label>
+            <input type="number" class="form-control" id="modalDefaultPackUnits" value="1" min="1">
+          </div>
+          <div class="col-md-4 d-flex align-items-end">
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="modalBatchTracking" checked>
+              <label for="modalBatchTracking" class="form-check-label">Batch Tracking</label>
+            </div>
+          </div>
+        </div>
+        <div id="modalErrors" class="alert alert-danger mt-3" style="display:none" role="alert"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveNewItemBtn"><i class="bi bi-check"></i> Save &amp; Select</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Keyboard shortcuts overlay ═══ -->
+<div class="kbd-hint" id="kbdHint" role="status" aria-live="polite">
+  <strong>Keyboard Shortcuts</strong><br>
+  <kbd>/</kbd> Focus item search &nbsp;
+  <kbd>N</kbd> New item modal &nbsp;
+  <kbd>M</kbd> Focus margin input &nbsp;
+  <kbd>Esc</kbd> Close modal/dropdown
+</div>
+
 <!-- ═══ Quick Reference Manual ═══ -->
 <div class="instr-panel" id="instrPanel">
   <h5><i class="bi bi-info-circle"></i> Stock Entry — Quick Reference Guide</h5>
   <ol>
     <li>
       <span class="tip-badge">Step 1</span>
-      <strong>Item Identification</strong> — Enter the product name exactly as it appears on the packaging. If the item already exists in the system, it will update the existing record rather than creating a duplicate. Fill in the generic name (INN), dosage form, strength, and unit of measure.
+      <strong>Item Search</strong> — Start typing the product name to search existing catalogue items. Use a barcode scanner to auto-fill from product barcodes. If the item doesn't exist, click <strong>"Add New Item"</strong> or press <kbd>N</kbd>.
     </li>
     <li>
       <span class="tip-badge">Step 1</span>
-      <strong>Category &amp; Brand</strong> — Select from existing options, or type a new one in the "new" field. You only need one or the other — not both.
+      <strong>Item Type</strong> — Select "Medicine" for drugs, "Supply" for reagents/consumables, or "Device" for equipment. Medicine-specific fields (dosage, strength, control status) appear only for medicines.
     </li>
     <li>
       <span class="tip-badge">Step 2</span>
@@ -380,28 +621,24 @@
       <strong>Expiry Date</strong> — Must be a future date. Expired stock cannot be entered. Items approaching expiry (within 30 days) will appear in dashboard alerts.
     </li>
     <li>
-      <span class="tip-badge">Step 2</span>
-      <strong>Supplier</strong> — Select an existing supplier or add a new one. Supplier records help with purchase order tracking and auditing.
-    </li>
-    <li>
       <span class="tip-badge">Step 3</span>
       <strong>Pack Size Units</strong> — Number of individual sellable units in ONE pack. Example: a box of 100 tablets = 100 units.
     </li>
     <li>
       <span class="tip-badge">Step 3</span>
-      <strong>Packs Received</strong> — How many packs arrived. Total units = Pack Size Units &times; Packs Received.
-    </li>
-    <li>
-      <span class="tip-badge">Step 3</span>
-      <strong>Purchase Price</strong> — The amount paid for ONE pack (not per unit). The system auto-calculates unit cost = purchase price &divide; pack size.
+      <strong>Purchase Price</strong> — The amount paid for ONE pack (not per unit). The system auto-calculates unit cost = purchase price / pack size.
     </li>
     <li>
       <span class="tip-badge">Step 3</span>
       <strong>Target Profit Margin</strong> — Set as a percentage (0-99%). Selling price is calculated as: unit cost &divide; (1 &minus; margin/100). A 25% margin on a 100 UGX unit cost gives a 133 UGX selling price.
     </li>
     <li>
-      <span class="tip-badge">Tip</span>
-      <strong>Duplicate Batches</strong> — The same batch number cannot be entered twice for the same item. If you receive more of an existing batch, enter it as a new delivery with a different batch identifier.
+      <span class="tip-badge">Step 3</span>
+      <strong>Manual Override</strong> — Click "Manual price override" to set a custom selling price instead of auto-calculating from margin.
+    </li>
+    <li>
+      <span class="tip-badge">Security</span>
+      <strong>Price Visibility</strong> — Purchase cost and profit margins are visible <em>only</em> on this entry screen and in Finance reports. Pharmacy staff see only selling prices. Lab and radiology technicians see no prices at all.
     </li>
   </ol>
 </div>
@@ -414,12 +651,17 @@
   const form = document.getElementById('stockEntryForm');
   const panels = form.querySelectorAll('.step-panel');
   const btns = document.querySelectorAll('#stepWizard .step-btn');
+  const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  const storeCode = '{{ store_code }}';
+  const SEARCH_URL = '/api/inventory/catalogue/search/';
+  const CREATE_URL = '/api/inventory/catalogue/create/';
+  const LOOKUPS_URL = '/api/inventory/lookups/';
 
-  // Track which step has errors from server-side validation
+  // ── Step fields for error detection ──
   const stepFields = {
-    1: ['item_name','generic_name','dosage_form','strength','unit_of_measure','category','new_category_name','brand','new_brand_name','pack_size','barcode','reorder_level','description','store_department','service_type','service_code'],
-    2: ['batch_number','mfg_date','exp_date','batch_barcode','weight','volume','supplier','new_supplier_name','supplier_contact','supplier_address'],
-    3: ['pack_size_units','packs_received','purchase_price_per_pack','target_profit_margin']
+    1: ['item_name','generic_name','item_type','sku','dosage_form','strength','unit_of_measure','category','new_category_name','brand','new_brand_name','pack_size','barcode','control_status','storage_class','batch_tracking','reorder_level','description','store_department','service_type','service_code'],
+    2: ['batch_number','mfg_date','exp_date','batch_barcode','weight','volume','location','supplier','new_supplier_name','supplier_contact','supplier_address'],
+    3: ['pack_size_units','packs_received','purchase_price_per_pack','target_profit_margin','selling_price_override','manual_selling_price']
   };
 
   function firstStepWithError(){
@@ -427,11 +669,12 @@
       for(const name of stepFields[s]){
         const el=form.querySelector('[name="'+name+'"]');
         if(el){
-          const wrapper=el.closest('.col-md-4,.col-md-6,.col-12');
+          const wrapper=el.closest('.col-md-4,.col-md-6,.col-md-8,.col-12,.col-auto');
           if(wrapper && wrapper.querySelector('.invalid-feedback')){return s;}
         }
       }
     }
+    if(form.querySelector('.alert-danger')) return 1;
     return null;
   }
 
@@ -440,53 +683,371 @@
     btns.forEach(b=>{
       const bs=parseInt(b.dataset.step);
       b.classList.remove('active');
+      b.setAttribute('aria-selected','false');
       if(bs<n) b.classList.add('done'); else b.classList.remove('done');
     });
     form.querySelector('.step-panel[data-step="'+n+'"]').classList.add('active');
     btns[n-1].classList.add('active');
+    btns[n-1].setAttribute('aria-selected','true');
     window.scrollTo({top:0,behavior:'smooth'});
   };
 
   btns.forEach(b=>b.addEventListener('click',()=>goToStep(parseInt(b.dataset.step))));
-
-  // On page load, jump to first step that has server errors
   const errStep = firstStepWithError();
   if(errStep) goToStep(errStep);
+
+  // ── Item type dynamic fields ──
+  const itemTypeEl = document.getElementById('id_item_type');
+  function toggleMedFields(){
+    const isMed = itemTypeEl && itemTypeEl.value === 'medicine';
+    document.querySelectorAll('.med-field').forEach(el=>{
+      el.classList.toggle('hidden-field', !isMed);
+    });
+  }
+  if(itemTypeEl){
+    itemTypeEl.addEventListener('change', toggleMedFields);
+    toggleMedFields();
+  }
+
+  // ── Autocomplete ──
+  const itemNameEl = document.getElementById('id_item_name');
+  const acList = document.getElementById('acList');
+  const existingItemIdEl = document.getElementById('id_existing_item_id');
+  const selectedInfo = document.getElementById('selectedItemInfo');
+  const selectedLabel = document.getElementById('selectedItemLabel');
+  const clearBtn = document.getElementById('clearSelectedItem');
+  let acTimeout = null;
+  let acActiveIdx = -1;
+  let acItems = [];
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+  }
+
+  function showAcList(items, query){
+    acItems = items;
+    acActiveIdx = -1;
+    acList.innerHTML = '';
+    if(items.length === 0){
+      acList.innerHTML = '<div class="ac-empty">No items found for "'+escapeHtml(query)+'"</div>';
+    }
+    items.forEach((item,i) => {
+      const div = document.createElement('div');
+      div.className = 'ac-item';
+      div.setAttribute('role','option');
+      div.setAttribute('aria-selected','false');
+      div.dataset.idx = i;
+      const nameHtml = escapeHtml(item.item_name);
+      const strengthHtml = item.strength ? ' <small class="text-muted">'+escapeHtml(item.strength)+'</small>' : '';
+      const catBrand = escapeHtml((item.category_name||'')+'/'+(item.brand_name||''));
+      const barcodeHtml = item.barcode ? ' / '+escapeHtml(item.barcode) : '';
+      div.innerHTML = '<div><strong>'+nameHtml+'</strong>'+strengthHtml+'<br><span class="ac-meta">'+catBrand+barcodeHtml+'</span></div><span class="ac-stock">'+(item.quantity_on_hand||0)+' in stock</span>';
+      div.addEventListener('click', ()=>selectAcItem(item));
+      acList.appendChild(div);
+    });
+    const createDiv = document.createElement('div');
+    createDiv.className = 'ac-create-btn';
+    createDiv.innerHTML = '<i class="bi bi-plus-circle"></i> Add "'+escapeHtml(query)+'" as new catalogue item';
+    createDiv.addEventListener('click', ()=>{
+      acList.classList.remove('show');
+      document.getElementById('modalItemName').value = query;
+      loadModalLookups();
+      new bootstrap.Modal(document.getElementById('newItemModal')).show();
+    });
+    acList.appendChild(createDiv);
+    acList.classList.add('show');
+  }
+
+  function selectAcItem(item){
+    existingItemIdEl.value = item.id;
+    itemNameEl.value = item.item_name;
+    selectedLabel.textContent = item.item_name + (item.strength?' '+item.strength:'') + ' ('+(item.category_name||'')+')';
+    selectedInfo.style.display = 'block';
+    acList.classList.remove('show');
+
+    const fieldMap = {
+      'id_generic_name': item.generic_name,
+      'id_sku': item.sku,
+      'id_barcode': item.barcode,
+      'id_pack_size_units': item.default_pack_size_units,
+    };
+    for(const [id, val] of Object.entries(fieldMap)){
+      const el = document.getElementById(id);
+      if(el && val) el.value = val;
+    }
+    const selectMap = {
+      'id_item_type': item.item_type,
+      'id_dosage_form': item.dosage_form,
+      'id_control_status': item.control_status,
+      'id_storage_class': item.storage_class,
+    };
+    for(const [id, val] of Object.entries(selectMap)){
+      const el = document.getElementById(id);
+      if(el && val){ el.value = val; el.dispatchEvent(new Event('change')); }
+    }
+    if(item.unit_of_measure){
+      const el = document.getElementById('id_unit_of_measure');
+      if(el) el.value = item.unit_of_measure;
+    }
+  }
+
+  if(clearBtn){
+    clearBtn.addEventListener('click', ()=>{
+      existingItemIdEl.value = '';
+      selectedInfo.style.display = 'none';
+      itemNameEl.value = '';
+      itemNameEl.focus();
+    });
+  }
+
+  if(itemNameEl){
+    itemNameEl.addEventListener('input', function(){
+      const q = this.value.trim();
+      if(existingItemIdEl.value){
+        existingItemIdEl.value = '';
+        selectedInfo.style.display = 'none';
+      }
+      clearTimeout(acTimeout);
+      if(q.length < 1){ acList.classList.remove('show'); return; }
+      acTimeout = setTimeout(()=>{
+        fetch(SEARCH_URL+'?q='+encodeURIComponent(q)+'&store='+encodeURIComponent(storeCode), {
+          headers: {'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest'}
+        })
+        .then(r=>r.json())
+        .then(data=>showAcList(data, q))
+        .catch(()=>{ acList.classList.remove('show'); });
+      }, 250);
+    });
+
+    itemNameEl.addEventListener('keydown', function(e){
+      if(!acList.classList.contains('show')) return;
+      const items = acList.querySelectorAll('.ac-item');
+      if(e.key==='ArrowDown'){
+        e.preventDefault();
+        acActiveIdx = Math.min(acActiveIdx+1, items.length-1);
+        items.forEach((el,i)=>{el.classList.toggle('active',i===acActiveIdx);el.setAttribute('aria-selected',i===acActiveIdx?'true':'false');});
+      } else if(e.key==='ArrowUp'){
+        e.preventDefault();
+        acActiveIdx = Math.max(acActiveIdx-1, 0);
+        items.forEach((el,i)=>{el.classList.toggle('active',i===acActiveIdx);el.setAttribute('aria-selected',i===acActiveIdx?'true':'false');});
+      } else if(e.key==='Enter' && acActiveIdx>=0 && acActiveIdx<acItems.length){
+        e.preventDefault();
+        selectAcItem(acItems[acActiveIdx]);
+      } else if(e.key==='Escape'){
+        acList.classList.remove('show');
+      }
+    });
+  }
+
+  document.addEventListener('click', function(e){
+    if(!acList.contains(e.target) && e.target !== itemNameEl){
+      acList.classList.remove('show');
+    }
+  });
+
+  // ── Barcode scanning support ──
+  let barcodeBuffer = '';
+  let barcodeTimeout = null;
+  document.addEventListener('keypress', function(e){
+    if(document.activeElement && ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName) && document.activeElement !== itemNameEl) return;
+    clearTimeout(barcodeTimeout);
+    if(e.key === 'Enter' && barcodeBuffer.length >= 6){
+      e.preventDefault();
+      itemNameEl.value = barcodeBuffer;
+      itemNameEl.dispatchEvent(new Event('input'));
+      barcodeBuffer = '';
+      return;
+    }
+    barcodeBuffer += e.key;
+    barcodeTimeout = setTimeout(()=>{ barcodeBuffer = ''; }, 100);
+  });
 
   // ── Live price preview ──
   const packSizeEl = document.getElementById('id_pack_size_units');
   const packsEl = document.getElementById('id_packs_received');
   const priceEl = document.getElementById('id_purchase_price_per_pack');
   const marginEl = document.getElementById('id_target_profit_margin');
+  const overrideEl = document.getElementById('id_selling_price_override');
+  const manualPriceEl = document.getElementById('id_manual_selling_price');
 
   function updatePreview(){
     const ps = parseFloat(packSizeEl?.value)||0;
     const pk = parseFloat(packsEl?.value)||0;
     const pp = parseFloat(priceEl?.value)||0;
     const mg = parseFloat(marginEl?.value)||0;
+    const isOverride = overrideEl?.checked;
+    const manualPrice = parseFloat(manualPriceEl?.value)||0;
 
     if(ps>0 && pp>0){
       const uc = pp/ps;
-      const sp = (mg>0&&mg<100) ? uc/(1-mg/100) : uc;
+      let sp;
+      if(isOverride && manualPrice>0){
+        sp = manualPrice;
+      } else {
+        sp = (mg>0&&mg<100) ? uc/(1-mg/100) : uc;
+      }
       const pf = sp-uc;
       const tu = ps*pk;
       const tc = pk*pp;
+      const gp = pf*tu;
       document.getElementById('prevUnitCost').textContent = uc.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:4});
       document.getElementById('prevSelling').textContent = sp.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
       document.getElementById('prevProfit').textContent = pf.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:4});
       document.getElementById('prevTotalUnits').textContent = tu.toLocaleString();
       document.getElementById('prevTotalCost').textContent = tc.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+      document.getElementById('prevGrossProfit').textContent = gp.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
     } else {
-      ['prevUnitCost','prevSelling','prevProfit','prevTotalUnits','prevTotalCost'].forEach(id=>{
+      ['prevUnitCost','prevSelling','prevProfit','prevTotalUnits','prevTotalCost','prevGrossProfit'].forEach(id=>{
         document.getElementById(id).textContent='—';
       });
     }
   }
 
-  [packSizeEl,packsEl,priceEl,marginEl].forEach(el=>{
+  [packSizeEl,packsEl,priceEl,marginEl,manualPriceEl].forEach(el=>{
     if(el){el.addEventListener('input',updatePreview);el.addEventListener('change',updatePreview);}
   });
+  if(overrideEl) overrideEl.addEventListener('change', updatePreview);
   updatePreview();
+
+  // ── Selling price override toggle ──
+  const showOverrideBtn = document.getElementById('showOverrideBtn');
+  const overrideSection = document.getElementById('overrideSection');
+  const manualPriceCol = document.getElementById('manualPriceCol');
+
+  if(showOverrideBtn){
+    showOverrideBtn.addEventListener('click', ()=>{
+      overrideSection.classList.toggle('show');
+      showOverrideBtn.style.display = overrideSection.classList.contains('show') ? 'none' : '';
+    });
+  }
+  if(overrideEl){
+    overrideEl.addEventListener('change', ()=>{
+      manualPriceCol.style.display = overrideEl.checked ? '' : 'none';
+      if(!overrideEl.checked && manualPriceEl) manualPriceEl.value = '';
+      updatePreview();
+    });
+  }
+
+  // ── New Catalogue Item Modal ──
+  let modalLookupsLoaded = false;
+  function loadModalLookups(){
+    if(modalLookupsLoaded) return;
+    fetch(LOOKUPS_URL, {headers: {'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest'}})
+    .then(r=>r.json())
+    .then(data=>{
+      const catSel = document.getElementById('modalCategory');
+      const brandSel = document.getElementById('modalBrand');
+      (data.categories||[]).forEach(c=>{
+        const opt = document.createElement('option');
+        opt.value = c.id; opt.textContent = c.name;
+        catSel.appendChild(opt);
+      });
+      (data.brands||[]).forEach(b=>{
+        const opt = document.createElement('option');
+        opt.value = b.id; opt.textContent = b.name;
+        brandSel.appendChild(opt);
+      });
+      modalLookupsLoaded = true;
+    }).catch(()=>{});
+  }
+
+  const modalItemType = document.getElementById('modalItemType');
+  const modalMedFields = document.getElementById('modalMedFields');
+  if(modalItemType){
+    modalItemType.addEventListener('change', ()=>{
+      modalMedFields.style.display = modalItemType.value === 'medicine' ? '' : 'none';
+    });
+  }
+
+  document.getElementById('saveNewItemBtn')?.addEventListener('click', function(){
+    const errDiv = document.getElementById('modalErrors');
+    errDiv.style.display = 'none';
+    const name = document.getElementById('modalItemName').value.trim();
+    const uom = document.getElementById('modalUom').value.trim();
+    if(!name){ errDiv.textContent = 'Display name is required.'; errDiv.style.display = ''; return; }
+    if(!uom){ errDiv.textContent = 'Unit of measure is required.'; errDiv.style.display = ''; return; }
+
+    const payload = {
+      item_name: name,
+      sku: document.getElementById('modalSku').value.trim(),
+      item_type: modalItemType.value,
+      unit_of_measure: uom,
+      barcode: document.getElementById('modalBarcode').value.trim(),
+      category_id: document.getElementById('modalCategory').value || null,
+      new_category_name: document.getElementById('modalNewCategory').value.trim(),
+      brand_id: document.getElementById('modalBrand').value || null,
+      new_brand_name: document.getElementById('modalNewBrand').value.trim(),
+      dosage_form: document.getElementById('modalDosageForm').value,
+      generic_name: document.getElementById('modalGenericName').value.trim(),
+      strength: document.getElementById('modalStrength').value.trim(),
+      control_status: document.getElementById('modalControlStatus').value,
+      storage_class: document.getElementById('modalStorageClass').value,
+      pack_size: document.getElementById('modalPackSize').value.trim(),
+      default_pack_size_units: parseInt(document.getElementById('modalDefaultPackUnits').value)||1,
+      batch_tracking: document.getElementById('modalBatchTracking').checked,
+      store_department: storeCode,
+    };
+
+    fetch(CREATE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify(payload),
+    })
+    .then(r=>{
+      if(!r.ok) return r.json().then(d=>{throw d;});
+      return r.json();
+    })
+    .then(item=>{
+      selectAcItem(item);
+      bootstrap.Modal.getInstance(document.getElementById('newItemModal')).hide();
+    })
+    .catch(err=>{
+      let msg = 'Failed to create item.';
+      if(typeof err === 'object'){
+        msg = Object.values(err).flat().join('; ');
+      }
+      errDiv.textContent = msg;
+      errDiv.style.display = '';
+    });
+  });
+
+  // ── Keyboard shortcuts ──
+  const kbdHint = document.getElementById('kbdHint');
+  document.getElementById('kbdToggle')?.addEventListener('click', ()=>{
+    kbdHint.classList.toggle('show');
+  });
+
+  document.addEventListener('keydown', function(e){
+    const active = document.activeElement;
+    const isInput = active && ['INPUT','TEXTAREA','SELECT'].includes(active.tagName);
+    const isModal = document.querySelector('.modal.show');
+
+    if(e.key === 'Escape'){
+      if(acList.classList.contains('show')){ acList.classList.remove('show'); e.preventDefault(); return; }
+      if(kbdHint.classList.contains('show')){ kbdHint.classList.remove('show'); e.preventDefault(); return; }
+    }
+
+    if(isInput || isModal) return;
+
+    if(e.key === '/'){
+      e.preventDefault();
+      if(itemNameEl){ goToStep(1); itemNameEl.focus(); }
+    } else if(e.key === 'n' || e.key === 'N'){
+      e.preventDefault();
+      loadModalLookups();
+      new bootstrap.Modal(document.getElementById('newItemModal')).show();
+    } else if(e.key === 'm' || e.key === 'M'){
+      e.preventDefault();
+      goToStep(3);
+      if(marginEl) marginEl.focus();
+    }
+  });
 
   // ── Bootstrap tooltips init ──
   document.querySelectorAll('.field-tip').forEach(el=>{

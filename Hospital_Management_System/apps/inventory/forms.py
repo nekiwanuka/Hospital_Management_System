@@ -92,15 +92,35 @@ class MedicalStoreEntryForm(forms.Form):
     DOSAGE_FORM_CHOICES = Item.DOSAGE_FORM_CHOICES
     STORE_DEPARTMENT_CHOICES = Item.STORE_DEPARTMENT_CHOICES
     SERVICE_TYPE_CHOICES = Item.SERVICE_TYPE_CHOICES
+    ITEM_TYPE_CHOICES = Item.ITEM_TYPE_CHOICES
+    CONTROL_STATUS_CHOICES = Item.CONTROL_STATUS_CHOICES
+    STORAGE_CLASS_CHOICES = Item.STORAGE_CLASS_CHOICES
+
+    # ── Catalogue item selection (hidden: populated by autocomplete JS) ──
+    existing_item_id = forms.IntegerField(
+        required=False,
+        widget=forms.HiddenInput(),
+        help_text="Internal ID of existing catalogue item selected via autocomplete.",
+    )
 
     item_name = forms.CharField(
         max_length=255,
         help_text="Trade/brand name as printed on the product packaging.",
     )
+    sku = forms.CharField(
+        max_length=60,
+        required=False,
+        help_text="Stock-keeping unit code (auto-generated if left blank).",
+    )
     generic_name = forms.CharField(
         max_length=255,
         required=False,
         help_text="International Non-proprietary Name (INN), e.g. 'Paracetamol' for Panadol.",
+    )
+    item_type = forms.ChoiceField(
+        choices=ITEM_TYPE_CHOICES,
+        initial="medicine",
+        help_text="Type: medicine, healthcare supply, or medical device.",
     )
     category = forms.ModelChoiceField(
         queryset=Category.objects.none(),
@@ -150,6 +170,23 @@ class MedicalStoreEntryForm(forms.Form):
         required=False,
         initial="pharmacy",
         help_text="Which store department will hold this stock.",
+    )
+    control_status = forms.ChoiceField(
+        choices=CONTROL_STATUS_CHOICES,
+        required=False,
+        initial="none",
+        help_text="Regulatory control level: prescription-only, controlled substance, etc.",
+    )
+    storage_class = forms.ChoiceField(
+        choices=STORAGE_CLASS_CHOICES,
+        required=False,
+        initial="room_temp",
+        help_text="Required storage conditions: room temp, refrigerated, etc.",
+    )
+    batch_tracking = forms.BooleanField(
+        required=False,
+        initial=True,
+        help_text="Track this item by batch/lot number for recalls and FEFO.",
     )
     service_type = forms.ChoiceField(
         choices=SERVICE_TYPE_CHOICES,
@@ -225,6 +262,23 @@ class MedicalStoreEntryForm(forms.Form):
         initial=25,
         help_text="Desired profit margin %. Selling price is auto-calculated.",
     )
+    selling_price_override = forms.BooleanField(
+        required=False,
+        initial=False,
+        help_text="Check to manually set selling price instead of auto-calculating from margin.",
+    )
+    manual_selling_price = forms.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        required=False,
+        min_value=Decimal("0.01"),
+        help_text="Manual selling price per unit (only used when override is checked).",
+    )
+    location = forms.CharField(
+        max_length=120,
+        required=False,
+        help_text="Physical shelf/bin location within the store, e.g. 'Shelf A3'.",
+    )
     supplier = forms.ModelChoiceField(
         queryset=Supplier.objects.none(),
         required=False,
@@ -261,6 +315,8 @@ class MedicalStoreEntryForm(forms.Form):
             css = "form-control"
             if isinstance(field.widget, forms.Select):
                 css = "form-select"
+            if isinstance(field.widget, forms.CheckboxInput):
+                css = "form-check-input"
             field.widget.attrs["class"] = css
 
         if self.store_department:
@@ -285,15 +341,18 @@ class MedicalStoreEntryForm(forms.Form):
         category = cleaned.get("category")
         brand = cleaned.get("brand")
         supplier = cleaned.get("supplier")
+        existing_item_id = cleaned.get("existing_item_id")
 
         new_category_name = (cleaned.get("new_category_name") or "").strip()
         new_brand_name = (cleaned.get("new_brand_name") or "").strip()
         new_supplier_name = (cleaned.get("new_supplier_name") or "").strip()
 
-        if not category and not new_category_name:
-            self.add_error("category", "Select a category or add a new one.")
-        if not brand and not new_brand_name:
-            self.add_error("brand", "Select a brand or add a new one.")
+        # When an existing item is selected, category/brand come from it
+        if not existing_item_id:
+            if not category and not new_category_name:
+                self.add_error("category", "Select a category or add a new one.")
+            if not brand and not new_brand_name:
+                self.add_error("brand", "Select a brand or add a new one.")
 
         store_department = (
             self.store_department or cleaned.get("store_department") or "pharmacy"
@@ -319,8 +378,6 @@ class MedicalStoreEntryForm(forms.Form):
         pack_size_units = cleaned.get("pack_size_units")
         packs_received = cleaned.get("packs_received")
         purchase_price_per_pack = cleaned.get("purchase_price_per_pack")
-        wholesale_price_per_pack = cleaned.get("wholesale_price_per_pack")
-        retail_price_per_unit = cleaned.get("retail_price_per_unit")
 
         if pack_size_units and pack_size_units <= 0:
             self.add_error("pack_size_units", "Pack size must be greater than zero.")
@@ -333,23 +390,22 @@ class MedicalStoreEntryForm(forms.Form):
                 "Purchase price per pack must be positive.",
             )
 
-        if (
-            wholesale_price_per_pack
-            and purchase_price_per_pack
-            and wholesale_price_per_pack < purchase_price_per_pack
-        ):
-            self.add_error(
-                "wholesale_price_per_pack",
-                "Wholesale price per pack cannot be below purchase price per pack.",
-            )
-
-        if pack_size_units and purchase_price_per_pack and retail_price_per_unit:
-            unit_cost = purchase_price_per_pack / Decimal(pack_size_units)
-            if retail_price_per_unit < unit_cost:
+        # Selling price override validation
+        selling_price_override = cleaned.get("selling_price_override", False)
+        manual_selling_price = cleaned.get("manual_selling_price")
+        if selling_price_override:
+            if not manual_selling_price or manual_selling_price <= 0:
                 self.add_error(
-                    "retail_price_per_unit",
-                    "Retail price per unit cannot be below unit cost.",
+                    "manual_selling_price",
+                    "When overriding, enter a valid selling price per unit.",
                 )
+            elif pack_size_units and purchase_price_per_pack:
+                unit_cost = purchase_price_per_pack / Decimal(pack_size_units)
+                if manual_selling_price < unit_cost:
+                    self.add_error(
+                        "manual_selling_price",
+                        "Selling price cannot be below unit cost.",
+                    )
 
         if pack_size_units and packs_received and purchase_price_per_pack:
             cleaned["quantity_received"] = pack_size_units * packs_received

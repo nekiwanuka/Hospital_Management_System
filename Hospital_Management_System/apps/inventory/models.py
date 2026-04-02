@@ -162,6 +162,27 @@ class Item(BranchScopedModel):
         ("consultation", "Consultation"),
     ]
 
+    ITEM_TYPE_CHOICES = [
+        ("medicine", "Medicine"),
+        ("supply", "Healthcare Supply"),
+        ("device", "Medical Device"),
+    ]
+
+    CONTROL_STATUS_CHOICES = [
+        ("none", "Not Controlled"),
+        ("prescription", "Prescription Only"),
+        ("controlled", "Controlled Substance"),
+        ("narcotic", "Narcotic"),
+    ]
+
+    STORAGE_CLASS_CHOICES = [
+        ("room_temp", "Room Temperature"),
+        ("cool", "Cool (8-15\u00b0C)"),
+        ("refrigerated", "Refrigerated (2-8\u00b0C)"),
+        ("frozen", "Frozen (<-10\u00b0C)"),
+        ("protected_light", "Protected from Light"),
+    ]
+
     DOSAGE_FORM_CHOICES = [
         ("tablet", "Tablet"),
         ("syrup", "Syrup"),
@@ -169,18 +190,51 @@ class Item(BranchScopedModel):
         ("cream", "Cream"),
         ("capsule", "Capsule"),
         ("drops", "Drops"),
+        ("ointment", "Ointment"),
+        ("solution", "Solution"),
+        ("suspension", "Suspension"),
+        ("powder", "Powder"),
+        ("gel", "Gel"),
+        ("suppository", "Suppository"),
+        ("inhaler", "Inhaler"),
+        ("patch", "Patch"),
+        ("device", "Device"),
+        ("reagent", "Reagent"),
+        ("consumable", "Consumable"),
         ("other", "Other"),
     ]
 
     item_name = models.CharField(max_length=255)
+    sku = models.CharField(
+        max_length=60, blank=True, help_text="Stock-keeping unit code."
+    )
     generic_name = models.CharField(max_length=255, blank=True)
+    item_type = models.CharField(
+        max_length=20,
+        choices=ITEM_TYPE_CHOICES,
+        default="medicine",
+    )
     category = models.ForeignKey(Category, on_delete=models.PROTECT)
     brand = models.ForeignKey(Brand, on_delete=models.PROTECT)
     dosage_form = models.CharField(max_length=30, choices=DOSAGE_FORM_CHOICES)
     strength = models.CharField(max_length=120, blank=True)
     unit_of_measure = models.CharField(max_length=60)
     pack_size = models.CharField(max_length=60, blank=True)
-    barcode = models.CharField(max_length=120, blank=True)
+    barcode = models.CharField(max_length=120, blank=True, db_index=True)
+    control_status = models.CharField(
+        max_length=20,
+        choices=CONTROL_STATUS_CHOICES,
+        default="none",
+    )
+    storage_class = models.CharField(
+        max_length=20,
+        choices=STORAGE_CLASS_CHOICES,
+        default="room_temp",
+    )
+    batch_tracking = models.BooleanField(
+        default=True,
+        help_text="Track this item by batch/lot number.",
+    )
     store_department = models.CharField(
         max_length=30,
         choices=STORE_DEPARTMENT_CHOICES,
@@ -206,10 +260,15 @@ class Item(BranchScopedModel):
             models.Index(fields=["branch", "is_active"]),
             models.Index(fields=["branch", "store_department"]),
             models.Index(fields=["branch", "service_type", "service_code"]),
+            models.Index(fields=["branch", "sku"]),
+            models.Index(fields=["branch", "item_type"]),
         ]
 
     def __str__(self):
-        return self.item_name
+        parts = [self.item_name]
+        if self.strength:
+            parts.append(self.strength)
+        return " ".join(parts)
 
     @property
     def quantity_on_hand(self):
@@ -303,11 +362,20 @@ class Batch(BranchScopedModel):
     selling_price_per_unit = models.DecimalField(
         max_digits=14, decimal_places=2, default=Decimal("0.00")
     )
+    selling_price_override = models.BooleanField(
+        default=False,
+        help_text="When True the selling price was manually set; margin auto-calc is disabled.",
+    )
     target_margin = models.DecimalField(
         max_digits=7,
         decimal_places=2,
         default=Decimal("25.00"),
         help_text="Target profit margin percentage used to auto-calculate selling price.",
+    )
+    location = models.CharField(
+        max_length=120,
+        blank=True,
+        help_text="Physical location/shelf within this store.",
     )
     profit_margin = models.DecimalField(
         max_digits=7,
@@ -436,14 +504,15 @@ class Batch(BranchScopedModel):
             self.purchase_price_per_pack / Decimal(self.pack_size_units)
         ).quantize(Decimal("0.0001"))
 
-        # Auto-calculate selling price from target margin
-        if self.target_margin > 0 and self.unit_cost > 0:
-            divisor = Decimal("1.00") - self.target_margin / Decimal("100")
-            self.selling_price_per_unit = (self.unit_cost / divisor).quantize(
-                Decimal("0.01")
-            )
-        elif self.unit_cost > 0 and self.selling_price_per_unit <= 0:
-            self.selling_price_per_unit = self.unit_cost
+        # Auto-calculate selling price from target margin (unless manually overridden)
+        if not self.selling_price_override:
+            if self.target_margin > 0 and self.unit_cost > 0:
+                divisor = Decimal("1.00") - self.target_margin / Decimal("100")
+                self.selling_price_per_unit = (self.unit_cost / divisor).quantize(
+                    Decimal("0.01")
+                )
+            elif self.unit_cost > 0 and self.selling_price_per_unit <= 0:
+                self.selling_price_per_unit = self.unit_cost
 
         # Auto-derive wholesale from selling price (pack-level equivalent)
         self.wholesale_price_per_pack = (
