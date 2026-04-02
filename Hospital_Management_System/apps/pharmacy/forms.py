@@ -167,24 +167,10 @@ class MedicalStoreRequestForm(forms.ModelForm):
         self.requested_for = requested_for
         self.requested_unit = requested_unit
 
-        # Determine which store departments to exclude so user can only
-        # request stock FROM other stores, not from their own department.
-        exclude_departments = set()
-        if requested_for == "pharmacy":
-            exclude_departments.add("pharmacy")
-        elif requested_for == "laboratory":
-            exclude_departments.add("laboratory")
-        elif requested_for == "radiology":
-            if requested_unit == "xray":
-                exclude_departments.add("xray")
-            elif requested_unit == "ultrasound":
-                exclude_departments.add("ultrasound")
-            else:
-                exclude_departments.update(["xray", "ultrasound"])
-
         queryset = (
             Item.objects.filter(
                 is_active=True,
+                is_department_stock=False,
                 batches__quantity_remaining__gt=0,
                 batches__exp_date__gte=timezone.localdate(),
             )
@@ -192,8 +178,6 @@ class MedicalStoreRequestForm(forms.ModelForm):
             .distinct()
             .order_by("item_name")
         )
-        if exclude_departments:
-            queryset = queryset.exclude(store_department__in=exclude_departments)
         if user is not None and getattr(user, "branch_id", None):
             queryset = queryset.filter(branch_id=user.branch_id)
 

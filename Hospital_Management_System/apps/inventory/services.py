@@ -605,12 +605,6 @@ def fulfill_store_request(store_request, fulfilled_by, remarks=""):
     if dest_department == "radiology" and store_request.requested_unit:
         actual_dest = store_request.requested_unit  # "xray" or "ultrasound"
 
-    if source_item.store_department == actual_dest:
-        raise ValidationError(
-            f"Cannot transfer stock within the same store ({source_item.get_store_department_display()}). "
-            f"Select a source item from a different store."
-        )
-
     with transaction.atomic():
         # --- Source: deduct via FIFO ---
         source_batches = list(_eligible_fifo_batches(source_item))
@@ -629,6 +623,7 @@ def fulfill_store_request(store_request, fulfilled_by, remarks=""):
                 strength=source_item.strength,
                 brand=source_item.brand,
                 store_department=actual_dest,
+                is_department_stock=True,
             )
             .order_by("id")
             .first()
@@ -645,6 +640,7 @@ def fulfill_store_request(store_request, fulfilled_by, remarks=""):
                 unit_of_measure=source_item.unit_of_measure,
                 pack_size=source_item.pack_size,
                 store_department=actual_dest,
+                is_department_stock=True,
                 reorder_level=source_item.reorder_level,
                 description=source_item.description,
                 is_active=True,

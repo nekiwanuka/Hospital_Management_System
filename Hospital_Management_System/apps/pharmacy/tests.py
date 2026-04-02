@@ -228,7 +228,7 @@ class PharmacyInventoryIntegrationTests(TestCase):
             ).exists()
         )
 
-    def test_fulfilling_internal_request_does_not_change_stock_levels(self):
+    def test_fulfilling_internal_request_deducts_source_stock(self):
         request_record = MedicalStoreRequest.objects.create(
             branch=self.branch,
             item=self.item,
@@ -248,4 +248,5 @@ class PharmacyInventoryIntegrationTests(TestCase):
         request_record.refresh_from_db()
         self.batch.refresh_from_db()
         self.assertEqual(request_record.status, "fulfilled")
-        self.assertEqual(self.batch.quantity_remaining, 10)
+        # Source store batch should be deducted
+        self.assertEqual(self.batch.quantity_remaining, 5)

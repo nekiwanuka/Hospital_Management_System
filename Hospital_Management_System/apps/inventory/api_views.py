@@ -210,7 +210,7 @@ class CatalogueSearchAPIView(APIView):
 
         queryset = branch_queryset_for_user(
             request.user,
-            Item.objects.filter(is_active=True)
+            Item.objects.filter(is_active=True, is_department_stock=False)
             .select_related("category", "brand")
             .order_by("item_name"),
         )

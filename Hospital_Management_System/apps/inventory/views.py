@@ -161,8 +161,12 @@ def _build_medical_store_context(user, filters=None):
     expiry_threshold = today + timedelta(days=30)
     store_filter = _normalize_store_filter(filters.get("store"))
 
-    item_queryset = Item.objects.select_related("category", "brand")
-    batch_queryset = Batch.objects.select_related("item", "supplier")
+    item_queryset = Item.objects.select_related("category", "brand").filter(
+        is_department_stock=False
+    )
+    batch_queryset = Batch.objects.select_related("item", "supplier").filter(
+        item__is_department_stock=False
+    )
     if store_filter in {"pharmacy", "laboratory", "xray", "ultrasound", "general"}:
         item_queryset = item_queryset.filter(store_department=store_filter)
         batch_queryset = batch_queryset.filter(item__store_department=store_filter)

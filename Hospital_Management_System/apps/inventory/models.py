@@ -240,6 +240,10 @@ class Item(BranchScopedModel):
         choices=STORE_DEPARTMENT_CHOICES,
         default="pharmacy",
     )
+    is_department_stock = models.BooleanField(
+        default=False,
+        help_text="True for stock received by a department (not store inventory).",
+    )
     service_code = models.CharField(max_length=120, blank=True)
     service_type = models.CharField(
         max_length=20,

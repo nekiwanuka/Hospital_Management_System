@@ -39,6 +39,21 @@ def sync_medicine_catalog_for_item(item):
         Medicine.objects.filter(branch=item.branch, inventory_item=item).delete()
         return None
 
+    # Store items should not have their own Medicine record when a
+    # corresponding department item already exists.
+    if not getattr(item, "is_department_stock", False):
+        has_dept_copy = Item.objects.filter(
+            branch=item.branch,
+            item_name=item.item_name,
+            strength=item.strength,
+            brand=item.brand,
+            store_department="pharmacy",
+            is_department_stock=True,
+        ).exists()
+        if has_dept_copy:
+            Medicine.objects.filter(branch=item.branch, inventory_item=item).delete()
+            return None
+
     batch = _snapshot_batch_for_item(item)
     defaults = {
         "name": item.item_name,
