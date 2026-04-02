@@ -600,6 +600,16 @@ def fulfill_store_request(store_request, fulfilled_by, remarks=""):
         raise ValidationError("Requested quantity must be positive.")
 
     dest_department = store_request.requested_for  # e.g. "pharmacy"
+    # For radiology sub-units, resolve the actual destination store code
+    actual_dest = dest_department
+    if dest_department == "radiology" and store_request.requested_unit:
+        actual_dest = store_request.requested_unit  # "xray" or "ultrasound"
+
+    if source_item.store_department == actual_dest:
+        raise ValidationError(
+            f"Cannot transfer stock within the same store ({source_item.get_store_department_display()}). "
+            f"Select a source item from a different store."
+        )
 
     with transaction.atomic():
         # --- Source: deduct via FIFO ---
@@ -618,7 +628,7 @@ def fulfill_store_request(store_request, fulfilled_by, remarks=""):
                 item_name=source_item.item_name,
                 strength=source_item.strength,
                 brand=source_item.brand,
-                store_department=dest_department,
+                store_department=actual_dest,
             )
             .order_by("id")
             .first()
@@ -634,7 +644,7 @@ def fulfill_store_request(store_request, fulfilled_by, remarks=""):
                 strength=source_item.strength,
                 unit_of_measure=source_item.unit_of_measure,
                 pack_size=source_item.pack_size,
-                store_department=dest_department,
+                store_department=actual_dest,
                 reorder_level=source_item.reorder_level,
                 description=source_item.description,
                 is_active=True,
@@ -659,7 +669,7 @@ def fulfill_store_request(store_request, fulfilled_by, remarks=""):
                 batch=src_batch,
                 movement_type="TRANSFER_OUT",
                 quantity=take_qty,
-                reference=f"Transfer to {dest_department} (Request #{store_request.pk})",
+                reference=f"Transfer to {actual_dest} (Request #{store_request.pk})",
                 user=fulfilled_by,
             )
 
@@ -750,7 +760,7 @@ def fulfill_store_request(store_request, fulfilled_by, remarks=""):
             remaining -= take_qty
 
         # Sync pharmacy medicine catalog if destination is pharmacy
-        if dest_department == "pharmacy":
+        if actual_dest == "pharmacy":
             sync_medicine_catalog_for_item(dest_item)
         # Also sync source item catalog (to reflect reduced stock)
         if source_item.store_department == "pharmacy":
