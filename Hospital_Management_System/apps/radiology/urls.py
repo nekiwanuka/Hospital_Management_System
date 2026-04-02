@@ -53,4 +53,10 @@ urlpatterns = [
     ),
     path("ultrasound/", views.ultrasound, name="ultrasound"),
     path("xray/", views.xray, name="xray"),
+    path("notifications/", views.notification_inbox, name="notification_inbox"),
+    path(
+        "notifications/<int:notification_pk>/read/",
+        views.mark_notification_read,
+        name="mark_notification_read",
+    ),
 ]
