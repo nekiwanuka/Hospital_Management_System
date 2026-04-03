@@ -16,6 +16,17 @@ class TriageRecord(BranchScopedModel):
         (4, "High"),
         (5, "Critical"),
     ]
+    BLOOD_GROUP_CHOICES = [
+        ("", "Unknown"),
+        ("A+", "A+"),
+        ("A-", "A−"),
+        ("B+", "B+"),
+        ("B-", "B−"),
+        ("AB+", "AB+"),
+        ("AB-", "AB−"),
+        ("O+", "O+"),
+        ("O-", "O−"),
+    ]
 
     patient = models.ForeignKey("patients.Patient", on_delete=models.PROTECT)
     visit = models.ForeignKey(
@@ -33,6 +44,9 @@ class TriageRecord(BranchScopedModel):
     oxygen_level = models.PositiveIntegerField(help_text="SpO₂ %")
     weight = models.DecimalField(max_digits=6, decimal_places=2, help_text="kg")
     height = models.DecimalField(max_digits=6, decimal_places=2, help_text="cm")
+    blood_group = models.CharField(
+        max_length=5, blank=True, default="", choices=BLOOD_GROUP_CHOICES
+    )
     symptoms = models.TextField()
     auto_notes = models.TextField("Clinical Auto-Notes", blank=True)
     priority_score = models.PositiveSmallIntegerField(

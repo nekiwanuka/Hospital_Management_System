@@ -896,6 +896,49 @@ def start(request, visit_id):
 
 
 @login_required
+@role_required("doctor", "system_admin", "director")
+@module_permission_required("consultation", "create")
+def edit_triage(request, visit_id):
+    """Allow doctors to update triage data from the consultation workbench."""
+    from apps.triage.forms import TriageEditForm
+
+    selected_panel = _selected_panel(request)
+    visit = _get_visit_or_redirect_for_user(request.user, visit_id)
+    if not visit:
+        messages.error(request, "Visit not found or not assigned to you.")
+        return _redirect_consultation_index(selected_panel)
+
+    triage_record = branch_queryset_for_user(
+        request.user,
+        TriageRecord.objects.filter(visit=visit).order_by("-date"),
+    ).first()
+    if not triage_record:
+        messages.error(request, "No triage record found for this visit.")
+        return _redirect_consultation_start(visit_id, selected_panel)
+
+    if request.method == "POST":
+        form = TriageEditForm(request.POST, instance=triage_record)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Triage record updated successfully.")
+            return _redirect_consultation_start(visit_id, selected_panel)
+    else:
+        form = TriageEditForm(instance=triage_record)
+
+    return render(
+        request,
+        "consultation/edit_triage.html",
+        {
+            "form": form,
+            "visit": visit,
+            "patient": visit.patient,
+            "record": triage_record,
+            "selected_panel": selected_panel,
+        },
+    )
+
+
+@login_required
 @role_required("nurse", "doctor", "system_admin", "director")
 @module_permission_required("consultation", "view")
 def nurse_review(request, visit_id):

@@ -42,7 +42,7 @@
   <div class="cl-card-body p-0">
     <div class="table-responsive">
       <table class="table">
-        <thead><tr><th>Date</th><th>Patient</th><th>Priority</th><th>BP <small class="text-muted">mmHg</small></th><th>Temp <small class="text-muted">°C</small></th><th>Pulse <small class="text-muted">bpm</small></th><th>SpO₂ <small class="text-muted">%</small></th><th>Auto-Notes</th><th>Outcome</th><th>Officer</th>{% if can_edit_triage %}<th></th>{% endif %}</tr></thead>
+        <thead><tr><th>Date</th><th>Patient</th><th>Priority</th><th>Blood Group</th><th>BP <small class="text-muted">mmHg</small></th><th>Temp <small class="text-muted">°C</small></th><th>Pulse <small class="text-muted">bpm</small></th><th>SpO₂ <small class="text-muted">%</small></th><th>Auto-Notes</th><th>Outcome</th><th>Officer</th>{% if can_edit_triage %}<th></th>{% endif %}</tr></thead>
         <tbody>
           {% for r in records %}
           <tr>
@@ -61,6 +61,7 @@
                 <span class="badge bg-success">Normal</span>
               {% endif %}
             </td>
+            <td>{{ r.blood_group|default:"—" }}</td>
             <td>{{ r.blood_pressure|default:"—" }}</td>
             <td>{{ r.temperature|default:"—" }}</td>
             <td>{{ r.pulse_rate|default:"—" }}</td>
@@ -75,7 +76,7 @@
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="{% if can_edit_triage %}11{% else %}10{% endif %}" class="text-center text-muted py-4">No triage records found.</td></tr>
+          <tr><td colspan="{% if can_edit_triage %}12{% else %}11{% endif %}" class="text-center text-muted py-4">No triage records found.</td></tr>
           {% endfor %}
         </tbody>
       </table>

@@ -31,6 +31,7 @@ class TriageRecordForm(forms.ModelForm):
             "oxygen_level",
             "weight",
             "height",
+            "blood_group",
             "symptoms",
             "outcome",
         ]
@@ -131,6 +132,7 @@ class TriageEditForm(forms.ModelForm):
             "oxygen_level",
             "weight",
             "height",
+            "blood_group",
             "symptoms",
             "outcome",
         ]
