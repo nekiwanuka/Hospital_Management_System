@@ -1,6 +1,6 @@
 from django import forms
 
-from apps.admission.models import Admission, NursingNote
+from apps.admission.models import Admission, Bed, NursingNote, VitalSign
 from apps.core.permissions import branch_queryset_for_user
 from apps.patients.models import Patient
 from apps.visits.models import Visit
@@ -9,7 +9,7 @@ from apps.visits.models import Visit
 class AdmissionForm(forms.ModelForm):
     class Meta:
         model = Admission
-        fields = ["visit", "patient", "ward", "bed", "doctor", "nurse", "diagnosis"]
+        fields = ["visit", "patient", "bed_assigned", "doctor", "nurse", "diagnosis"]
         widgets = {
             "diagnosis": forms.Textarea(attrs={"rows": 3}),
         }
@@ -25,6 +25,15 @@ class AdmissionForm(forms.ModelForm):
             field.widget.attrs["class"] = css
 
         if user is not None:
+            bed_field = self.fields.get("bed_assigned")
+            if isinstance(bed_field, forms.ModelChoiceField):
+                bed_field.queryset = branch_queryset_for_user(
+                    user,
+                    Bed.objects.filter(status="available")
+                    .select_related("ward")
+                    .order_by("ward__name", "bed_number"),
+                )
+
             patient_field = self.fields.get("patient")
             if isinstance(patient_field, forms.ModelChoiceField):
                 patient_field.queryset = branch_queryset_for_user(
@@ -67,6 +76,18 @@ class AdmissionForm(forms.ModelForm):
             cleaned_data["patient"] = visit.patient
         return cleaned_data
 
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        bed = instance.bed_assigned
+        if bed:
+            instance.ward = bed.ward.name
+            instance.bed = bed.bed_number
+        if commit:
+            instance.save()
+            if bed:
+                Bed.objects.filter(pk=bed.pk).update(status="occupied")
+        return instance
+
 
 class DischargeForm(forms.ModelForm):
     class Meta:
@@ -101,3 +122,35 @@ class NursingNoteForm(forms.ModelForm):
             if isinstance(field.widget, forms.Select):
                 css = "form-select"
             field.widget.attrs["class"] = css
+
+
+class VitalSignForm(forms.ModelForm):
+    class Meta:
+        model = VitalSign
+        fields = [
+            "temperature",
+            "blood_pressure_systolic",
+            "blood_pressure_diastolic",
+            "pulse_rate",
+            "respiratory_rate",
+            "oxygen_saturation",
+            "notes",
+        ]
+        widgets = {
+            "notes": forms.Textarea(
+                attrs={"rows": 2, "placeholder": "Additional notes..."}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["temperature"].widget.attrs["placeholder"] = "e.g. 36.5"
+        self.fields["blood_pressure_systolic"].widget.attrs["placeholder"] = "Systolic"
+        self.fields["blood_pressure_diastolic"].widget.attrs[
+            "placeholder"
+        ] = "Diastolic"
+        self.fields["pulse_rate"].widget.attrs["placeholder"] = "BPM"
+        self.fields["respiratory_rate"].widget.attrs["placeholder"] = "Breaths/min"
+        self.fields["oxygen_saturation"].widget.attrs["placeholder"] = "SpO2 %"
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-control"

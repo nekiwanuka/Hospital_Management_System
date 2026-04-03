@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block title %}Delivery #{{ record.pk }} — {{ clinic_name }}{% endblock %}
+{% block header_title %}Delivery Record{% endblock %}
+
+{% block content %}
+<div class="cl-page-header d-flex flex-wrap align-items-center justify-content-between mb-4">
+  <div>
+    <h1 class="mb-1"><i class="bi bi-heart-pulse-fill me-2 text-danger"></i>Delivery #{{ record.pk }}</h1>
+    <p class="text-muted mb-0">{{ record.patient.first_name }} {{ record.patient.last_name }} &bull; {{ record.patient.patient_id }}</p>
+  </div>
+  <a href="{% url 'delivery:index' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back</a>
+</div>
+
+<!-- Status Banner -->
+<div class="alert alert-{% if record.status == 'discharged' %}success{% elif record.status == 'delivered' %}info{% elif record.status == 'in_labour' %}danger{% elif record.status == 'post_delivery' %}warning{% else %}secondary{% endif %} d-flex align-items-center mb-4 shadow-sm">
+  <i class="bi bi-{% if record.status == 'discharged' %}check-circle-fill{% elif record.status == 'in_labour' %}exclamation-triangle-fill{% else %}info-circle-fill{% endif %} fs-4 me-3"></i>
+  <div><strong>{{ record.get_status_display }}</strong></div>
+</div>
+
+<div class="row g-3 mb-4">
+  <!-- Patient & Delivery Info -->
+  <div class="col-md-6">
+    <div class="cl-card shadow-sm h-100">
+      <div class="cl-card-header bg-light"><h2 class="cl-card-title mb-0"><i class="bi bi-person text-primary me-2"></i>Patient & Labour Info</h2></div>
+      <div class="cl-card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-5 text-muted">Patient</dt>
+          <dd class="col-sm-7"><a href="{% url 'patients:detail' record.patient.pk %}" class="text-decoration-none fw-medium">{{ record.patient.first_name }} {{ record.patient.last_name }}</a></dd>
+
+          <dt class="col-sm-5 text-muted">Admitted</dt>
+          <dd class="col-sm-7">{{ record.admitted_at|date:"d M Y H:i" }}</dd>
+
+          <dt class="col-sm-5 text-muted">Gravida / Parity</dt>
+          <dd class="col-sm-7">G{{ record.gravida|default:"?" }} P{{ record.parity|default:"?" }}</dd>
+
+          <dt class="col-sm-5 text-muted">Gestational Age</dt>
+          <dd class="col-sm-7">{{ record.gestational_age_weeks|default:"—" }} weeks</dd>
+
+          <dt class="col-sm-5 text-muted">Delivered By</dt>
+          <dd class="col-sm-7">{{ record.delivered_by.get_full_name|default:record.delivered_by.username }}</dd>
+
+          {% if record.midwife %}
+          <dt class="col-sm-5 text-muted">Midwife</dt>
+          <dd class="col-sm-7">{{ record.midwife.get_full_name|default:record.midwife.username }}</dd>
+          {% endif %}
+
+          <dt class="col-sm-5 text-muted">Labour Started</dt>
+          <dd class="col-sm-7">{{ record.labour_started_at|date:"d M Y H:i"|default:"—" }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <!-- Baby & Outcome Info -->
+  <div class="col-md-6">
+    <div class="cl-card shadow-sm h-100">
+      <div class="cl-card-header bg-light"><h2 class="cl-card-title mb-0"><i class="bi bi-emoji-smile text-success me-2"></i>Delivery Outcome</h2></div>
+      <div class="cl-card-body">
+        {% if record.status in 'delivered,post_delivery,discharged' %}
+        <dl class="row mb-0">
+          <dt class="col-sm-5 text-muted">Delivery Type</dt>
+          <dd class="col-sm-7">{{ record.get_delivery_type_display|default:"—" }}</dd>
+
+          <dt class="col-sm-5 text-muted">Delivery Time</dt>
+          <dd class="col-sm-7">{{ record.delivery_datetime|date:"d M Y H:i"|default:"—" }}</dd>
+
+          <dt class="col-sm-5 text-muted">Baby Gender</dt>
+          <dd class="col-sm-7">{{ record.get_baby_gender_display|default:"—" }}</dd>
+
+          <dt class="col-sm-5 text-muted">Baby Weight</dt>
+          <dd class="col-sm-7">{{ record.baby_weight_kg|default:"—" }} kg</dd>
+
+          <dt class="col-sm-5 text-muted">APGAR (1/5 min)</dt>
+          <dd class="col-sm-7">{{ record.apgar_score_1min|default:"—" }} / {{ record.apgar_score_5min|default:"—" }}</dd>
+
+          <dt class="col-sm-5 text-muted">Outcome</dt>
+          <dd class="col-sm-7">
+            <span class="badge bg-{% if record.outcome == 'live_birth' %}success{% elif record.outcome == 'still_birth' %}danger{% else %}dark{% endif %}">
+              {{ record.get_outcome_display|default:"—" }}
+            </span>
+          </dd>
+
+          {% if record.complications %}
+          <dt class="col-sm-5 text-muted">Complications</dt>
+          <dd class="col-sm-7">{{ record.complications }}</dd>
+          {% endif %}
+        </dl>
+        {% else %}
+        <p class="text-muted mb-0">Outcome not yet recorded.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Action Cards -->
+<div class="row g-3 mb-4">
+  {% if record.status != 'discharged' %}
+
+  {% if record.status == 'admitted' %}
+  <div class="col-md-4">
+    <form method="post" action="{% url 'delivery:update_status' record.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="status" value="in_labour">
+      <button type="submit" class="btn btn-danger w-100"><i class="bi bi-play-fill me-1"></i>Mark In Labour</button>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if record.status == 'in_labour' or record.status == 'admitted' %}
+  <div class="col-md-8">
+    <div class="cl-card shadow-sm">
+      <div class="cl-card-header bg-light"><h2 class="cl-card-title mb-0"><i class="bi bi-clipboard2-check text-info me-2"></i>Record Delivery Outcome</h2></div>
+      <div class="cl-card-body">
+        <form method="post" action="{% url 'delivery:record_outcome' record.pk %}">
+          {% csrf_token %}
+          <div class="row g-3">
+            {% for field in outcome_form %}
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors.0 }}</div>{% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          <button type="submit" class="btn btn-info mt-3"><i class="bi bi-check-lg me-1"></i>Save Outcome</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if record.status == 'delivered' %}
+  <div class="col-md-4">
+    <form method="post" action="{% url 'delivery:update_status' record.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="status" value="post_delivery">
+      <button type="submit" class="btn btn-warning w-100"><i class="bi bi-eye me-1"></i>Move to Post-Delivery Observation</button>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if record.status == 'post_delivery' or record.status == 'delivered' %}
+  <div class="col-md-8">
+    <div class="cl-card shadow-sm">
+      <div class="cl-card-header bg-light"><h2 class="cl-card-title mb-0"><i class="bi bi-box-arrow-right text-success me-2"></i>Discharge</h2></div>
+      <div class="cl-card-body">
+        <form method="post" action="{% url 'delivery:discharge' record.pk %}">
+          {% csrf_token %}
+          <div class="row g-3">
+            {% for field in discharge_form %}
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+            </div>
+            {% endfor %}
+          </div>
+          <button type="submit" class="btn btn-success mt-3"><i class="bi bi-check-circle me-1"></i>Discharge</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% endif %}
+</div>
+
+<!-- Progress Notes -->
+<div class="cl-card shadow-sm mb-4">
+  <div class="cl-card-header bg-light d-flex justify-content-between align-items-center">
+    <h2 class="cl-card-title mb-0"><i class="bi bi-journal-text text-primary me-2"></i>Delivery Notes</h2>
+    <span class="badge bg-secondary">{{ notes|length }}</span>
+  </div>
+  <div class="cl-card-body">
+    {% if record.status != 'discharged' %}
+    <form method="post" action="{% url 'delivery:add_note' record.pk %}" class="mb-4">
+      {% csrf_token %}
+      <div class="row g-2">
+        <div class="col-md-3">
+          {{ note_form.category }}
+        </div>
+        <div class="col-md-7">
+          {{ note_form.note }}
+        </div>
+        <div class="col-md-2 d-grid">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Add</button>
+        </div>
+      </div>
+    </form>
+    {% endif %}
+
+    {% for note in notes %}
+    <div class="border-start border-3 ps-3 mb-3 {% if note.category == 'vitals' %}border-danger{% elif note.category == 'medication' %}border-info{% elif note.category == 'labour_progress' %}border-warning{% else %}border-secondary{% endif %}">
+      <div class="d-flex justify-content-between">
+        <strong>{{ note.get_category_display }}</strong>
+        <small class="text-muted">{{ note.created_at|date:"d M Y H:i" }} &mdash; {{ note.author.get_full_name|default:note.author.username }}</small>
+      </div>
+      <p class="mb-0 mt-1">{{ note.note }}</p>
+    </div>
+    {% empty %}
+    <p class="text-muted mb-0">No notes yet.</p>
+    {% endfor %}
+  </div>
+</div>
+
+{% if record.delivery_notes.exists %}
+{% endif %}
+{% endblock %}

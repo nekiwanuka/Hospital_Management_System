@@ -3,25 +3,68 @@
 {% block header_title %}Nurse Station{% endblock %}
 
 {% block content %}
-<div class="cl-page-header">
-  <div><h1>Nurse Station</h1><p>Active admissions and nursing notes</p></div>
+<div class="cl-page-header d-flex flex-wrap align-items-center justify-content-between mb-4">
+  <div>
+    <h1 class="mb-1"><i class="bi bi-clipboard2-pulse me-2 text-primary"></i>Nurse Station</h1>
+    <p class="text-muted mb-0">Active admissions, vitals charting &amp; nursing notes</p>
+  </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="cl-card shadow-sm text-center">
+      <div class="cl-card-body py-3">
+        <h3 class="mb-0 text-success">{{ my_patients|length }}</h3>
+        <small class="text-muted">My Patients</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="cl-card shadow-sm text-center">
+      <div class="cl-card-body py-3">
+        <h3 class="mb-0 text-info">{{ other_patients|length }}</h3>
+        <small class="text-muted">Other Patients</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="cl-card shadow-sm text-center">
+      <div class="cl-card-body py-3">
+        <h3 class="mb-0 text-secondary">{{ recent_notes|length }}</h3>
+        <small class="text-muted">Recent Notes</small>
+      </div>
+    </div>
+  </div>
 </div>
 
 {% if my_patients %}
-<div class="cl-card mb-4">
-  <div class="cl-card-header"><h2 class="cl-card-title">My Patients</h2></div>
+<div class="cl-card mb-4 shadow-sm">
+  <div class="cl-card-header bg-light d-flex align-items-center">
+    <h2 class="cl-card-title mb-0"><i class="bi bi-person-check text-success me-2"></i>My Patients</h2>
+    <span class="badge bg-success ms-auto">{{ my_patients|length }}</span>
+  </div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
-      <table class="table">
-        <thead><tr><th>Patient</th><th>Ward</th><th>Doctor</th><th>Admitted</th><th>Actions</th></tr></thead>
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr><th>Patient</th><th>Ward / Bed</th><th>Doctor</th><th>Admitted</th><th>Diagnosis</th><th class="text-end">Actions</th></tr>
+        </thead>
         <tbody>
           {% for a in my_patients %}
           <tr>
-            <td><a href="{% url 'patients:detail' a.patient.pk %}">{{ a.patient.first_name }} {{ a.patient.last_name }}</a></td>
-            <td>{{ a.ward|default:"—" }}</td>
-            <td>{{ a.doctor|default:"—" }}</td>
-            <td>{{ a.admission_date|date:"d M Y" }}</td>
-            <td><a href="{% url 'admission:detail' a.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+            <td>
+              <strong>{{ a.patient.first_name }} {{ a.patient.last_name }}</strong>
+              <br><small class="text-muted">{{ a.patient.patient_id }}</small>
+            </td>
+            <td>{{ a.ward|default:"—" }} / {{ a.bed|default:"—" }}</td>
+            <td>{{ a.doctor.get_full_name|default:a.doctor.username }}</td>
+            <td class="text-muted">{{ a.admission_date|date:"d M Y" }}</td>
+            <td class="small">{{ a.diagnosis|truncatechars:40 }}</td>
+            <td class="text-end">
+              <a href="{% url 'admission:detail' a.pk %}" class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-eye"></i></a>
+              <a href="{% url 'admission:vitals_chart' a.pk %}" class="btn btn-sm btn-outline-danger" title="Vitals"><i class="bi bi-heart-pulse"></i></a>
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -32,21 +75,31 @@
 {% endif %}
 
 {% if other_patients %}
-<div class="cl-card mb-4">
-  <div class="cl-card-header"><h2 class="cl-card-title">Other Patients</h2></div>
+<div class="cl-card mb-4 shadow-sm">
+  <div class="cl-card-header bg-light d-flex align-items-center">
+    <h2 class="cl-card-title mb-0"><i class="bi bi-people text-info me-2"></i>Other Patients</h2>
+    <span class="badge bg-info ms-auto">{{ other_patients|length }}</span>
+  </div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
-      <table class="table">
-        <thead><tr><th>Patient</th><th>Ward</th><th>Doctor</th><th>Nurse</th><th>Admitted</th><th>Actions</th></tr></thead>
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr><th>Patient</th><th>Ward / Bed</th><th>Doctor</th><th>Nurse</th><th>Admitted</th><th class="text-end">Actions</th></tr>
+        </thead>
         <tbody>
           {% for a in other_patients %}
           <tr>
-            <td><a href="{% url 'patients:detail' a.patient.pk %}">{{ a.patient.first_name }} {{ a.patient.last_name }}</a></td>
-            <td>{{ a.ward|default:"—" }}</td>
-            <td>{{ a.doctor|default:"—" }}</td>
-            <td>{{ a.nurse|default:"—" }}</td>
-            <td>{{ a.admission_date|date:"d M Y" }}</td>
-            <td><a href="{% url 'admission:detail' a.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+            <td>
+              <strong>{{ a.patient.first_name }} {{ a.patient.last_name }}</strong>
+              <br><small class="text-muted">{{ a.patient.patient_id }}</small>
+            </td>
+            <td>{{ a.ward|default:"—" }} / {{ a.bed|default:"—" }}</td>
+            <td>{{ a.doctor.get_full_name|default:a.doctor.username }}</td>
+            <td>{{ a.nurse.get_full_name|default:"—" }}</td>
+            <td class="text-muted">{{ a.admission_date|date:"d M Y" }}</td>
+            <td class="text-end">
+              <a href="{% url 'admission:detail' a.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -56,17 +109,29 @@
 </div>
 {% endif %}
 
+{% if not my_patients and not other_patients %}
+<div class="alert alert-info shadow-sm">
+  <i class="bi bi-info-circle me-2"></i>No active admissions at this time.
+</div>
+{% endif %}
+
 {% if recent_notes %}
-<div class="cl-card">
-  <div class="cl-card-header"><h2 class="cl-card-title">Recent Nursing Notes</h2></div>
+<div class="cl-card shadow-sm">
+  <div class="cl-card-header bg-light d-flex align-items-center">
+    <h2 class="cl-card-title mb-0"><i class="bi bi-journal-text text-secondary me-2"></i>Recent Nursing Notes</h2>
+    <span class="badge bg-secondary ms-auto">{{ recent_notes|length }}</span>
+  </div>
   <div class="cl-card-body">
     {% for note in recent_notes %}
-    <div class="border-bottom pb-2 mb-2">
-      <div class="d-flex justify-content-between">
-        <div><strong>{{ note.admission.patient.first_name }} {{ note.admission.patient.last_name }}</strong> — {{ note.nurse.get_full_name|default:note.nurse.username }}</div>
-        <small class="text-muted">{{ note.created_at|date:"d M Y H:i" }}</small>
+    <div class="border-start border-3 ps-3 mb-3 {% if note.category == 'vitals' %}border-danger{% elif note.category == 'medication' %}border-info{% elif note.category == 'handover' %}border-warning{% else %}border-secondary{% endif %}">
+      <div class="d-flex flex-wrap justify-content-between">
+        <div>
+          <strong>{{ note.admission.patient.first_name }} {{ note.admission.patient.last_name }}</strong>
+          <span class="badge bg-light text-dark border ms-2">{{ note.get_category_display }}</span>
+        </div>
+        <small class="text-muted">{{ note.created_at|date:"d M Y H:i" }} &mdash; {{ note.nurse.get_full_name|default:note.nurse.username }}</small>
       </div>
-      <p class="mb-0">{{ note.note|truncatechars:150 }}</p>
+      <p class="mb-0 mt-1">{{ note.note|truncatechars:200 }}</p>
     </div>
     {% endfor %}
   </div>

@@ -8,6 +8,8 @@ class Invoice(BranchScopedModel):
     PAYMENT_METHODS = [
         ("cash", "Cash"),
         ("mobile_money", "Mobile Money"),
+        ("bank_transfer", "Bank Transfer"),
+        ("card", "Card"),
         ("insurance", "Insurance"),
     ]
     PAYMENT_STATUS = [
@@ -152,6 +154,25 @@ class InvoiceLinePayment(BranchScopedModel):
     amount_paid = models.DecimalField(max_digits=12, decimal_places=2)
     payment_method = models.CharField(max_length=20, choices=Invoice.PAYMENT_METHODS)
     transaction_id = models.CharField(max_length=120, blank=True)
+    payer_phone = models.CharField(
+        max_length=20, blank=True, help_text="Mobile money phone number"
+    )
+    network = models.CharField(
+        max_length=20,
+        blank=True,
+        choices=[("mtn", "MTN"), ("airtel", "Airtel"), ("other", "Other")],
+        help_text="Mobile money network",
+    )
+    bank_name = models.CharField(
+        max_length=100, blank=True, help_text="Bank name for bank transfers"
+    )
+    bank_account = models.CharField(
+        max_length=40, blank=True, help_text="Bank account number"
+    )
+    card_last_four = models.CharField(
+        max_length=4, blank=True, help_text="Last 4 digits of card"
+    )
+    cardholder_name = models.CharField(max_length=120, blank=True)
     received_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,

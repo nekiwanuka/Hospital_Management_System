@@ -53,6 +53,18 @@
     <a href="{% url 'admission:index' %}" class="cl-nav-item {% if request.resolver_match.app_name == 'admission' %}active{% endif %}">
       <i class="bi bi-building"></i> Admission
     </a>
+    <a href="{% url 'admission:nurse_station' %}" class="cl-nav-item {% if request.resolver_match.url_name == 'nurse_station' %}active{% endif %}">
+      <i class="bi bi-clipboard2-pulse"></i> Nurse Station
+    </a>
+    <a href="{% url 'admission:bed_management' %}" class="cl-nav-item {% if request.resolver_match.url_name == 'bed_management' %}active{% endif %}">
+      <i class="bi bi-hospital"></i> Bed Management
+    </a>
+    {% endif %}
+
+    {% if user_modules.delivery %}
+    <a href="{% url 'delivery:index' %}" class="cl-nav-item {% if request.resolver_match.app_name == 'delivery' %}active{% endif %}">
+      <i class="bi bi-heart-pulse-fill"></i> Delivery Ward
+    </a>
     {% endif %}
 
     {% if user_modules.laboratory or user_modules.radiology or user_modules.pharmacy %}

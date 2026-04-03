@@ -147,8 +147,39 @@
               <div class="col-md-6" id="transactionField">
                 <label class="form-label fw-semibold">Transaction ID</label>
                 {{ payment_form.transaction_id }}
-                <div class="form-text">Required for Mobile Money and Insurance payments.</div>
+                <div class="form-text">Required for all non-cash payments.</div>
               </div>
+
+              <!-- Mobile Money Fields -->
+              <div class="col-md-6 method-field mobile_money-field" style="display:none;">
+                <label class="form-label fw-semibold">Phone Number</label>
+                {{ payment_form.payer_phone }}
+              </div>
+              <div class="col-md-6 method-field mobile_money-field" style="display:none;">
+                <label class="form-label fw-semibold">Network</label>
+                {{ payment_form.network }}
+              </div>
+
+              <!-- Bank Transfer Fields -->
+              <div class="col-md-6 method-field bank_transfer-field" style="display:none;">
+                <label class="form-label fw-semibold">Bank Name</label>
+                {{ payment_form.bank_name }}
+              </div>
+              <div class="col-md-6 method-field bank_transfer-field" style="display:none;">
+                <label class="form-label fw-semibold">Account Number</label>
+                {{ payment_form.bank_account }}
+              </div>
+
+              <!-- Card Fields -->
+              <div class="col-md-6 method-field card-field" style="display:none;">
+                <label class="form-label fw-semibold">Card Last 4 Digits</label>
+                {{ payment_form.card_last_four }}
+              </div>
+              <div class="col-md-6 method-field card-field" style="display:none;">
+                <label class="form-label fw-semibold">Cardholder Name</label>
+                {{ payment_form.cardholder_name }}
+              </div>
+
               <div class="col-md-6">
                 <label class="form-label fw-semibold">Notes</label>
                 {{ payment_form.notes }}
@@ -406,6 +437,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
   radios.forEach(r => r.addEventListener('change', updateUI));
   updateUI();
+
+  // Show/hide payment-method-specific fields
+  const methodSelect = document.querySelector('[name="payment_method"]');
+  function updateMethodFields() {
+    const method = methodSelect ? methodSelect.value : '';
+    document.querySelectorAll('.method-field').forEach(el => el.style.display = 'none');
+    if (method) {
+      document.querySelectorAll('.' + method + '-field').forEach(el => el.style.display = 'block');
+    }
+    // Hide transaction ID field for cash
+    const txField = document.getElementById('transactionField');
+    if (txField) txField.style.display = method === 'cash' ? 'none' : 'block';
+  }
+  if (methodSelect) {
+    methodSelect.addEventListener('change', updateMethodFields);
+    updateMethodFields();
+  }
 
   // AJAX payment submission
   const paymentForm = document.getElementById('paymentForm');

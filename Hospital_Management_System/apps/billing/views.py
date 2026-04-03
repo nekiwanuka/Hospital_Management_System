@@ -193,7 +193,17 @@ def _require_transaction_id(payment_method, transaction_id):
 
 
 def _apply_line_payment(
-    line_item, amount_paid, payment_method, user, transaction_id=""
+    line_item,
+    amount_paid,
+    payment_method,
+    user,
+    transaction_id="",
+    payer_phone="",
+    network="",
+    bank_name="",
+    bank_account="",
+    card_last_four="",
+    cardholder_name="",
 ):
     if amount_paid <= 0:
         raise ValidationError("Payment amount must be greater than zero.")
@@ -211,6 +221,12 @@ def _apply_line_payment(
         amount_paid=amount_paid,
         payment_method=payment_method,
         transaction_id=transaction_id,
+        payer_phone=payer_phone,
+        network=network,
+        bank_name=bank_name,
+        bank_account=bank_account,
+        card_last_four=card_last_four,
+        cardholder_name=cardholder_name,
         received_by=user,
     )
 
@@ -225,13 +241,32 @@ def _apply_line_payment(
 
 
 def _apply_invoice_payment(
-    invoice, amount_paid, payment_method, user, transaction_id=""
+    invoice,
+    amount_paid,
+    payment_method,
+    user,
+    transaction_id="",
+    payer_phone="",
+    network="",
+    bank_name="",
+    bank_account="",
+    card_last_four="",
+    cardholder_name="",
 ):
     if amount_paid <= 0:
         raise ValidationError("Payment amount must be greater than zero.")
 
     remaining_amount = amount_paid
     line_items = list(invoice.line_items.exclude(payment_status="paid").order_by("id"))
+
+    payment_kwargs = dict(
+        payer_phone=payer_phone,
+        network=network,
+        bank_name=bank_name,
+        bank_account=bank_account,
+        card_last_four=card_last_four,
+        cardholder_name=cardholder_name,
+    )
 
     for line_item in line_items:
         line_outstanding = line_item.amount - line_item.paid_amount
@@ -245,6 +280,7 @@ def _apply_invoice_payment(
             payment_method,
             user,
             transaction_id=transaction_id,
+            **payment_kwargs,
         )
         remaining_amount -= applied_amount
         if remaining_amount <= 0:
@@ -265,6 +301,7 @@ def _apply_invoice_payment(
                 payment_method,
                 user,
                 transaction_id=transaction_id,
+                **payment_kwargs,
             )
 
 
@@ -1276,6 +1313,14 @@ def update_payment_status(request, pk):
                     invoice.payment_method,
                     request.user,
                     transaction_id=transaction_id,
+                    payer_phone=payment_form.cleaned_data.get("payer_phone", ""),
+                    network=payment_form.cleaned_data.get("network", ""),
+                    bank_name=payment_form.cleaned_data.get("bank_name", ""),
+                    bank_account=payment_form.cleaned_data.get("bank_account", ""),
+                    card_last_four=payment_form.cleaned_data.get("card_last_four", ""),
+                    cardholder_name=payment_form.cleaned_data.get(
+                        "cardholder_name", ""
+                    ),
                 )
 
                 invoice.amount_paid = invoice.amount_paid + amount_to_apply
@@ -1473,6 +1518,12 @@ def pay_line_item(request, pk, line_id):
                 form.cleaned_data["payment_method"],
                 request.user,
                 transaction_id=form.cleaned_data.get("transaction_id", ""),
+                payer_phone=form.cleaned_data.get("payer_phone", ""),
+                network=form.cleaned_data.get("network", ""),
+                bank_name=form.cleaned_data.get("bank_name", ""),
+                bank_account=form.cleaned_data.get("bank_account", ""),
+                card_last_four=form.cleaned_data.get("card_last_four", ""),
+                cardholder_name=form.cleaned_data.get("cardholder_name", ""),
             )
 
             invoice.amount_paid = invoice.amount_paid + form.cleaned_data["amount_paid"]

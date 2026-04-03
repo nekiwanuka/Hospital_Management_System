@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "apps.permissions",
     "apps.reports",
     "apps.settingsapp",
+    "apps.delivery",
 ]
 
 MIDDLEWARE = [

@@ -9,6 +9,7 @@ _MODULE_CODES = [
     "consultation",
     "emergency",
     "admission",
+    "delivery",
     "laboratory",
     "radiology",
     "pharmacy",

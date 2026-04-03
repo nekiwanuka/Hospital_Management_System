@@ -14,4 +14,7 @@ urlpatterns = [
     path(
         "<int:admission_pk>/notes/add/", views.add_nursing_note, name="add_nursing_note"
     ),
+    path("<int:admission_pk>/vitals/", views.vitals_chart, name="vitals_chart"),
+    path("<int:admission_pk>/vitals/add/", views.record_vitals, name="record_vitals"),
+    path("beds/", views.bed_management, name="bed_management"),
 ]

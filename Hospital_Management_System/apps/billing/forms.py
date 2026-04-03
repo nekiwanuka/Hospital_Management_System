@@ -55,6 +55,27 @@ class LineItemPaymentForm(forms.Form):
     amount_paid = forms.DecimalField(max_digits=12, decimal_places=2, min_value=0.01)
     payment_method = forms.ChoiceField(choices=Invoice.PAYMENT_METHODS)
     transaction_id = forms.CharField(max_length=120, required=False)
+    payer_phone = forms.CharField(max_length=20, required=False, label="Phone Number")
+    network = forms.ChoiceField(
+        choices=[
+            ("", "-- Select Network --"),
+            ("mtn", "MTN"),
+            ("airtel", "Airtel"),
+            ("other", "Other"),
+        ],
+        required=False,
+        label="Network",
+    )
+    bank_name = forms.CharField(max_length=100, required=False, label="Bank Name")
+    bank_account = forms.CharField(
+        max_length=40, required=False, label="Account Number"
+    )
+    card_last_four = forms.CharField(
+        max_length=4, required=False, label="Card Last 4 Digits"
+    )
+    cardholder_name = forms.CharField(
+        max_length=120, required=False, label="Cardholder Name"
+    )
 
     def __init__(self, *args, **kwargs):
         kwargs.pop("user", None)
@@ -76,6 +97,22 @@ class LineItemPaymentForm(forms.Form):
                 "transaction_id",
                 "Transaction ID is required for non-cash payments.",
             )
+        if payment_method == "mobile_money":
+            if not (cleaned_data.get("payer_phone") or "").strip():
+                self.add_error(
+                    "payer_phone", "Phone number is required for mobile money."
+                )
+            if not (cleaned_data.get("network") or "").strip():
+                self.add_error("network", "Network is required for mobile money.")
+        if payment_method == "bank_transfer":
+            if not (cleaned_data.get("bank_name") or "").strip():
+                self.add_error("bank_name", "Bank name is required for bank transfers.")
+        if payment_method == "card":
+            if not (cleaned_data.get("card_last_four") or "").strip():
+                self.add_error(
+                    "card_last_four",
+                    "Card last 4 digits are required for card payments.",
+                )
         return cleaned_data
 
 
@@ -95,6 +132,27 @@ class InvoicePaymentForm(forms.Form):
     )
     payment_method = forms.ChoiceField(choices=Invoice.PAYMENT_METHODS)
     transaction_id = forms.CharField(max_length=120, required=False)
+    payer_phone = forms.CharField(max_length=20, required=False, label="Phone Number")
+    network = forms.ChoiceField(
+        choices=[
+            ("", "-- Select Network --"),
+            ("mtn", "MTN"),
+            ("airtel", "Airtel"),
+            ("other", "Other"),
+        ],
+        required=False,
+        label="Network",
+    )
+    bank_name = forms.CharField(max_length=100, required=False, label="Bank Name")
+    bank_account = forms.CharField(
+        max_length=40, required=False, label="Account Number"
+    )
+    card_last_four = forms.CharField(
+        max_length=4, required=False, label="Card Last 4 Digits"
+    )
+    cardholder_name = forms.CharField(
+        max_length=120, required=False, label="Cardholder Name"
+    )
     notes = forms.CharField(widget=forms.Textarea, required=False)
 
     def __init__(self, *args, **kwargs):
@@ -132,5 +190,25 @@ class InvoicePaymentForm(forms.Form):
                 "transaction_id",
                 "Transaction ID is required for non-cash payments.",
             )
+
+        if payment_status in {"paid", "partial"}:
+            if payment_method == "mobile_money":
+                if not (cleaned_data.get("payer_phone") or "").strip():
+                    self.add_error(
+                        "payer_phone", "Phone number is required for mobile money."
+                    )
+                if not (cleaned_data.get("network") or "").strip():
+                    self.add_error("network", "Network is required for mobile money.")
+            if payment_method == "bank_transfer":
+                if not (cleaned_data.get("bank_name") or "").strip():
+                    self.add_error(
+                        "bank_name", "Bank name is required for bank transfers."
+                    )
+            if payment_method == "card":
+                if not (cleaned_data.get("card_last_four") or "").strip():
+                    self.add_error(
+                        "card_last_four",
+                        "Card last 4 digits are required for card payments.",
+                    )
 
         return cleaned_data

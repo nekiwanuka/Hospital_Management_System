@@ -21,6 +21,7 @@ urlpatterns = [
     path("pharmacy/", include("apps.pharmacy.urls")),
     path("billing/", include("apps.billing.urls")),
     path("admission/", include("apps.admission.urls")),
+    path("delivery/", include("apps.delivery.urls")),
     path("referrals/", include("apps.referrals.urls")),
     path("emergency/", include("apps.emergency.urls")),
     path("inventory/", include("apps.inventory.urls")),

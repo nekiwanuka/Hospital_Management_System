@@ -5,8 +5,8 @@ from django.http import Http404
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
-from apps.admission.forms import AdmissionForm, DischargeForm, NursingNoteForm
-from apps.admission.models import Admission, NursingNote
+from apps.admission.forms import AdmissionForm, DischargeForm, NursingNoteForm, VitalSignForm
+from apps.admission.models import Admission, Bed, NursingNote, VitalSign, Ward
 from apps.consultation.models import Consultation
 from apps.core.permissions import (
     branch_queryset_for_user,
@@ -189,6 +189,12 @@ def detail(request, pk):
         admission=admission
     ).select_related("nurse")[:10]
 
+    context["vital_signs"] = VitalSign.objects.filter(
+        admission=admission
+    ).select_related("recorded_by").order_by("-created_at")[:10]
+
+    context["vital_sign_form"] = VitalSignForm()
+
     return render(request, "admission/detail.html", context)
 
 
@@ -205,6 +211,11 @@ def discharge(request, pk):
             if not discharge_obj.discharge_date:
                 discharge_obj.discharge_date = timezone.now()
             discharge_obj.save()
+            # Release the bed
+            if discharge_obj.bed_assigned:
+                Bed.objects.filter(pk=discharge_obj.bed_assigned_id).update(
+                    status="available"
+                )
             if discharge_obj.visit:
                 transition_visit(discharge_obj.visit, "completed", request.user)
             return redirect("admission:detail", pk=admission.pk)
@@ -266,6 +277,8 @@ def nurse_station(request):
             "my_patients": my_patients,
             "other_patients": other_patients,
             "recent_notes": recent_notes,
+            "vital_sign_form": VitalSignForm(),
+            "note_form": NursingNoteForm(),
         },
     )
 
@@ -318,3 +331,49 @@ def nursing_notes(request, admission_pk):
             "notes": notes,
         },
     )
+
+
+@login_required
+@role_required("nurse", "doctor", "system_admin", "director")
+@module_permission_required("admission", "create")
+def record_vitals(request, admission_pk):
+    admission = _get_admission_for_user_or_404(request.user, admission_pk)
+    if request.method == "POST":
+        form = VitalSignForm(request.POST)
+        if form.is_valid():
+            vital = form.save(commit=False)
+            vital.admission = admission
+            vital.recorded_by = request.user
+            vital.branch = admission.branch
+            vital.save()
+    return redirect("admission:detail", pk=admission.pk)
+
+
+@login_required
+@role_required("nurse", "doctor", "system_admin", "director")
+@module_permission_required("admission", "view")
+def vitals_chart(request, admission_pk):
+    admission = _get_admission_for_user_or_404(request.user, admission_pk)
+    vitals = admission.vital_signs.order_by("created_at")
+    return render(
+        request,
+        "admission/vitals_chart.html",
+        {
+            "admission": admission,
+            "vitals": vitals,
+        },
+    )
+
+
+# ── Bed & Ward Management ────────────────────────────────────
+
+
+@login_required
+@role_required("system_admin", "director", "nurse", "doctor")
+@module_permission_required("admission", "view")
+def bed_management(request):
+    wards = branch_queryset_for_user(
+        request.user,
+        Ward.objects.prefetch_related("beds").filter(is_active=True).order_by("name"),
+    )
+    return render(request, "admission/bed_management.html", {"wards": wards})

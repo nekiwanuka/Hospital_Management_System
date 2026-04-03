@@ -1,6 +1,21 @@
 from django.contrib import admin
 
-from apps.admission.models import Admission, NursingNote
+from apps.admission.models import Admission, Bed, NursingNote, VitalSign, Ward
+
+
+@admin.register(Ward)
+class WardAdmin(admin.ModelAdmin):
+    list_display = ("name", "ward_type", "floor", "is_active", "branch")
+    list_filter = ("branch", "ward_type", "is_active")
+    search_fields = ("name",)
+
+
+@admin.register(Bed)
+class BedAdmin(admin.ModelAdmin):
+    list_display = ("bed_number", "ward", "status", "branch")
+    list_filter = ("status", "ward__branch", "ward")
+    search_fields = ("bed_number", "ward__name")
+    raw_id_fields = ("ward",)
 
 
 @admin.register(NursingNote)
@@ -35,3 +50,20 @@ class AdmissionAdmin(admin.ModelAdmin):
         "ward",
         "bed",
     )
+
+
+@admin.register(VitalSign)
+class VitalSignAdmin(admin.ModelAdmin):
+    list_display = (
+        "admission",
+        "temperature",
+        "blood_pressure_systolic",
+        "blood_pressure_diastolic",
+        "pulse_rate",
+        "oxygen_saturation",
+        "recorded_by",
+        "created_at",
+        "branch",
+    )
+    list_filter = ("branch", "created_at")
+    raw_id_fields = ("admission", "recorded_by")

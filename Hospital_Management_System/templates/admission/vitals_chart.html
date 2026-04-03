@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Vitals Chart — {{ admission.patient }} — {{ clinic_name }}{% endblock %}
+{% block header_title %}Vitals Chart{% endblock %}
+
+{% block content %}
+<div class="cl-page-header d-flex flex-wrap align-items-center justify-content-between mb-4">
+  <div>
+    <h1 class="mb-1"><i class="bi bi-heart-pulse me-2 text-danger"></i>Vitals Chart</h1>
+    <p class="text-muted mb-0">{{ admission.patient.first_name }} {{ admission.patient.last_name }} &bull; Ward: {{ admission.ward|default:"—" }} &bull; Bed: {{ admission.bed|default:"—" }}</p>
+  </div>
+  <a href="{% url 'admission:detail' admission.pk %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back to Admission</a>
+</div>
+
+<!-- Record Vitals -->
+<div class="cl-card shadow-sm mb-4">
+  <div class="cl-card-header bg-light"><h2 class="cl-card-title mb-0"><i class="bi bi-plus-circle text-success me-2"></i>Record Vitals</h2></div>
+  <div class="cl-card-body">
+    <form method="post" action="{% url 'admission:record_vitals' admission.pk %}">
+      {% csrf_token %}
+      <div class="row g-2">
+        <div class="col-md-2">
+          <label class="form-label small">Temp (°C)</label>
+          <input type="number" step="0.1" name="temperature" class="form-control" placeholder="36.5">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">BP Systolic</label>
+          <input type="number" name="blood_pressure_systolic" class="form-control" placeholder="120">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">BP Diastolic</label>
+          <input type="number" name="blood_pressure_diastolic" class="form-control" placeholder="80">
+        </div>
+        <div class="col-md-1">
+          <label class="form-label small">Pulse</label>
+          <input type="number" name="pulse_rate" class="form-control" placeholder="72">
+        </div>
+        <div class="col-md-1">
+          <label class="form-label small">RR</label>
+          <input type="number" name="respiratory_rate" class="form-control" placeholder="16">
+        </div>
+        <div class="col-md-1">
+          <label class="form-label small">SpO2 %</label>
+          <input type="number" name="oxygen_saturation" class="form-control" placeholder="98">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Notes</label>
+          <input type="text" name="notes" class="form-control" placeholder="Optional">
+        </div>
+        <div class="col-md-1 d-flex align-items-end">
+          <button type="submit" class="btn btn-success w-100"><i class="bi bi-plus-lg"></i></button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Vitals History -->
+<div class="cl-card shadow-sm">
+  <div class="cl-card-header bg-light"><h2 class="cl-card-title mb-0"><i class="bi bi-table text-primary me-2"></i>Vitals History</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover table-sm align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Date/Time</th>
+            <th>Temp (°C)</th>
+            <th>BP</th>
+            <th>Pulse</th>
+            <th>RR</th>
+            <th>SpO2</th>
+            <th>Recorded By</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in vitals %}
+          <tr>
+            <td class="text-muted">{{ v.created_at|date:"d M Y H:i" }}</td>
+            <td class="{% if v.temperature and v.temperature > 37.5 %}text-danger fw-bold{% endif %}">{{ v.temperature|default:"—" }}</td>
+            <td class="{% if v.blood_pressure_systolic and v.blood_pressure_systolic > 140 %}text-danger fw-bold{% endif %}">{{ v.blood_pressure }}</td>
+            <td class="{% if v.pulse_rate and v.pulse_rate > 100 %}text-danger fw-bold{% elif v.pulse_rate and v.pulse_rate < 60 %}text-warning fw-bold{% endif %}">{{ v.pulse_rate|default:"—" }}</td>
+            <td>{{ v.respiratory_rate|default:"—" }}</td>
+            <td class="{% if v.oxygen_saturation and v.oxygen_saturation < 95 %}text-danger fw-bold{% endif %}">{{ v.oxygen_saturation|default:"—" }}{% if v.oxygen_saturation %}%{% endif %}</td>
+            <td class="small">{{ v.recorded_by.get_full_name|default:v.recorded_by.username }}</td>
+            <td class="small text-muted">{{ v.notes|truncatechars:50|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="8" class="text-center text-muted py-4">No vitals recorded yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
