@@ -1,9 +1,10 @@
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_GET
 
 from apps.admission.models import Admission
 from apps.billing.models import Invoice
@@ -47,6 +48,7 @@ def index(request):
             | Q(first_name__icontains=query)
             | Q(last_name__icontains=query)
             | Q(phone__icontains=query)
+            | Q(national_id__icontains=query)
         )
 
     paginator = Paginator(queryset, 15)
@@ -227,3 +229,43 @@ def edit(request, pk):
             "submit_label": "Save Changes",
         },
     )
+
+
+@login_required
+@require_GET
+def check_duplicate(request):
+    """AJAX endpoint: return possible duplicate patients by name + DOB."""
+    first_name = request.GET.get("first_name", "").strip()
+    last_name = request.GET.get("last_name", "").strip()
+    dob = request.GET.get("date_of_birth", "").strip()
+    exclude_pk = request.GET.get("exclude", "").strip()
+
+    if len(first_name) < 2 and len(last_name) < 2:
+        return JsonResponse({"matches": []})
+
+    qs = branch_queryset_for_user(request.user, Patient.objects.all())
+    filters = Q()
+    if first_name:
+        filters &= Q(first_name__iexact=first_name)
+    if last_name:
+        filters &= Q(last_name__iexact=last_name)
+    if dob:
+        filters &= Q(date_of_birth=dob)
+    if not filters:
+        return JsonResponse({"matches": []})
+
+    qs = qs.filter(filters)
+    if exclude_pk and exclude_pk.isdigit():
+        qs = qs.exclude(pk=int(exclude_pk))
+
+    matches = [
+        {
+            "id": p.pk,
+            "patient_id": p.patient_id,
+            "name": f"{p.first_name} {p.last_name}",
+            "dob": str(p.date_of_birth),
+            "phone": p.phone,
+        }
+        for p in qs[:5]
+    ]
+    return JsonResponse({"matches": matches})

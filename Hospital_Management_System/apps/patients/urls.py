@@ -7,6 +7,7 @@ app_name = "patients"
 urlpatterns = [
     path("", views.index, name="index"),
     path("create/", views.create, name="create"),
+    path("check-duplicate/", views.check_duplicate, name="check_duplicate"),
     path("<int:pk>/", views.detail, name="detail"),
     path("<int:pk>/edit/", views.edit, name="edit"),
 ]

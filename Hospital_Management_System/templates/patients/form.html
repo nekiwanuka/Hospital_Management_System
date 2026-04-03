@@ -12,9 +12,15 @@
   <div class="cl-card-body">
     <form method="post" novalidate>
       {% csrf_token %}
+      <!-- Duplicate warning banner -->
+      <div id="duplicate-warning" class="alert alert-warning d-none mb-3">
+        <strong><i class="bi bi-exclamation-triangle"></i> Possible duplicate(s) found:</strong>
+        <ul id="duplicate-list" class="mb-0 mt-1"></ul>
+        <small class="text-muted">Please verify this is a new patient before proceeding.</small>
+      </div>
       <div class="row">
         {% for field in form %}
-        <div class="{% if field.name == 'address' or field.name == 'allergies' %}col-12{% else %}col-md-6{% endif %} mb-3">
+        <div class="{% if field.name == 'address' or field.name == 'allergies' or field.name == 'chronic_conditions' %}col-12{% else %}col-md-6{% endif %} mb-3">
           <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
           {{ field }}
           {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
@@ -30,4 +36,48 @@
     </form>
   </div>
 </div>
+
+<script>
+(function(){
+  const checkUrl = "{% url 'patients:check_duplicate' %}";
+  const excludePk = "{{ patient.pk|default:'' }}";
+  const fnField = document.getElementById("id_first_name");
+  const lnField = document.getElementById("id_last_name");
+  const dobField = document.getElementById("id_date_of_birth");
+  const warning = document.getElementById("duplicate-warning");
+  const list = document.getElementById("duplicate-list");
+  let timer = null;
+
+  function checkDuplicates(){
+    const fn = (fnField ? fnField.value : "").trim();
+    const ln = (lnField ? lnField.value : "").trim();
+    const dob = (dobField ? dobField.value : "").trim();
+    if(fn.length < 2 && ln.length < 2){ warning.classList.add("d-none"); return; }
+    const params = new URLSearchParams({first_name:fn, last_name:ln, date_of_birth:dob});
+    if(excludePk) params.append("exclude", excludePk);
+    fetch(checkUrl + "?" + params.toString(), {credentials:"same-origin"})
+      .then(r => r.json())
+      .then(data => {
+        list.innerHTML = "";
+        if(data.matches && data.matches.length){
+          data.matches.forEach(m => {
+            const li = document.createElement("li");
+            li.textContent = m.patient_id + " — " + m.name + " (DOB: " + m.dob + ", Phone: " + m.phone + ")";
+            list.appendChild(li);
+          });
+          warning.classList.remove("d-none");
+        } else {
+          warning.classList.add("d-none");
+        }
+      }).catch(() => {});
+  }
+
+  [fnField, lnField, dobField].forEach(el => {
+    if(el) el.addEventListener("input", function(){
+      clearTimeout(timer);
+      timer = setTimeout(checkDuplicates, 500);
+    });
+  });
+})();
+</script>
 {% endblock %}

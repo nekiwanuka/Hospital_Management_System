@@ -61,6 +61,15 @@ class TriageRecordForm(forms.ModelForm):
                 }
             ),
         }
+        help_texts = {
+            "temperature": "°C (normal 36.1–37.2)",
+            "blood_pressure": "mmHg — systolic/diastolic (normal ~120/80)",
+            "pulse_rate": "bpm (normal 60–100)",
+            "respiratory_rate": "breaths/min (normal 12–20)",
+            "oxygen_level": "SpO₂ % (normal 95–100)",
+            "weight": "kg",
+            "height": "cm",
+        }
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user", None)

@@ -22,7 +22,7 @@ def index(request):
     queryset = branch_queryset_for_user(
         request.user,
         TriageRecord.objects.select_related("patient", "triage_officer").order_by(
-            "-date"
+            "-priority_score", "-date"
         ),
     )
 

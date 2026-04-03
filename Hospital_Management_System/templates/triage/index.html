@@ -42,20 +42,35 @@
   <div class="cl-card-body p-0">
     <div class="table-responsive">
       <table class="table">
-        <thead><tr><th>Date</th><th>Patient</th><th>BP</th><th>Temp</th><th>Pulse</th><th>Outcome</th><th>Officer</th></tr></thead>
+        <thead><tr><th>Date</th><th>Patient</th><th>Priority</th><th>BP <small class="text-muted">mmHg</small></th><th>Temp <small class="text-muted">°C</small></th><th>Pulse <small class="text-muted">bpm</small></th><th>SpO₂ <small class="text-muted">%</small></th><th>Auto-Notes</th><th>Outcome</th><th>Officer</th></tr></thead>
         <tbody>
           {% for r in records %}
           <tr>
             <td>{{ r.date|date:"d M Y H:i" }}</td>
             <td>{{ r.patient.first_name }} {{ r.patient.last_name }}</td>
+            <td>
+              {% if r.priority_score >= 5 %}
+                <span class="badge bg-danger">Critical</span>
+              {% elif r.priority_score >= 4 %}
+                <span class="badge bg-warning text-dark">High</span>
+              {% elif r.priority_score >= 3 %}
+                <span class="badge bg-info text-dark">Moderate</span>
+              {% elif r.priority_score >= 2 %}
+                <span class="badge bg-secondary">Low concern</span>
+              {% else %}
+                <span class="badge bg-success">Normal</span>
+              {% endif %}
+            </td>
             <td>{{ r.blood_pressure|default:"—" }}</td>
             <td>{{ r.temperature|default:"—" }}</td>
             <td>{{ r.pulse_rate|default:"—" }}</td>
+            <td>{{ r.oxygen_level|default:"—" }}</td>
+            <td><small>{{ r.auto_notes|linebreaksbr|default:"—" }}</small></td>
             <td><span class="badge bg-secondary">{{ r.get_outcome_display|default:"—" }}</span></td>
             <td>{{ r.triage_officer|default:"—" }}</td>
           </tr>
           {% empty %}
-          <tr><td colspan="7" class="text-center text-muted py-4">No triage records found.</td></tr>
+          <tr><td colspan="10" class="text-center text-muted py-4">No triage records found.</td></tr>
           {% endfor %}
         </tbody>
       </table>
