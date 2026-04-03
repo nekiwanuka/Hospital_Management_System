@@ -33,6 +33,13 @@ def home(request):
     return redirect("accounts:login")
 
 
+@login_required
+def help_manuals(request):
+    """Display department help manuals / user guides."""
+    section = request.GET.get("section", "").strip()
+    return render(request, "core/help.html", {"active_section": section})
+
+
 def permission_denied_view(request, exception=None):
     """Custom 403 handler — renders the friendly template."""
     return render(request, "403.html", status=403)

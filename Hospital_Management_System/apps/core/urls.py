@@ -12,6 +12,7 @@ urlpatterns = [
         views.system_admin_dashboard,
         name="system_admin_dashboard",
     ),
+    path("help/", views.help_manuals, name="help"),
     path("setup/", views.setup_redirect, name="setup"),
     path("delete-request/", views.request_delete, name="request_delete"),
     path("delete-requests/", views.delete_requests_list, name="delete_requests"),

@@ -105,6 +105,11 @@
     </a>
     {% endif %}
 
+    <div class="cl-nav-section">Support</div>
+    <a href="{% url 'core:help' %}" class="cl-nav-item {% if request.resolver_match.url_name == 'help' %}active{% endif %}">
+      <i class="bi bi-question-circle"></i> Help &amp; Guides
+    </a>
+
     {% if user.role == 'system_admin' or user.role == 'director' or user.is_superuser %}
     <div class="cl-nav-section">Administration</div>
     <a href="{% url 'settingsapp:index' %}" class="cl-nav-item {% if request.resolver_match.app_name == 'settingsapp' %}active{% endif %}">

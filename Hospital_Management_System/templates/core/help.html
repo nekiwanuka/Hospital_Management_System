@@ -1,0 +1,598 @@
+{% extends "base.html" %}
+{% block title %}Help &amp; Guides — {{ clinic_name }}{% endblock %}
+{% block header_title %}Help &amp; Guides{% endblock %}
+
+{% block extra_css %}
+<style>
+  .help-sidebar { position: sticky; top: calc(var(--header-height) + 1.5rem); }
+  .help-nav .nav-link { font-size: 0.8125rem; padding: 0.375rem 0.75rem; border-radius: 0.375rem; color: var(--cl-ink); }
+  .help-nav .nav-link:hover { background: #f1f5f9; }
+  .help-nav .nav-link.active { background: var(--cl-primary); color: #fff; font-weight: 600; }
+  .help-nav .nav-link i { width: 1.25rem; text-align: center; margin-right: 0.5rem; }
+  .help-section { scroll-margin-top: calc(var(--header-height) + 1.5rem); }
+  .help-section h2 { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+  .help-section h2 i { font-size: 1.1rem; opacity: 0.7; }
+  .help-section h3 { font-size: 0.9375rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.375rem; color: var(--cl-primary); }
+  .help-section p, .help-section li { font-size: 0.8125rem; line-height: 1.65; color: #334155; }
+  .help-section ul { padding-left: 1.25rem; }
+  .help-section .badge { font-size: 0.6875rem; }
+  .help-divider { border: 0; border-top: 2px solid #e2e8f0; margin: 2rem 0; }
+  .help-quick-tip { background: rgba(13,110,253,0.06); border-left: 3px solid var(--cl-primary); padding: 0.75rem 1rem; border-radius: 0 0.375rem 0.375rem 0; margin: 0.75rem 0; font-size: 0.8125rem; }
+  .help-warning { background: rgba(220,38,38,0.06); border-left: 3px solid var(--cl-danger); padding: 0.75rem 1rem; border-radius: 0 0.375rem 0.375rem 0; margin: 0.75rem 0; font-size: 0.8125rem; }
+  .help-key { display: inline-block; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 0.25rem; padding: 0 0.375rem; font-size: 0.75rem; font-weight: 600; font-family: monospace; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div>
+    <h1><i class="bi bi-book"></i> Help &amp; User Guides</h1>
+    <p>Step-by-step manuals for every department and feature</p>
+  </div>
+</div>
+
+<div class="row">
+  <!-- Navigation sidebar -->
+  <div class="col-lg-3 mb-4">
+    <div class="cl-card help-sidebar">
+      <div class="cl-card-body py-2">
+        <nav class="help-nav nav flex-column gap-1">
+          <a class="nav-link" href="#overview" data-section="overview"><i class="bi bi-grid-1x2"></i>Overview</a>
+          <a class="nav-link" href="#patients" data-section="patients"><i class="bi bi-people"></i>Patients</a>
+          <a class="nav-link" href="#visits" data-section="visits"><i class="bi bi-clipboard2-pulse"></i>Visits</a>
+          <a class="nav-link" href="#triage" data-section="triage"><i class="bi bi-heart-pulse"></i>Triage</a>
+          <a class="nav-link" href="#consultation" data-section="consultation"><i class="bi bi-chat-square-text"></i>Consultation</a>
+          <a class="nav-link" href="#emergency" data-section="emergency"><i class="bi bi-exclamation-triangle"></i>Emergency</a>
+          <a class="nav-link" href="#admission" data-section="admission"><i class="bi bi-building"></i>Admission</a>
+          <a class="nav-link" href="#laboratory" data-section="laboratory"><i class="bi bi-droplet"></i>Laboratory</a>
+          <a class="nav-link" href="#radiology" data-section="radiology"><i class="bi bi-radioactive"></i>Radiology</a>
+          <a class="nav-link" href="#pharmacy" data-section="pharmacy"><i class="bi bi-capsule"></i>Pharmacy</a>
+          <a class="nav-link" href="#inventory" data-section="inventory"><i class="bi bi-box-seam"></i>Inventory</a>
+          <a class="nav-link" href="#billing" data-section="billing"><i class="bi bi-receipt"></i>Billing</a>
+          <a class="nav-link" href="#reports" data-section="reports"><i class="bi bi-bar-chart-line"></i>Reports</a>
+          <a class="nav-link" href="#referrals" data-section="referrals"><i class="bi bi-send"></i>Referrals</a>
+          <a class="nav-link" href="#permissions" data-section="permissions"><i class="bi bi-shield-lock"></i>Permissions</a>
+          <a class="nav-link" href="#settings" data-section="settings"><i class="bi bi-gear"></i>Settings</a>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manual content -->
+  <div class="col-lg-9">
+
+    <!-- ========== OVERVIEW ========== -->
+    <section id="overview" class="help-section cl-card">
+      <div class="cl-card-body">
+        <h2><i class="bi bi-grid-1x2"></i> System Overview</h2>
+        <p>Welcome to the <strong>Hospital Management System (HMS)</strong>. This system manages the end-to-end patient care workflow — from registration through billing.</p>
+
+        <h3>Typical Patient Flow</h3>
+        <ol>
+          <li><strong>Registration</strong> — Receptionist registers the patient (or locates an existing record).</li>
+          <li><strong>Visit</strong> — A new visit is created and the patient checks in.</li>
+          <li><strong>Billing / Payment</strong> — The visit invoice is generated; payment is collected or post-pay privilege is approved.</li>
+          <li><strong>Triage</strong> — Nurse/triage officer records vitals; the system auto-calculates priority and clinical notes.</li>
+          <li><strong>Consultation</strong> — Doctor examines the patient, writes notes, and orders labs/imaging/prescriptions.</li>
+          <li><strong>Diagnostics</strong> — Lab and radiology fulfil orders and upload results.</li>
+          <li><strong>Pharmacy</strong> — Pharmacist dispenses prescribed medicines.</li>
+          <li><strong>Discharge / Referral</strong> — Patient is discharged or referred elsewhere.</li>
+        </ol>
+
+        <h3>User Roles</h3>
+        <ul>
+          <li><span class="badge bg-primary">Receptionist</span> — Patient registration, visit creation, billing front-desk.</li>
+          <li><span class="badge bg-success">Nurse / Triage Officer</span> — Triage vital recording, patient assessment.</li>
+          <li><span class="badge bg-info text-dark">Doctor</span> — Consultation, diagnosis, ordering tests &amp; prescriptions, editing medical data.</li>
+          <li><span class="badge bg-secondary">Lab Technician</span> — Processing lab requests, entering results.</li>
+          <li><span class="badge bg-secondary">Radiology Technician / Radiologist</span> — Imaging requests &amp; reports.</li>
+          <li><span class="badge bg-secondary">Pharmacist</span> — Dispensing medicines, managing pharmacy stock.</li>
+          <li><span class="badge bg-secondary">Cashier</span> — Processing payments, issuing receipts.</li>
+          <li><span class="badge bg-dark">System Admin</span> — Full system access, user management, settings.</li>
+          <li><span class="badge bg-dark">Director</span> — Executive oversight, reports, approvals.</li>
+        </ul>
+
+        <div class="help-quick-tip">
+          <strong><i class="bi bi-lightbulb"></i> Tip:</strong> Use the search bar on any list page to quickly find patients, visits, or records by name, ID, or phone number.
+        </div>
+      </div>
+    </section>
+
+    <hr class="help-divider">
+
+    <!-- ========== PATIENTS ========== -->
+    <section id="patients" class="help-section cl-card">
+      <div class="cl-card-body">
+        <h2><i class="bi bi-people"></i> Patients</h2>
+        <p>The Patients module is the master registry for all patients. Every clinical interaction is linked to a patient record.</p>
+
+        <h3>Registering a New Patient</h3>
+        <ol>
+          <li>Navigate to <strong>Patients</strong> from the sidebar.</li>
+          <li>Click <strong>"Register Patient"</strong>.</li>
+          <li>Fill in the required fields: first name, last name, gender, date of birth, phone, address, and next of kin.</li>
+          <li>Optional fields: email, national ID (NIN), marital status, occupation, nationality, religion, blood group, allergies, chronic conditions.</li>
+          <li>Click <strong>"Create Patient"</strong>.</li>
+        </ol>
+
+        <h3>Duplicate Detection</h3>
+        <p>As you type the patient's name and date of birth, the system automatically checks for existing records. If a potential duplicate is found, a <span class="badge bg-warning text-dark">warning banner</span> appears showing matching patients. Always verify this before creating a new record.</p>
+
+        <h3>Editing Patient Details</h3>
+        <div class="help-warning">
+          <strong><i class="bi bi-exclamation-triangle"></i> Restricted:</strong> Only <strong>System Admin</strong> and <strong>Director</strong> can edit patient personal details (name, phone, address, etc.). If you need a correction, contact your administrator or request permission.
+        </div>
+
+        <h3>Searching for Patients</h3>
+        <p>Use the search bar at the top of the Patients list. You can search by:</p>
+        <ul>
+          <li>Patient ID (e.g., <span class="help-key">KPL-PT-000042</span>)</li>
+          <li>First or last name</li>
+          <li>Phone number</li>
+          <li>National ID / NIN</li>
+        </ul>
+
+        <h3>Patient Detail Page</h3>
+        <p>Click on any patient to see their complete medical history, including triage records, consultations, lab results, imaging, invoices, admissions, and referrals — all in one place.</p>
+      </div>
+    </section>
+
+    <hr class="help-divider">
+
+    <!-- ========== VISITS ========== -->
+    <section id="visits" class="help-section cl-card">
+      <div class="cl-card-body">
+        <h2><i class="bi bi-clipboard2-pulse"></i> Visits</h2>
+        <p>A Visit represents a single episode of care. Each time a patient comes to the facility, a new visit is created.</p>
+
+        <h3>Creating a Visit</h3>
+        <ol>
+          <li>Navigate to <strong>Visits</strong> or open the patient's detail page.</li>
+          <li>Click <strong>"New Visit"</strong>.</li>
+          <li>Select the patient (if not already selected).</li>
+          <li>The visit is automatically assigned a visit number and timestamped.</li>
+        </ol>
+
+        <h3>Visit Statuses</h3>
+        <ul>
+          <li><span class="badge bg-secondary">Checked In</span> — Patient has arrived.</li>
+          <li><span class="badge bg-info text-dark">Waiting Triage</span> — Awaiting vitals assessment.</li>
+          <li><span class="badge bg-primary">Waiting Doctor</span> — Triaged, in queue for consultation.</li>
+          <li><span class="badge bg-success">Completed</span> — All care delivered and visit closed.</li>
+        </ul>
+
+        <div class="help-warning">
+          <strong><i class="bi bi-lock"></i> Note:</strong> Visits cannot be edited or deleted by regular staff. Only administrators can manage visit records for data integrity.
+        </div>
+      </div>
+    </section>
+
+    <hr class="help-divider">
+
+    <!-- ========== TRIAGE ========== -->
+    <section id="triage" class="help-section cl-card">
+      <div class="cl-card-body">
+        <h2><i class="bi bi-heart-pulse"></i> Triage</h2>
+        <p>Triage is where patient vitals are recorded and an initial clinical assessment is performed.</p>
+
+        <h3>Recording Triage</h3>
+        <ol>
+          <li>Navigate to <strong>Triage</strong>.</li>
+          <li>In the <strong>"Eligible Visits"</strong> table, find the patient's visit and click <strong>"Triage"</strong>.</li>
+          <li>Enter all vital signs with their correct metric units:
+            <ul>
+              <li><strong>Temperature</strong> — in °C (normal: 36.1–37.2)</li>
+              <li><strong>Blood Pressure</strong> — in mmHg, format systolic/diastolic (e.g., 120/80)</li>
+              <li><strong>Pulse Rate</strong> — in bpm (normal: 60–100)</li>
+              <li><strong>Respiratory Rate</strong> — in breaths/min (normal: 12–20)</li>
+              <li><strong>Oxygen Saturation (SpO₂)</strong> — in % (normal: 95–100%)</li>
+              <li><strong>Weight</strong> — in kg</li>
+              <li><strong>Height</strong> — in cm</li>
+            </ul>
+          </li>
+          <li>Describe the patient's <strong>symptoms</strong>.</li>
+          <li>Select the <strong>outcome</strong>: Send to Doctor, Emergency, or Admission.</li>
+          <li>Click <strong>"Save Triage Record"</strong>.</li>
+        </ol>
+
+        <h3>Auto-Generated Clinical Notes</h3>
+        <p>The system automatically analyses vitals and generates clinical notes when values are abnormal:</p>
+        <ul>
+          <li><strong>Fever</strong> — Temperature ≥ 38.0°C</li>
+          <li><strong>Hypothermia</strong> — Temperature &lt; 35.0°C</li>
+          <li><strong>Hypertension</strong> — BP ≥ 140/90 mmHg</li>
+          <li><strong>Hypotension</strong> — BP &lt; 90/60 mmHg</li>
+          <li><strong>Tachycardia</strong> — Pulse &gt; 100 bpm</li>
+          <li><strong>Bradycardia</strong> — Pulse &lt; 60 bpm</li>
+          <li><strong>Hypoxemia</strong> — SpO₂ &lt; 95%</li>
+          <li><strong>BMI</strong> — Auto-calculated from weight and height</li>
+        </ul>
+
+        <h3>Priority Scoring</h3>
+        <p>Each record gets an automatic priority based on the severity of vital sign abnormalities:</p>
+        <ul>
+          <li><span class="badge bg-success">Normal</span> — All vitals within range</li>
+          <li><span class="badge bg-secondary">Low Concern</span> — Minor deviations</li>
+          <li><span class="badge bg-info text-dark">Moderate</span> — Notable abnormalities</li>
+          <li><span class="badge bg-warning text-dark">High</span> — Significant concern</li>
+          <li><span class="badge bg-danger">Critical</span> — Urgent attention needed</li>
+        </ul>
+        <p>Records are sorted by priority (critical first) so the most urgent patients are seen first.</p>
+
+        <h3>Editing Triage Data</h3>
+        <p>Doctors, nurses, and triage officers can update the medical vitals on any triage record by clicking the <i class="bi bi-pencil"></i> edit button. Patient and visit details are not editable from this form.</p>
+      </div>
+    </section>
+
+    <hr class="help-divider">
+
+    <!-- ========== CONSULTATION ========== -->
+    <section id="consultation" class="help-section cl-card">
+      <div class="cl-card-body">
+        <h2><i class="bi bi-chat-square-text"></i> Consultation</h2>
+        <p>Doctors use this module to examine patients, document findings, and place orders.</p>
+
+        <h3>Starting a Consultation</h3>
+        <ol>
+          <li>Navigate to <strong>Consultation</strong>.</li>
+          <li>Select a patient from the queue (those sent from triage).</li>
+          <li>The workbench opens showing the patient's vitals, history, and profile.</li>
+        </ol>
+
+        <h3>During Consultation</h3>
+        <ul>
+          <li><strong>Clinical Notes</strong> — Document history of presenting illness, examination findings, and diagnosis.</li>
+          <li><strong>Lab Orders</strong> — Request blood work, urinalysis, or other tests.</li>
+          <li><strong>Imaging Orders</strong> — Request X-rays, ultrasounds, CT scans, or MRIs.</li>
+          <li><strong>Prescriptions</strong> — Prescribe medicines with dosage, frequency, and duration.</li>
+          <li><strong>Referrals</strong> — Refer to a specialist or another facility.</li>
+        </ul>
+
+        <h3>Completing a Consultation</h3>
+        <p>After documenting everything, submit the consultation. The system will route orders to the appropriate departments (lab, radiology, pharmacy).</p>
+
+        <div class="help-quick-tip">
+          <strong><i class="bi bi-lightbulb"></i> Tip:</strong> Review triage auto-notes on the patient's card to quickly spot abnormalities before examining the patient.
+        </div>
+      </div>
+    </section>
+
+    <hr class="help-divider">
+
+    <!-- ========== EMERGENCY ========== -->
+    <section id="emergency" class="help-section cl-card">
+      <div class="cl-card-body">
+        <h2><i class="bi bi-exclamation-triangle"></i> Emergency</h2>
+        <p>The Emergency module handles urgent and critical cases that bypass the normal visit workflow.</p>
+
+        <h3>Registering an Emergency Case</h3>
+        <ol>
+          <li>Navigate to <strong>Emergency</strong>.</li>
+          <li>Click <strong>"New Emergency Case"</strong>.</li>
+          <li>Select or register the patient.</li>
+          <li>Record the nature of the emergency, initial assessment, and vitals.</li>
+          <li>The case is immediately prioritised for attention.</li>
+        </ol>
+
+        <h3>Emergency Outcomes</h3>
+        <ul>
+          <li><strong>Stabilised &amp; Discharged</strong> — Patient treated and sent home.</li>
+          <li><strong>Admitted</strong> — Patient transferred to the admission ward.</li>
+          <li><strong>Referred</strong> — Transferred to another facility for specialised care.</li>
+        </ul>
+      </div>
+    </section>
+
+    <hr class="help-divider">
+
+    <!-- ========== ADMISSION ========== -->
+    <section id="admission" class="help-section cl-card">
+      <div class="cl-card-body">
+        <h2><i class="bi bi-building"></i> Admission</h2>
+        <p>Manages inpatient stays — from bed allocation to discharge.</p>
+
+        <h3>Admitting a Patient</h3>
+        <ol>
+          <li>Navigate to <strong>Admission</strong>.</li>
+          <li>Click <strong>"Admit Patient"</strong>.</li>
+          <li>Select the patient and visit.</li>
+          <li>Assign a ward, bed, and admitting doctor.</li>
+          <li>Record the admission diagnosis.</li>
+        </ol>
+
+        <h3>During Admission</h3>
+        <ul>
+          <li>Track daily rounds and nursing notes.</li>
+          <li>Order additional tests or medications.</li>
+          <li>Monitor patient progress and vitals.</li>
+        </ul>
+
+        <h3>Discharging a Patient</h3>
+        <p>Record the discharge date, outcome, and any follow-up instructions. The system will update the visit status accordingly.</p>
+      </div>
+    </section>
+
+    <hr class="help-divider">
+
+    <!-- ========== LABORATORY ========== -->
+    <section id="laboratory" class="help-section cl-card">
+      <div class="cl-card-body">
+        <h2><i class="bi bi-droplet"></i> Laboratory</h2>
+        <p>Lab technicians use this module to process test requests from doctors and record results.</p>
+
+        <h3>Processing Lab Requests</h3>
+        <ol>
+          <li>Navigate to <strong>Laboratory</strong>.</li>
+          <li>Pending requests appear in the queue.</li>
+          <li>Click on a request to view patient details and ordered tests.</li>
+          <li>Perform the test and enter the results.</li>
+          <li>Submit — the results are automatically available to the requesting doctor.</li>
+        </ol>
+
+        <h3>Test Categories</h3>
+        <p>Tests are organised by category (haematology, biochemistry, urinalysis, etc.). Each test has a defined panel with normal ranges displayed alongside results.</p>
+
+        <div class="help-quick-tip">
+          <strong><i class="bi bi-lightbulb"></i> Tip:</strong> Flag any critical or panic values immediately by marking them as urgent so the doctor is alerted.
+        </div>
+      </div>
+    </section>
+
+    <hr class="help-divider">
+
+    <!-- ========== RADIOLOGY ========== -->
+    <section id="radiology" class="help-section cl-card">
+      <div class="cl-card-body">
+        <h2><i class="bi bi-radioactive"></i> Radiology</h2>
+        <p>Handles all imaging requests — X-rays, ultrasounds, CT scans, and MRIs.</p>
+
+        <h3>Processing Imaging Requests</h3>
+        <ol>
+          <li>Navigate to <strong>Radiology</strong>.</li>
+          <li>Pending imaging requests are listed by priority.</li>
+          <li>Select a request, perform the imaging, and upload the result/report.</li>
+          <li>The radiologist reviews and adds their interpretation.</li>
+          <li>Results are sent back to the requesting doctor.</li>
+        </ol>
+
+        <h3>Radiology Reports</h3>
+        <p>Each imaging result includes the technique used, findings, impression, and any uploaded images. These are attached to the patient's medical history.</p>
+      </div>
+    </section>
+
+    <hr class="help-divider">
+
+    <!-- ========== PHARMACY ========== -->
+    <section id="pharmacy" class="help-section cl-card">
+      <div class="cl-card-body">
+        <h2><i class="bi bi-capsule"></i> Pharmacy</h2>
+        <p>The Pharmacy module manages medicine dispensing and stock at the branch level.</p>
+
+        <h3>Dispensing Medicines</h3>
+        <ol>
+          <li>Navigate to <strong>Pharmacy</strong>.</li>
+          <li>Pending prescriptions from consultations appear in the queue.</li>
+          <li>Select a prescription and verify the medicine, dosage, and quantity.</li>
+          <li>Dispense the medicine — stock is automatically deducted.</li>
+          <li>A receipt/label can be printed for the patient.</li>
+        </ol>
+
+        <h3>Stock Management</h3>
+        <ul>
+          <li>View current stock levels for all medicines.</li>
+          <li>Low-stock alerts appear when quantities fall below the reorder threshold.</li>
+          <li>Stock is replenished from the central Medical Store (see Inventory).</li>
+        </ul>
+
+        <div class="help-warning">
+          <strong><i class="bi bi-exclamation-triangle"></i> Important:</strong> Never dispense medicines without a valid prescription from a doctor. All dispensing is logged for audit purposes.
+        </div>
+      </div>
+    </section>
+
+    <hr class="help-divider">
+
+    <!-- ========== INVENTORY ========== -->
+    <section id="inventory" class="help-section cl-card">
+      <div class="cl-card-body">
+        <h2><i class="bi bi-box-seam"></i> Inventory / Medical Store</h2>
+        <p>The central inventory manages all medical supplies, medicines, and consumables across branches.</p>
+
+        <h3>Key Features</h3>
+        <ul>
+          <li><strong>Main Store Dashboard</strong> — Overview of all stock items, values, and alerts.</li>
+          <li><strong>Receiving Stock</strong> — Record incoming supplies from suppliers with batch numbers and expiry dates.</li>
+          <li><strong>Transfers</strong> — Transfer stock from the main store to branch pharmacies, labs, or radiology departments.</li>
+          <li><strong>Pack Sizes</strong> — Items can have configurable pack sizes (e.g., a box of 100 tablets). Transfers can be done in packs or individual units.</li>
+          <li><strong>Stock Reconciliation</strong> — Physical stock counts can be verified against system records.</li>
+        </ul>
+
+        <h3>Transfer Workflow</h3>
+        <ol>
+          <li>Go to <strong>Inventory → Transfer</strong>.</li>
+          <li>Select the destination (pharmacy, lab, or radiology).</li>
+          <li>Choose items and quantities.</li>
+          <li>Submit — stock is deducted from central and added to the destination.</li>
+        </ol>
+      </div>
+    </section>
+
+    <hr class="help-divider">
+
+    <!-- ========== BILLING ========== -->
+    <section id="billing" class="help-section cl-card">
+      <div class="cl-card-body">
+        <h2><i class="bi bi-receipt"></i> Billing &amp; Payments</h2>
+        <p>The Billing module handles invoices, payments, and financial tracking for all patient services.</p>
+
+        <h3>Invoice Lifecycle</h3>
+        <ol>
+          <li><strong>Generated</strong> — An invoice is auto-created when a visit is initiated or services are ordered.</li>
+          <li><strong>Pending</strong> — Awaiting payment from the patient.</li>
+          <li><strong>Partial</strong> — Some payment received; balance outstanding.</li>
+          <li><strong>Paid</strong> — Full payment received.</li>
+        </ol>
+
+        <h3>Collecting Payment</h3>
+        <ol>
+          <li>Navigate to <strong>Billing</strong>.</li>
+          <li>Find the invoice (search by patient name or invoice number).</li>
+          <li>Click <strong>"Record Payment"</strong>.</li>
+          <li>Enter the amount and payment method (cash, mobile money, card, etc.).</li>
+          <li>A receipt is generated automatically.</li>
+        </ol>
+
+        <h3>Post-Pay Privilege</h3>
+        <p>In some cases, a cashier can approve a patient to proceed to triage before payment. This requires approval and is logged for audit.</p>
+
+        <div class="help-quick-tip">
+          <strong><i class="bi bi-lightbulb"></i> Tip:</strong> Use the billing search to find invoices by patient name, invoice number, or status (paid, pending, partial).
+        </div>
+      </div>
+    </section>
+
+    <hr class="help-divider">
+
+    <!-- ========== REPORTS ========== -->
+    <section id="reports" class="help-section cl-card">
+      <div class="cl-card-body">
+        <h2><i class="bi bi-bar-chart-line"></i> Reports</h2>
+        <p>The Reports module provides data-driven insights into hospital operations, finances, and clinical activity.</p>
+
+        <h3>Available Reports</h3>
+        <ul>
+          <li><strong>Revenue Summary</strong> — Total income by period, branch, and payment method.</li>
+          <li><strong>Patient Statistics</strong> — Registration and visit counts over time.</li>
+          <li><strong>Departmental Activity</strong> — Lab, radiology, pharmacy throughput.</li>
+          <li><strong>Stock Reports</strong> — Inventory levels, transfers, and consumption.</li>
+          <li><strong>Audit Logs</strong> — Track who did what and when across the system.</li>
+        </ul>
+
+        <h3>Filtering &amp; Date Ranges</h3>
+        <p>Most reports support date range filters, branch filters, and export options. Use these to narrow down to the exact information you need.</p>
+      </div>
+    </section>
+
+    <hr class="help-divider">
+
+    <!-- ========== REFERRALS ========== -->
+    <section id="referrals" class="help-section cl-card">
+      <div class="cl-card-body">
+        <h2><i class="bi bi-send"></i> Referrals</h2>
+        <p>Create and track patient referrals to specialists or external facilities.</p>
+
+        <h3>Creating a Referral</h3>
+        <ol>
+          <li>From a consultation or the Referrals module, click <strong>"New Referral"</strong>.</li>
+          <li>Select the patient and specify the referring doctor.</li>
+          <li>Enter the referral reason, destination facility, and any clinical notes.</li>
+          <li>Submit — a referral record is created and linked to the patient's history.</li>
+        </ol>
+
+        <h3>Tracking Referrals</h3>
+        <p>All referrals are listed with their status. Follow up on outcomes and record feedback when available.</p>
+      </div>
+    </section>
+
+    <hr class="help-divider">
+
+    <!-- ========== PERMISSIONS ========== -->
+    <section id="permissions" class="help-section cl-card">
+      <div class="cl-card-body">
+        <h2><i class="bi bi-shield-lock"></i> Permissions &amp; Access Control</h2>
+        <p>The system uses a two-layer permission model to control who can do what:</p>
+
+        <h3>Role-Based Access (Layer 1)</h3>
+        <p>Every user has a role (receptionist, doctor, nurse, etc.) which grants baseline access to specific modules. For example, a pharmacist can access Pharmacy but not Laboratory.</p>
+
+        <h3>Explicit Permission Grants (Layer 2)</h3>
+        <p>Administrators can grant additional module access to specific users beyond their role. For example, giving a nurse access to view billing records.</p>
+
+        <h3>Requesting Access</h3>
+        <ol>
+          <li>If you encounter a "Permission Denied" page, click <strong>"Request Access"</strong>.</li>
+          <li>Your request is sent to the System Admin / Director for review.</li>
+          <li>Once approved, you gain access immediately.</li>
+        </ol>
+
+        <h3>Managing Permissions (Admin Only)</h3>
+        <ul>
+          <li>Navigate to <strong>Permissions</strong> in the sidebar.</li>
+          <li>View all users and their current access levels.</li>
+          <li>Grant or revoke module access per user.</li>
+          <li>Suspend or reactivate user permissions.</li>
+        </ul>
+
+        <div class="help-warning">
+          <strong><i class="bi bi-lock"></i> Important:</strong> Patient record editing is restricted to <strong>System Admin</strong> and <strong>Director</strong> only. Doctors can edit medical/triage data but not patient personal details or visits.
+        </div>
+      </div>
+    </section>
+
+    <hr class="help-divider">
+
+    <!-- ========== SETTINGS ========== -->
+    <section id="settings" class="help-section cl-card">
+      <div class="cl-card-body">
+        <h2><i class="bi bi-gear"></i> System Settings</h2>
+        <p>Configure the system to match your facility's needs. Only System Admin and Director roles have access.</p>
+
+        <h3>Branding</h3>
+        <ul>
+          <li>Upload your facility's logo.</li>
+          <li>Set the facility name displayed throughout the system.</li>
+          <li>Customize colours for the sidebar, dashboard, and buttons.</li>
+        </ul>
+
+        <h3>Branches</h3>
+        <p>If your facility has multiple locations, each is managed as a separate branch. Users are assigned to branches and can only see data from their branch (unless granted multi-branch access).</p>
+
+        <h3>User Management</h3>
+        <ul>
+          <li>Create new user accounts and assign roles.</li>
+          <li>Reset passwords for staff members.</li>
+          <li>Deactivate accounts for departed staff.</li>
+        </ul>
+
+        <h3>Billing Configuration</h3>
+        <ul>
+          <li>Set service prices and fee schedules.</li>
+          <li>Configure payment methods accepted.</li>
+          <li>Set up currency display format.</li>
+        </ul>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+  // Highlight active section in help nav on scroll
+  const sections = document.querySelectorAll('.help-section');
+  const navLinks = document.querySelectorAll('.help-nav .nav-link');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if(entry.isIntersecting){
+        navLinks.forEach(l => l.classList.remove('active'));
+        const id = entry.target.id;
+        const link = document.querySelector('.help-nav .nav-link[href="#'+id+'"]');
+        if(link) link.classList.add('active');
+      }
+    });
+  }, {rootMargin: '-20% 0px -60% 0px', threshold: 0});
+  sections.forEach(s => observer.observe(s));
+
+  // Jump to section from URL param
+  const params = new URLSearchParams(window.location.search);
+  const sec = params.get('section');
+  if(sec){
+    const el = document.getElementById(sec);
+    if(el) setTimeout(() => el.scrollIntoView({behavior:'smooth'}), 200);
+  }
+})();
+</script>
+{% endblock %}
