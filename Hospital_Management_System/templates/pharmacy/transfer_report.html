@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Pharmacy Transfer Report — {{ clinic_name }}{% endblock %}
+{% block header_title %}Pharmacy Transfer Report{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Pharmacy Transfer Report</h1><small class="text-muted">Stock movements involving the pharmacy store.</small></div>
+  <a href="{% url 'pharmacy:index' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to Pharmacy</a>
+</div>
+
+<!-- Filters -->
+<div class="cl-card mb-4">
+  <div class="cl-card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-4"><label class="form-label">From</label><input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+      <div class="col-md-4"><label class="form-label">To</label><input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+      <div class="col-md-4"><button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-filter"></i> Filter</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- Summary -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-4">
+    <div class="cl-stat">
+      <div class="cl-stat-icon primary"><i class="bi bi-box-arrow-in-right"></i></div>
+      <div class="cl-stat-label">Total Units Transferred</div>
+      <div class="cl-stat-value">{{ summary.total_qty }}</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="cl-stat">
+      <div class="cl-stat-icon warning"><i class="bi bi-cash-coin"></i></div>
+      <div class="cl-stat-label">Total Cost Value</div>
+      <div class="cl-stat-value">{{ summary.total_cost_value }}</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="cl-stat">
+      <div class="cl-stat-icon success"><i class="bi bi-tag"></i></div>
+      <div class="cl-stat-label">Total Retail Value</div>
+      <div class="cl-stat-value">{{ summary.total_retail_value }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Table -->
+<div class="cl-card">
+  <div class="cl-card-header"><h2 class="cl-card-title">Transfers</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Item</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Batch</th>
+            <th class="text-end">Qty</th>
+            <th class="text-end">Unit Cost</th>
+            <th class="text-end">Selling Price</th>
+            <th>Transferred By</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in transfers %}
+          <tr>
+            <td>{{ t.transferred_at|date:"d M Y H:i" }}</td>
+            <td>{{ t.source_item.item_name }}</td>
+            <td>{{ t.source_item.get_store_department_display }}</td>
+            <td>{{ t.destination_item.get_store_department_display }}</td>
+            <td>{{ t.source_batch.batch_number }}</td>
+            <td class="text-end">{{ t.quantity }}</td>
+            <td class="text-end">{{ t.unit_cost }}</td>
+            <td class="text-end">{{ t.selling_price_per_unit }}</td>
+            <td>{{ t.transferred_by.get_full_name }}</td>
+            <td>{{ t.notes|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="10" class="text-center text-muted py-4">No pharmacy transfers found for the selected period.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

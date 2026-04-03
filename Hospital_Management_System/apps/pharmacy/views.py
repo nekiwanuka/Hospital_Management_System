@@ -1,13 +1,16 @@
 from datetime import timedelta
+from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Q
-from django.shortcuts import redirect, render
+from django.db import models
+from django.db.models import F, Q, Sum
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from apps.billing.models import InvoiceLineItem, Receipt
+from apps.inventory.models import StockTransfer
 from apps.core.permissions import (
     branch_queryset_for_user,
     module_permission_required,
@@ -562,5 +565,111 @@ def pharmacy_receipts(request):
             "date_from": date_from,
             "date_to": date_to,
             "receipt_type": receipt_type,
+        },
+    )
+
+
+@login_required
+@role_required(
+    "pharmacist", "nurse", "cashier", "receptionist", "system_admin", "director"
+)
+@module_permission_required("pharmacy", "view")
+def pharmacy_receipt_detail(request, receipt_pk):
+    """View a single receipt without leaving the pharmacy module."""
+    rcpt = get_object_or_404(Receipt, pk=receipt_pk)
+    scoped = branch_queryset_for_user(
+        request.user, Receipt.objects.filter(pk=receipt_pk)
+    )
+    if not scoped.exists():
+        from django.http import Http404
+
+        raise Http404("Receipt not found")
+    invoice = rcpt.invoice
+    line_items = invoice.line_items.all()
+    return render(
+        request,
+        "pharmacy/receipt_detail.html",
+        {
+            "receipt": rcpt,
+            "invoice": invoice,
+            "line_items": line_items,
+        },
+    )
+
+
+@login_required
+@role_required("pharmacist", "nurse", "system_admin", "director")
+@module_permission_required("pharmacy", "view")
+def pharmacy_transfer_report(request):
+    """Pharmacy-scoped stock transfer report — shows transfers
+    involving the pharmacy store without routing to inventory."""
+    today = timezone.localdate()
+    default_start = today - timedelta(days=30)
+    date_from = request.GET.get("date_from", "")
+    date_to = request.GET.get("date_to", "")
+    try:
+        date_from = timezone.datetime.strptime(date_from, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        date_from = default_start
+    try:
+        date_to = timezone.datetime.strptime(date_to, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        date_to = today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    pharmacy_transfers = branch_queryset_for_user(
+        request.user,
+        StockTransfer.objects.select_related(
+            "source_item",
+            "source_batch",
+            "destination_item",
+            "destination_batch",
+            "transferred_by",
+            "store_request",
+        )
+        .filter(
+            transferred_at__date__range=(date_from, date_to),
+        )
+        .filter(
+            Q(source_item__store_department="pharmacy")
+            | Q(destination_item__store_department="pharmacy")
+        )
+        .order_by("-transferred_at"),
+    )[:200]
+
+    summary_qs = branch_queryset_for_user(
+        request.user,
+        StockTransfer.objects.filter(
+            transferred_at__date__range=(date_from, date_to),
+        ).filter(
+            Q(source_item__store_department="pharmacy")
+            | Q(destination_item__store_department="pharmacy")
+        ),
+    )
+    summary = summary_qs.aggregate(
+        total_qty=Sum("quantity"),
+        total_cost_value=Sum(
+            F("quantity") * F("unit_cost"),
+            output_field=models.DecimalField(),
+        ),
+        total_retail_value=Sum(
+            F("quantity") * F("selling_price_per_unit"),
+            output_field=models.DecimalField(),
+        ),
+    )
+
+    return render(
+        request,
+        "pharmacy/transfer_report.html",
+        {
+            "transfers": pharmacy_transfers,
+            "date_from": date_from,
+            "date_to": date_to,
+            "summary": {
+                "total_qty": summary["total_qty"] or 0,
+                "total_cost_value": summary["total_cost_value"] or Decimal("0.00"),
+                "total_retail_value": summary["total_retail_value"] or Decimal("0.00"),
+            },
         },
     )

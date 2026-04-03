@@ -16,4 +16,10 @@ urlpatterns = [
     ),
     path("prescriptions/", views.prescriptions, name="prescriptions"),
     path("receipts/", views.pharmacy_receipts, name="pharmacy_receipts"),
+    path(
+        "receipts/<int:receipt_pk>/",
+        views.pharmacy_receipt_detail,
+        name="pharmacy_receipt_detail",
+    ),
+    path("transfers/", views.pharmacy_transfer_report, name="transfer_report"),
 ]

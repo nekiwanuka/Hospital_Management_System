@@ -586,7 +586,7 @@ def _render_request_page(
                         request,
                         "Radiology request saved and sent to the radiology workflow queue after billing clearance.",
                     )
-                    return redirect("billing:detail", pk=invoice.pk)
+                    return redirect("radiology:detail", pk=imaging_request.pk)
     else:
         form = form_class(user=request.user, initial=initial)
 

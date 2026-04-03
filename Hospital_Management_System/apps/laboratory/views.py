@@ -370,7 +370,11 @@ def create_request(request):
                     source_model="lab",
                     source_id=lab_request.id,
                 )
-                return redirect("billing:detail", pk=invoice.pk)
+                messages.success(
+                    request,
+                    f"Lab request created. Invoice {invoice.invoice_number} sent to cashier.",
+                )
+                return redirect("laboratory:detail", pk=lab_request.pk)
     else:
         form = LabRequestForm(user=request.user)
 

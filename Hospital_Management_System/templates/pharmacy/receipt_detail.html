@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Receipt {{ receipt.receipt_number }}</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:13px;color:#333;margin:0;padding:20px}
+    .header{text-align:center;margin-bottom:20px;border-bottom:2px solid #333;padding-bottom:10px}
+    .header h1{margin:0;font-size:20px} .header p{margin:2px 0;font-size:12px;color:#555}
+    .header .logo{max-height:70px;margin-bottom:6px}
+    .header .doc-type{font-size:16px;font-weight:bold;margin-top:6px;letter-spacing:2px}
+    table{width:100%;border-collapse:collapse;margin-bottom:20px}
+    table th,table td{border:1px solid #ddd;padding:8px;text-align:left}
+    table th{background:#f5f5f5} .total-row{font-weight:bold;background:#f5f5f5}
+    .footer{text-align:center;font-size:11px;color:#999;margin-top:30px}
+    @media print{body{margin:0;padding:10px}.no-print{display:none}}
+  </style>
+</head>
+<body>
+  <div class="no-print" style="margin-bottom:15px">
+    <button onclick="window.print()" style="padding:8px 16px;cursor:pointer">Print</button>
+    <a href="{% url 'pharmacy:pharmacy_receipts' %}" style="margin-left:10px">Back to Pharmacy Receipts</a>
+  </div>
+
+  <div class="header">
+    {% if clinic_logo %}<img src="{{ clinic_logo.url }}" alt="Logo" class="logo">{% endif %}
+    <h1>{{ clinic_name|default:"Hospital" }}</h1>
+    {% if clinic_address %}<p>{{ clinic_address }}</p>{% endif %}
+    {% if clinic_city or clinic_country %}<p>{{ clinic_city }}{% if clinic_city and clinic_country %}, {% endif %}{{ clinic_country }}</p>{% endif %}
+    {% if clinic_phone %}<p>Tel: {{ clinic_phone }}{% if clinic_email %} | Email: {{ clinic_email }}{% endif %}</p>{% endif %}
+    <p class="doc-type">{{ receipt.get_receipt_type_display|upper }} RECEIPT — {{ receipt.receipt_number }}</p>
+    {% if receipt.service_type %}<p style="font-size:13px;margin-top:4px"><strong>Service:</strong> {{ receipt.service_type|upper }}</p>{% endif %}
+  </div>
+
+  <table style="border:none;margin-bottom:15px">
+    <tr style="border:none"><td style="border:none;width:50%">
+      <strong>Patient:</strong> {{ invoice.patient.first_name }} {{ invoice.patient.last_name }}<br>
+      <strong>Invoice:</strong> {{ invoice.invoice_number }}<br>
+      <strong>Receipt #:</strong> {{ receipt.receipt_number }}<br>
+      <strong>Date:</strong> {{ receipt.created_at|date:"d M Y H:i" }}
+    </td><td style="border:none;width:50%;text-align:right">
+      <strong>Amount:</strong> {{ receipt.amount_paid }}<br>
+      <strong>Balance:</strong> {{ receipt.balance_due }}<br>
+      <strong>Method:</strong> {{ receipt.get_payment_method_display }}<br>
+      <strong>Transaction ID:</strong> {{ receipt.transaction_id|default:"—" }}<br>
+      <strong>Cashier:</strong> {{ receipt.received_by|default:"—" }}
+    </td></tr>
+  </table>
+
+  {% if receipt.receipt_type == 'partial' %}
+  <p><strong>Partial Payment:</strong> This receipt confirms a part payment on the invoice. Outstanding balance is {{ receipt.balance_due }}.</p>
+  {% endif %}
+
+  {% if receipt.service_description %}
+  <p style="margin-bottom:12px"><strong>Reason for Payment:</strong> {{ receipt.service_description }}</p>
+  {% endif %}
+
+  <table>
+    <thead><tr><th>#</th><th>Service</th><th>Description</th><th style="text-align:right">Amount</th></tr></thead>
+    <tbody>
+      {% for item in line_items %}
+      <tr><td>{{ forloop.counter }}</td><td>{{ item.get_service_type_display }}</td><td>{{ item.description }}</td><td style="text-align:right">{{ item.amount }}</td></tr>
+      {% endfor %}
+      <tr class="total-row"><td colspan="3" style="text-align:right">Invoice Total</td><td style="text-align:right">{{ invoice.total_amount }}</td></tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    <p>Thank you. {{ clinic_name|default:"Hospital" }}</p>
+    {% if clinic_phone %}<p>Tel: {{ clinic_phone }}{% if clinic_email %} | {{ clinic_email }}{% endif %}</p>{% endif %}
+  </div>
+</body>
+</html>

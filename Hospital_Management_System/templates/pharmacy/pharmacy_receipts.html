@@ -102,7 +102,7 @@
             <td>{{ r.received_by.get_full_name|default:r.received_by.username }}</td>
             <td>{{ r.created_at|date:"d M Y H:i" }}</td>
             <td>
-              <a href="{% url 'billing:receipt_detail' r.pk %}" class="btn btn-sm btn-outline-primary" title="View Receipt"><i class="bi bi-receipt"></i></a>
+              <a href="{% url 'pharmacy:pharmacy_receipt_detail' r.pk %}" class="btn btn-sm btn-outline-primary" title="View Receipt"><i class="bi bi-receipt"></i></a>
             </td>
           </tr>
           {% empty %}
