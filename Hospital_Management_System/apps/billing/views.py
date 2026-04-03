@@ -1000,9 +1000,7 @@ def index(request):
 
     paginator = Paginator(queryset, 12)
     page_obj = paginator.get_page(request.GET.get("page"))
-    active_shift = None
-    if request.user.role in {"cashier", "receptionist"}:
-        active_shift = _get_open_shift_for_user(request.user)
+    active_shift = _get_open_shift_for_user(request.user)
 
     return render(
         request,
@@ -1987,32 +1985,36 @@ def shift_sessions_report(request):
 @role_required("cashier", "receptionist", "director", "system_admin")
 @module_permission_required("billing", "update")
 def open_shift(request):
+    # Check for existing open shift on any request method
+    existing_shift = _get_open_shift_for_user(request.user)
+    if existing_shift:
+        messages.info(request, "You already have an open shift.")
+        return redirect("billing:index")
+
     if request.method == "POST":
         opening_float = request.POST.get("opening_float")
-        if not opening_float or float(opening_float) <= 0:
+        try:
+            opening_float_val = (
+                Decimal(opening_float) if opening_float else Decimal("0")
+            )
+        except Exception:
+            opening_float_val = Decimal("0")
+
+        if opening_float_val <= 0:
             return render(
                 request,
                 "billing/open_shift.html",
                 {"error": "Opening float must be a positive number."},
             )
 
-        # Ensure no open shifts exist for the cashier
-        if CashierShiftSession.objects.filter(
-            opened_by=request.user, status="open"
-        ).exists():
-            return render(
-                request,
-                "billing/open_shift.html",
-                {"error": "You already have an open shift."},
-            )
-
         # Create a new shift
         CashierShiftSession.objects.create(
             branch=request.user.branch,
             opened_by=request.user,
-            opening_float=opening_float,
+            opening_float=opening_float_val,
             status="open",
         )
+        messages.success(request, "Shift opened successfully.")
         return redirect("billing:index")
 
     return render(request, "billing/open_shift.html")

@@ -1,9 +1,36 @@
-<form method="post">
-    {% csrf_token %}
-    <label for="opening_float">Opening Float:</label>
-    <input type="number" name="opening_float" id="opening_float" step="0.01" required>
-    {% if error %}
-        <p style="color: red;">{{ error }}</p>
-    {% endif %}
-    <button type="submit">Open Shift</button>
-</form>
+{% extends "base.html" %}
+{% block title %}Open Shift — {{ clinic_name }}{% endblock %}
+{% block header_title %}Open Cashier Shift{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-5">
+    <div class="cl-card shadow-sm">
+      <div class="cl-card-header bg-success text-white">
+        <h2 class="cl-card-title mb-0"><i class="bi bi-unlock me-2"></i>Open Cashier Shift</h2>
+      </div>
+      <div class="cl-card-body">
+        {% if error %}
+        <div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>{{ error }}</div>
+        {% endif %}
+        <p class="text-muted mb-3">Enter the opening float amount to start your cashier shift.</p>
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="opening_float" class="form-label fw-semibold">Opening Float (UGX)</label>
+            <div class="input-group input-group-lg">
+              <span class="input-group-text bg-light"><i class="bi bi-cash-stack text-success"></i></span>
+              <input type="number" name="opening_float" id="opening_float" class="form-control" placeholder="e.g. 50000" min="0" step="500" required>
+            </div>
+            <div class="form-text">Enter the amount of cash available at the start of your shift.</div>
+          </div>
+          <div class="d-flex gap-2">
+            <a href="{% url 'billing:index' %}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-success"><i class="bi bi-check-lg me-1"></i>Open Shift</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
