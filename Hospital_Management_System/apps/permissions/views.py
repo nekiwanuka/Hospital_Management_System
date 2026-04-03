@@ -161,6 +161,14 @@ def request_access(request):
         messages.error(request, "Invalid module selected.")
         return redirect("core:dashboard")
 
+    # Block if user already has access to this module
+    if request.user.has_module_access(module_name):
+        messages.info(
+            request,
+            "You already have access to this module.",
+        )
+        return redirect("core:dashboard")
+
     # Prevent duplicate pending requests
     already_pending = PermissionAccessRequest.objects.filter(
         user=request.user, module_name=module_name, status="pending"

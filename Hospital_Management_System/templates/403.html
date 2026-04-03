@@ -26,30 +26,16 @@
         </p>
 
         {% if user.is_authenticated %}
+        {% if available_modules %}
         <form method="post" action="{% url 'permissions:request_access' %}">
           {% csrf_token %}
           <input type="hidden" name="requested_path" value="{{ request.path }}">
           <div class="mb-3">
             <select name="module_name" class="form-select" required>
               <option value="">-- Select the module you need access to --</option>
-              <option value="patients">Patients</option>
-              <option value="visits">Visits Queue</option>
-              <option value="triage">Triage</option>
-              <option value="consultation">Consultation</option>
-              <option value="emergency">Emergency</option>
-              <option value="admission">Admission</option>
-              <option value="laboratory">Laboratory</option>
-              <option value="radiology">Radiology</option>
-              <option value="pharmacy">Pharmacy</option>
-              <option value="inventory">Inventory / Medical Stores</option>
-              <option value="billing">Billing</option>
-              <option value="reports">Reports</option>
-              <option value="referrals">Referrals</option>
-              <option value="accounts">Accounts</option>
-              <option value="branches">Branches</option>
-              <option value="settingsapp">System Settings</option>
-              <option value="core">Dashboards</option>
-              <option value="permissions">Permissions</option>
+              {% for code, label in available_modules %}
+              <option value="{{ code }}">{{ label }}</option>
+              {% endfor %}
             </select>
           </div>
           <div class="mb-3">
@@ -60,6 +46,9 @@
             <i class="bi bi-send me-1"></i> Request Access from Admin
           </button>
         </form>
+        {% else %}
+        <p class="text-muted mb-3">You have access to all modules. If this page should be accessible, please contact your administrator.</p>
+        {% endif %}
         <a href="{% url 'core:dashboard' %}" class="btn btn-outline-secondary w-100">
           <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
         </a>

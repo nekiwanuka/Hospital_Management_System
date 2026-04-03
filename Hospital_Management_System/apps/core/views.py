@@ -42,7 +42,20 @@ def help_manuals(request):
 
 def permission_denied_view(request, exception=None):
     """Custom 403 handler — renders the friendly template."""
-    return render(request, "403.html", status=403)
+    # Build a list of modules the user does NOT already have access to
+    available_modules = []
+    if request.user.is_authenticated:
+        from apps.permissions.models import UserModulePermission
+
+        for code, label in UserModulePermission.MODULE_CHOICES:
+            if not request.user.has_module_access(code):
+                available_modules.append((code, label))
+    return render(
+        request,
+        "403.html",
+        {"available_modules": available_modules},
+        status=403,
+    )
 
 
 def _role_specific_dashboard_redirect(user):

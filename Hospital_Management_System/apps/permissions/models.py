@@ -13,6 +13,7 @@ class UserModulePermission(models.Model):
         ("pharmacy", "Pharmacy"),
         ("billing", "Billing"),
         ("admission", "Admission"),
+        ("delivery", "Delivery Ward"),
         ("emergency", "Emergency"),
         ("referrals", "Referrals"),
         ("inventory", "Inventory"),

@@ -2,6 +2,45 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 
 from apps.accounts.models import User
+from apps.permissions.models import UserModulePermission
+
+
+def _sync_module_permissions(user, modules, granter=None):
+    """Ensure UserModulePermission rows exist for every module the admin
+    selected, and deactivate rows for modules that were removed."""
+    current = set(
+        UserModulePermission.objects.filter(user=user).values_list(
+            "module_name", flat=True
+        )
+    )
+    granted = set(modules)
+
+    # Create or reactivate permissions for newly granted modules
+    for mod in granted:
+        perm, created = UserModulePermission.objects.get_or_create(
+            user=user,
+            module_name=mod,
+            defaults={
+                "can_view": True,
+                "can_create": True,
+                "can_update": True,
+                "is_active": True,
+                "granted_by": granter,
+                "notes": "Granted via user admin form",
+            },
+        )
+        if not created and not perm.is_active:
+            perm.is_active = True
+            perm.granted_by = granter
+            perm.notes = "Re-activated via user admin form"
+            perm.save(update_fields=["is_active", "granted_by", "notes"])
+
+    # Deactivate permissions for modules removed from the list
+    removed = current - granted
+    if removed:
+        UserModulePermission.objects.filter(user=user, module_name__in=removed).update(
+            is_active=False
+        )
 
 
 class UserEditForm(forms.ModelForm):
@@ -57,6 +96,7 @@ class UserEditForm(forms.ModelForm):
         instance.allowed_modules = self.cleaned_data.get("allowed_modules", [])
         if commit:
             instance.save()
+            _sync_module_permissions(instance, instance.allowed_modules)
         return instance
 
 
@@ -117,4 +157,5 @@ class UserCreateForm(UserCreationForm):
         instance.allowed_modules = self.cleaned_data.get("allowed_modules", [])
         if commit:
             instance.save()
+            _sync_module_permissions(instance, instance.allowed_modules)
         return instance
