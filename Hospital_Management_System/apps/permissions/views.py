@@ -149,9 +149,37 @@ def toggle_permission(request, pk):
 
 @login_required
 def request_access(request):
-    """Any authenticated user can submit an access request."""
+    """Any authenticated user can view the request form (GET) or submit a request (POST)."""
+    # Build the list of modules the user does NOT already have access to
+    available_modules = []
+    for code, label in UserModulePermission.MODULE_CHOICES:
+        if not request.user.has_module_access(code):
+            available_modules.append((code, label))
+
+    # Pending requests by this user
+    pending_requests = PermissionAccessRequest.objects.filter(
+        user=request.user, status="pending"
+    )
+    pending_codes = set(pending_requests.values_list("module_name", flat=True))
+
+    # Recent history (approved/rejected)
+    my_history = (
+        PermissionAccessRequest.objects.filter(user=request.user)
+        .exclude(status="pending")
+        .order_by("-updated_at")[:10]
+    )
+
     if request.method != "POST":
-        return redirect("core:dashboard")
+        return render(
+            request,
+            "permissions/request_access.html",
+            {
+                "available_modules": available_modules,
+                "pending_requests": pending_requests,
+                "pending_codes": pending_codes,
+                "my_history": my_history,
+            },
+        )
 
     module_name = (request.POST.get("module_name") or "").strip()
     reason = (request.POST.get("reason") or "").strip()
@@ -159,7 +187,7 @@ def request_access(request):
     valid_modules = {code for code, _ in UserModulePermission.MODULE_CHOICES}
     if module_name not in valid_modules:
         messages.error(request, "Invalid module selected.")
-        return redirect("core:dashboard")
+        return redirect("permissions:request_access")
 
     # Block if user already has access to this module
     if request.user.has_module_access(module_name):
@@ -167,18 +195,15 @@ def request_access(request):
             request,
             "You already have access to this module.",
         )
-        return redirect("core:dashboard")
+        return redirect("permissions:request_access")
 
     # Prevent duplicate pending requests
-    already_pending = PermissionAccessRequest.objects.filter(
-        user=request.user, module_name=module_name, status="pending"
-    ).exists()
-    if already_pending:
+    if module_name in pending_codes:
         messages.info(
             request,
             "You already have a pending access request for this module.",
         )
-        return redirect("core:dashboard")
+        return redirect("permissions:request_access")
 
     PermissionAccessRequest.objects.create(
         user=request.user,
@@ -190,7 +215,7 @@ def request_access(request):
         "Your access request has been submitted. "
         "The system administrator will review it shortly.",
     )
-    return redirect("core:dashboard")
+    return redirect("permissions:request_access")
 
 
 @login_required

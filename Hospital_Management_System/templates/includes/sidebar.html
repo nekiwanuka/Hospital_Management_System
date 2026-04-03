@@ -117,6 +117,11 @@
     </a>
     {% endif %}
 
+    <div class="cl-nav-section">Access</div>
+    <a href="{% url 'permissions:request_access' %}" class="cl-nav-item {% if request.resolver_match.url_name == 'request_access' %}active{% endif %}">
+      <i class="bi bi-shield-plus"></i> Request Access
+    </a>
+
     <div class="cl-nav-section">Support</div>
     <a href="{% url 'core:help' %}" class="cl-nav-item {% if request.resolver_match.url_name == 'help' %}active{% endif %}">
       <i class="bi bi-question-circle"></i> Help &amp; Guides

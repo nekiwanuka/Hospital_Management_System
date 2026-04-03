@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Request Access — {{ clinic_name }}{% endblock %}
+{% block header_title %}Request Module Access{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+  <!-- Request Form -->
+  <div class="col-lg-6">
+    <div class="cl-card">
+      <div class="cl-card-header">
+        <h2 class="cl-card-title mb-0"><i class="bi bi-send me-2"></i>Request Access</h2>
+      </div>
+      <div class="cl-card-body">
+        {% if available_modules %}
+        <p class="text-muted mb-3">Select a module you need access to and submit your request. The system administrator will review it.</p>
+        <form method="post" action="{% url 'permissions:request_access' %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="module_name" class="form-label fw-semibold">Module</label>
+            <select name="module_name" id="module_name" class="form-select" required>
+              <option value="">-- Select module --</option>
+              {% for code, label in available_modules %}
+              <option value="{{ code }}" {% if code in pending_codes %}disabled{% endif %}>
+                {{ label }}{% if code in pending_codes %} (pending){% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="reason" class="form-label fw-semibold">Reason <span class="text-muted fw-normal">(optional)</span></label>
+            <textarea name="reason" id="reason" class="form-control" rows="3"
+                      placeholder="Briefly explain why you need access to this module"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-send me-1"></i> Submit Request
+          </button>
+        </form>
+        {% else %}
+        <div class="text-center py-4">
+          <i class="bi bi-check-circle text-success" style="font-size:2.5rem;"></i>
+          <p class="mt-2 mb-0 text-muted">You already have access to all available modules.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Pending Requests -->
+  <div class="col-lg-6">
+    <div class="cl-card">
+      <div class="cl-card-header">
+        <h2 class="cl-card-title mb-0"><i class="bi bi-hourglass-split me-2"></i>Pending Requests</h2>
+      </div>
+      <div class="cl-card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Module</th><th>Reason</th><th>Submitted</th></tr></thead>
+            <tbody>
+              {% for req in pending_requests %}
+              <tr>
+                <td><span class="badge bg-warning text-dark">{{ req.get_module_name_display }}</span></td>
+                <td class="text-muted">{{ req.reason|default:"—"|truncatewords:12 }}</td>
+                <td><small>{{ req.created_at|date:"M d, Y H:i" }}</small></td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="3" class="text-center text-muted py-3">No pending requests.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Request History -->
+    {% if my_history %}
+    <div class="cl-card mt-3">
+      <div class="cl-card-header">
+        <h2 class="cl-card-title mb-0"><i class="bi bi-clock-history me-2"></i>Recent History</h2>
+      </div>
+      <div class="cl-card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Module</th><th>Status</th><th>Reviewer Notes</th><th>Date</th></tr></thead>
+            <tbody>
+              {% for req in my_history %}
+              <tr>
+                <td>{{ req.get_module_name_display }}</td>
+                <td>
+                  {% if req.status == 'approved' %}
+                  <span class="badge bg-success">Approved</span>
+                  {% else %}
+                  <span class="badge bg-danger">Rejected</span>
+                  {% endif %}
+                </td>
+                <td class="text-muted">{{ req.reviewer_notes|default:"—"|truncatewords:10 }}</td>
+                <td><small>{{ req.updated_at|date:"M d, Y" }}</small></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
