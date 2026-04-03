@@ -303,12 +303,15 @@ body {
     margin-left: var(--sidebar-width);
     padding-top: var(--header-height);
     min-height: 100vh;
+    display: flex;
+    flex-direction: column;
     transition: margin-left var(--cl-transition);
 }
 
 .cl-content {
     padding: 1.5rem;
     max-width: 1400px;
+    flex: 1;
 }
 
 /* ---------- Cards ---------- */
