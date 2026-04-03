@@ -4,6 +4,29 @@ from django.contrib.auth.mixins import UserPassesTestMixin
 from django.core.exceptions import PermissionDenied
 
 
+def _has_explicit_module_grant(user, module_name, action="view"):
+    """Return True if the user has an active UserModulePermission row
+    granting the given action on the module."""
+    try:
+        from apps.permissions.models import UserModulePermission
+
+        perm = UserModulePermission.objects.filter(
+            user=user, module_name=module_name, is_active=True
+        ).first()
+        if not perm:
+            return False
+        action_map = {
+            "view": perm.can_view,
+            "create": perm.can_create,
+            "update": perm.can_update,
+            "soft_delete": perm.can_soft_delete,
+            "hard_delete": perm.can_hard_delete,
+        }
+        return bool(action_map.get(action, False))
+    except Exception:
+        return False
+
+
 def user_has_any_role(user, roles):
     if not user or not user.is_authenticated:
         return False
@@ -20,7 +43,18 @@ def role_required(*roles):
         def _wrapped_view(request, *args, **kwargs):
             if user_has_any_role(request.user, allowed_roles):
                 return view_func(request, *args, **kwargs)
-            raise PermissionDenied("You do not have permission to access this module.")
+            # Check if the next decorator granted module info; if the user
+            # has an explicit module permission, let them through.
+            module_name = getattr(view_func, "_module_name", None)
+            action = getattr(view_func, "_module_action", "view")
+            if module_name and _has_explicit_module_grant(
+                request.user, module_name, action
+            ):
+                return view_func(request, *args, **kwargs)
+            raise PermissionDenied(
+                "You do not have permission to access this page. "
+                "Please contact the system administrator to request access."
+            )
 
         return _wrapped_view
 
@@ -34,7 +68,10 @@ class RoleRequiredMixin(UserPassesTestMixin):
         return user_has_any_role(self.request.user, self.allowed_roles)
 
     def handle_no_permission(self):
-        raise PermissionDenied("You do not have permission to access this module.")
+        raise PermissionDenied(
+            "You do not have permission to access this page. "
+            "Please contact the system administrator to request access."
+        )
 
 
 def branch_queryset_for_user(user, queryset):
@@ -135,9 +172,14 @@ def module_permission_required(module_name: str, action: str):
             if has_module_action_permission(request.user, module_name, action):
                 return view_func(request, *args, **kwargs)
             raise PermissionDenied(
-                "Permission denied. Request access from System Administrator in Permission Setup."
+                "You do not have permission to access this page. "
+                "Please contact the system administrator to request access."
             )
 
+        # Tag the wrapper so that role_required (outer decorator) can read
+        # the module name and fall back to explicit permission grants.
+        _wrapped_view._module_name = module_name
+        _wrapped_view._module_action = action
         return _wrapped_view
 
     return decorator

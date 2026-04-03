@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Review Access Request — {{ clinic_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-warning bg-opacity-10 border-0">
+          <h5 class="mb-0 fw-bold">
+            <i class="bi bi-shield-exclamation me-2 text-warning"></i>
+            Review Access Request
+          </h5>
+        </div>
+        <div class="card-body">
+          <dl class="row mb-3">
+            <dt class="col-sm-4">User</dt>
+            <dd class="col-sm-8">
+              <strong>{{ access_request.user.get_full_name|default:access_request.user.username }}</strong>
+              <span class="badge bg-secondary ms-1">{{ access_request.user.get_role_display }}</span>
+            </dd>
+
+            <dt class="col-sm-4">Module</dt>
+            <dd class="col-sm-8">{{ access_request.get_module_name_display }}</dd>
+
+            <dt class="col-sm-4">Reason</dt>
+            <dd class="col-sm-8">{{ access_request.reason|default:"No reason provided" }}</dd>
+
+            <dt class="col-sm-4">Requested</dt>
+            <dd class="col-sm-8">{{ access_request.created_at|timesince }} ago ({{ access_request.created_at }})</dd>
+          </dl>
+
+          <hr>
+
+          <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label for="reviewer_notes" class="form-label fw-semibold">Notes (optional)</label>
+              <textarea name="reviewer_notes" id="reviewer_notes" class="form-control" rows="2"
+                        placeholder="Optional notes…"></textarea>
+            </div>
+
+            <div class="d-flex gap-2">
+              <button type="submit" name="action" value="approve" class="btn btn-success flex-fill">
+                <i class="bi bi-check-lg me-1"></i> Approve &amp; Grant Access
+              </button>
+              <button type="submit" name="action" value="reject" class="btn btn-outline-danger flex-fill">
+                <i class="bi bi-x-lg me-1"></i> Reject
+              </button>
+            </div>
+          </form>
+
+          <div class="mt-3 text-center">
+            <a href="{% url 'permissions:access_requests' %}" class="text-muted small">
+              <i class="bi bi-arrow-left me-1"></i> Back to all requests
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

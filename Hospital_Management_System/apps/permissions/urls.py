@@ -9,4 +9,11 @@ urlpatterns = [
     path("create/", views.create, name="create"),
     path("<int:pk>/edit/", views.update, name="update"),
     path("<int:pk>/delete/", views.delete, name="delete"),
+    path("request-access/", views.request_access, name="request_access"),
+    path("access-requests/", views.access_requests_list, name="access_requests"),
+    path(
+        "access-requests/<int:pk>/review/",
+        views.review_access_request,
+        name="review_access_request",
+    ),
 ]

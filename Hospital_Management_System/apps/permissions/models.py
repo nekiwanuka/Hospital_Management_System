@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 class UserModulePermission(models.Model):
@@ -55,3 +56,46 @@ class UserModulePermission(models.Model):
     @property
     def can_delete_any(self):
         return self.can_soft_delete or self.can_hard_delete
+
+
+class PermissionAccessRequest(models.Model):
+    """A user requests access to a module they cannot reach."""
+
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("approved", "Approved"),
+        ("rejected", "Rejected"),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="permission_requests",
+    )
+    module_name = models.CharField(
+        max_length=40, choices=UserModulePermission.MODULE_CHOICES
+    )
+    reason = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="permission_requests_reviewed",
+    )
+    reviewer_notes = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["status", "created_at"]),
+            models.Index(fields=["user", "module_name"]),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.user.username} → {self.get_module_name_display()} ({self.status})"
+        )

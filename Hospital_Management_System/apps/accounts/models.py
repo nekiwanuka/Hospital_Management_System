@@ -139,23 +139,51 @@ class User(AbstractUser):
         # Explicit allowed_modules override defaults
         modules = self.allowed_modules
         if modules:
-            return module_name in modules
-        # Fall back to role defaults
-        defaults = self.ROLE_DEFAULT_MODULES.get(self.role)
-        if defaults is not None:
-            return module_name in defaults
-        return True
+            if module_name in modules:
+                return True
+        else:
+            # Fall back to role defaults
+            defaults = self.ROLE_DEFAULT_MODULES.get(self.role)
+            if defaults is not None:
+                if module_name in defaults:
+                    return True
+            else:
+                return True
+        # Check for an explicit permission grant (even if module not in role defaults)
+        try:
+            from apps.permissions.models import UserModulePermission
+
+            return UserModulePermission.objects.filter(
+                user=self, module_name=module_name, is_active=True, can_view=True
+            ).exists()
+        except Exception:
+            return False
 
     def get_effective_modules(self):
         """Return the list of module codes this user can actually access."""
         if self.is_superuser or self.role in ("system_admin", "director"):
             return [code for code, _ in self.MODULE_ACCESS_CHOICES]
         if self.allowed_modules:
-            return list(self.allowed_modules)
-        defaults = self.ROLE_DEFAULT_MODULES.get(self.role)
-        if defaults is not None:
-            return list(defaults)
-        return [code for code, _ in self.MODULE_ACCESS_CHOICES]
+            base = list(self.allowed_modules)
+        else:
+            defaults = self.ROLE_DEFAULT_MODULES.get(self.role)
+            if defaults is not None:
+                base = list(defaults)
+            else:
+                return [code for code, _ in self.MODULE_ACCESS_CHOICES]
+        # Merge in explicitly granted modules
+        try:
+            from apps.permissions.models import UserModulePermission
+
+            granted = UserModulePermission.objects.filter(
+                user=self, is_active=True, can_view=True
+            ).values_list("module_name", flat=True)
+            for mod in granted:
+                if mod not in base:
+                    base.append(mod)
+        except Exception:
+            pass
+        return base
 
     def clean(self):
         super().clean()

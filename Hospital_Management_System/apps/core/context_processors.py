@@ -23,6 +23,7 @@ def system_context(request):
     settings_obj = SystemSettings.objects.first()
     user_modules = {}
     can_view_revenue = False
+    pending_access_requests_count = 0
 
     user = getattr(request, "user", None)
     if user and user.is_authenticated:
@@ -38,6 +39,19 @@ def system_context(request):
             or getattr(user, "can_view_revenue", False)
         )
 
+        # Pending permission access requests (admin/director only)
+        if getattr(user, "role", "") in ("system_admin", "director") or getattr(
+            user, "is_superuser", False
+        ):
+            try:
+                from apps.permissions.models import PermissionAccessRequest
+
+                pending_access_requests_count = PermissionAccessRequest.objects.filter(
+                    status="pending"
+                ).count()
+            except Exception:
+                pass
+
     return {
         "system_settings": settings_obj,
         "clinic_name": settings_obj.clinic_name if settings_obj else "ClinicMS",
@@ -49,4 +63,5 @@ def system_context(request):
         "clinic_logo": settings_obj.logo if settings_obj else None,
         "user_modules": user_modules,
         "can_view_revenue": can_view_revenue,
+        "pending_access_requests_count": pending_access_requests_count,
     }

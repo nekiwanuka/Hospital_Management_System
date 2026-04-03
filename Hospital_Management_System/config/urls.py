@@ -3,6 +3,10 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+from apps.core.views import permission_denied_view
+
+handler403 = permission_denied_view
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("apps.inventory.api_urls")),

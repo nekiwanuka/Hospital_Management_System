@@ -33,6 +33,11 @@ def home(request):
     return redirect("accounts:login")
 
 
+def permission_denied_view(request, exception=None):
+    """Custom 403 handler — renders the friendly template."""
+    return render(request, "403.html", status=403)
+
+
 def _role_specific_dashboard_redirect(user):
     if getattr(user, "role", "") != "radiology_technician":
         return None
