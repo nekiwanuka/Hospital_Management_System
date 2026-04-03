@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Wards Management — {{ clinic_name }}{% endblock %}
+{% block header_title %}Wards Management{% endblock %}
+
+{% block content %}
+<div class="cl-page-header d-flex flex-wrap align-items-center justify-content-between mb-4">
+  <div>
+    <h1 class="mb-1"><i class="bi bi-building me-2"></i>Wards Management</h1>
+    <p class="text-muted mb-0">Configure wards, beds, and daily rates</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'admission:ward_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>New Ward</a>
+    <a href="{% url 'admission:bed_add' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-plus me-1"></i>Add Bed</a>
+    <a href="{% url 'admission:bed_management' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-hospital me-1"></i>Bed Status</a>
+  </div>
+</div>
+
+{% for ward in wards %}
+<div class="cl-card shadow-sm mb-4">
+  <div class="cl-card-header bg-light d-flex flex-wrap justify-content-between align-items-center">
+    <div>
+      <h2 class="cl-card-title mb-0">
+        <i class="bi bi-building me-2 text-primary"></i>{{ ward.name }}
+        <span class="badge bg-secondary ms-1">{{ ward.get_ward_type_display }}</span>
+        <span class="badge {% if ward.ward_category == 'vvip' %}bg-warning text-dark{% elif ward.ward_category == 'vip' %}bg-info{% else %}bg-light text-dark border{% endif %} ms-1">
+          {{ ward.get_ward_category_display }}
+        </span>
+        {% if not ward.is_active %}<span class="badge bg-danger ms-1">Inactive</span>{% endif %}
+      </h2>
+      {% if ward.floor %}<small class="text-muted">Floor: {{ ward.floor }}</small>{% endif %}
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+      <span class="text-muted small me-2">Daily rate: <strong>{{ ward.daily_rate|floatformat:0 }} UGX</strong></span>
+      <span class="badge bg-success">{{ ward.available_beds }} available</span>
+      <span class="badge bg-secondary">{{ ward.total_beds }} total</span>
+      {% if ward.capacity %}<span class="badge bg-outline-dark border text-dark">Capacity: {{ ward.capacity }}</span>{% endif %}
+      <a href="{% url 'admission:ward_edit' ward.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+    </div>
+  </div>
+  <div class="cl-card-body">
+    {% if ward.description %}<p class="text-muted small mb-3">{{ ward.description }}</p>{% endif %}
+    <div class="row g-2">
+      {% for bed in ward.beds.all %}
+      <div class="col-6 col-md-3 col-lg-2">
+        <div class="card text-center {% if bed.status == 'available' %}border-success{% elif bed.status == 'occupied' %}border-danger{% elif bed.status == 'maintenance' %}border-warning{% else %}border-info{% endif %}">
+          <div class="card-body py-2 px-2">
+            <h6 class="card-title mb-1">{{ bed.bed_number }}</h6>
+            <span class="badge {% if bed.status == 'available' %}bg-success{% elif bed.status == 'occupied' %}bg-danger{% elif bed.status == 'maintenance' %}bg-warning text-dark{% else %}bg-info{% endif %}">
+              {{ bed.get_status_display }}
+            </span>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="col-12"><p class="text-muted text-center mb-0">No beds in this ward. <a href="{% url 'admission:bed_add' %}?ward={{ ward.pk }}">Add beds</a></p></div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% empty %}
+<div class="cl-card shadow-sm">
+  <div class="cl-card-body text-center py-5">
+    <i class="bi bi-building display-4 text-muted"></i>
+    <p class="text-muted mt-3 mb-0">No wards configured. <a href="{% url 'admission:ward_create' %}">Create the first ward</a></p>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

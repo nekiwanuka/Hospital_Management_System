@@ -27,6 +27,11 @@ class SystemSettings(TimeStampedModel):
     )
     lab_service_rates = models.JSONField(default=dict, blank=True)
     radiology_service_rates = models.JSONField(default=dict, blank=True)
+    ward_category_rates = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Daily rates per ward category, e.g. {"ordinary":"50000","vip":"150000","vvip":"300000"}',
+    )
     is_initialized = models.BooleanField(default=False)
 
     def __str__(self):

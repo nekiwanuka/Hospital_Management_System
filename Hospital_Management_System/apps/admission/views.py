@@ -1,12 +1,31 @@
+import datetime
+from decimal import Decimal
+
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db import transaction
+from django.db.models import Q, Sum
 from django.http import Http404
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from apps.admission.forms import AdmissionForm, DischargeForm, NursingNoteForm, VitalSignForm
-from apps.admission.models import Admission, Bed, NursingNote, VitalSign, Ward
+from apps.admission.forms import (
+    AdmissionForm,
+    BedForm,
+    DischargeForm,
+    NursingNoteForm,
+    VitalSignForm,
+    WardForm,
+)
+from apps.admission.models import (
+    Admission,
+    AdmissionDailyCharge,
+    Bed,
+    NursingNote,
+    VitalSign,
+    Ward,
+)
 from apps.consultation.models import Consultation
 from apps.core.permissions import (
     branch_queryset_for_user,
@@ -17,6 +36,7 @@ from apps.laboratory.models import LabRequest
 from apps.patients.models import Patient
 from apps.pharmacy.models import DispenseRecord, PharmacyRequest
 from apps.radiology.models import ImagingRequest
+from apps.settingsapp.services import get_ward_category_rate
 from apps.triage.models import TriageRecord
 from apps.visits.models import Visit
 from apps.visits.services import transition_visit
@@ -189,9 +209,11 @@ def detail(request, pk):
         admission=admission
     ).select_related("nurse")[:10]
 
-    context["vital_signs"] = VitalSign.objects.filter(
-        admission=admission
-    ).select_related("recorded_by").order_by("-created_at")[:10]
+    context["vital_signs"] = (
+        VitalSign.objects.filter(admission=admission)
+        .select_related("recorded_by")
+        .order_by("-created_at")[:10]
+    )
 
     context["vital_sign_form"] = VitalSignForm()
 
@@ -247,7 +269,7 @@ def nurse_station(request):
     user = request.user
     active_admissions = branch_queryset_for_user(
         user,
-        Admission.objects.select_related("patient", "doctor", "nurse")
+        Admission.objects.select_related("patient", "doctor", "nurse", "ward_obj")
         .filter(discharge_date__isnull=True)
         .order_by("-admission_date"),
     )
@@ -377,3 +399,273 @@ def bed_management(request):
         Ward.objects.prefetch_related("beds").filter(is_active=True).order_by("name"),
     )
     return render(request, "admission/bed_management.html", {"wards": wards})
+
+
+# ── Ward Setup Management ────────────────────────────────────
+
+
+@login_required
+@role_required("system_admin", "director")
+@module_permission_required("admission", "create")
+def ward_list(request):
+    wards = branch_queryset_for_user(
+        request.user,
+        Ward.objects.prefetch_related("beds").order_by("name"),
+    )
+    return render(request, "admission/ward_list.html", {"wards": wards})
+
+
+@login_required
+@role_required("system_admin", "director")
+@module_permission_required("admission", "create")
+def ward_create(request):
+    if request.method == "POST":
+        form = WardForm(request.POST, user=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Ward created successfully.")
+            return redirect("admission:ward_list")
+    else:
+        form = WardForm(user=request.user)
+    return render(
+        request,
+        "admission/ward_form.html",
+        {"form": form, "page_title": "Create Ward", "submit_label": "Create Ward"},
+    )
+
+
+@login_required
+@role_required("system_admin", "director")
+@module_permission_required("admission", "update")
+def ward_edit(request, pk):
+    ward = get_object_or_404(
+        branch_queryset_for_user(request.user, Ward.objects.all()), pk=pk
+    )
+    if request.method == "POST":
+        form = WardForm(request.POST, instance=ward, user=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Ward updated.")
+            return redirect("admission:ward_list")
+    else:
+        form = WardForm(instance=ward, user=request.user)
+    return render(
+        request,
+        "admission/ward_form.html",
+        {
+            "form": form,
+            "ward": ward,
+            "page_title": "Edit Ward",
+            "submit_label": "Save Changes",
+        },
+    )
+
+
+@login_required
+@role_required("system_admin", "director")
+@module_permission_required("admission", "create")
+def bed_add(request):
+    ward_id = request.GET.get("ward")
+    initial = {}
+    if ward_id:
+        initial["ward"] = ward_id
+    if request.method == "POST":
+        form = BedForm(request.POST, user=request.user)
+        if form.is_valid():
+            bed = form.save(commit=False)
+            bed.branch = form.cleaned_data["ward"].branch
+            bed.save()
+            messages.success(request, f"Bed {bed.bed_number} added.")
+            return redirect("admission:ward_list")
+    else:
+        form = BedForm(user=request.user, initial=initial)
+    return render(
+        request,
+        "admission/bed_form.html",
+        {"form": form, "page_title": "Add Bed"},
+    )
+
+
+# ── Daily Ward Charges & Invoicing ───────────────────────────
+
+
+def _generate_daily_charges(admission, up_to_date=None):
+    """Create AdmissionDailyCharge rows for all un-billed days."""
+    if not admission.ward_obj or admission.daily_rate <= 0:
+        return []
+
+    today = up_to_date or timezone.localdate()
+    start = (
+        admission.last_billed_date + datetime.timedelta(days=1)
+        if admission.last_billed_date
+        else admission.admission_date.date()
+    )
+
+    if admission.discharge_date:
+        end = min(admission.discharge_date.date(), today)
+    else:
+        end = today
+
+    new_charges = []
+    current = start
+    while current <= end:
+        charge, created = AdmissionDailyCharge.objects.get_or_create(
+            admission=admission,
+            charge_date=current,
+            defaults={
+                "branch": admission.branch,
+                "amount": admission.daily_rate,
+                "ward_category": admission.ward_obj.ward_category,
+            },
+        )
+        if created:
+            new_charges.append(charge)
+        current += datetime.timedelta(days=1)
+
+    if new_charges:
+        admission.last_billed_date = new_charges[-1].charge_date
+        admission.save(update_fields=["last_billed_date", "updated_at"])
+
+    return new_charges
+
+
+@login_required
+@role_required("nurse", "doctor", "system_admin", "director", "cashier")
+@module_permission_required("admission", "view")
+def daily_charges(request, pk):
+    """View all daily charges for an admission, generate missing ones, and allow payment."""
+    admission = _get_admission_for_user_or_404(request.user, pk)
+
+    # Auto-generate any missing daily charges
+    _generate_daily_charges(admission)
+
+    charges = admission.daily_charges.order_by("-charge_date")
+    total_charged = charges.aggregate(t=Sum("amount"))["t"] or Decimal("0.00")
+    total_billed = charges.filter(invoice_line__isnull=False).aggregate(
+        t=Sum("amount")
+    )["t"] or Decimal("0.00")
+    total_unbilled = total_charged - total_billed
+
+    return render(
+        request,
+        "admission/daily_charges.html",
+        {
+            "admission": admission,
+            "charges": charges,
+            "total_charged": total_charged,
+            "total_billed": total_billed,
+            "total_unbilled": total_unbilled,
+        },
+    )
+
+
+@login_required
+@role_required("nurse", "cashier", "system_admin", "director")
+@module_permission_required("billing", "create")
+def generate_daily_invoice(request, pk):
+    """Bill the un-invoiced daily ward charges for an admission — attaches to existing invoice or creates new."""
+    admission = _get_admission_for_user_or_404(request.user, pk)
+
+    # Generate any missing daily charges first
+    _generate_daily_charges(admission)
+
+    unbilled = admission.daily_charges.filter(invoice_line__isnull=True).order_by(
+        "charge_date"
+    )
+    if not unbilled.exists():
+        messages.info(request, "No un-billed daily charges.")
+        return redirect("admission:daily_charges", pk=pk)
+
+    from apps.billing.models import Invoice, InvoiceLineItem
+
+    with transaction.atomic():
+        # Find or create an invoice for this patient/visit
+        invoice = None
+        if admission.visit:
+            invoice = (
+                Invoice.objects.filter(
+                    branch=admission.branch,
+                    patient=admission.patient,
+                    visit=admission.visit,
+                    payment_status__in=["pending", "partial", "post_payment"],
+                )
+                .order_by("-created_at")
+                .first()
+            )
+
+        if not invoice:
+            from apps.billing.views import _generate_invoice_number
+
+            invoice = Invoice.objects.create(
+                branch=admission.branch,
+                invoice_number=_generate_invoice_number(admission.branch),
+                patient=admission.patient,
+                visit=admission.visit,
+                services="Ward daily charges",
+                total_amount=Decimal("0.00"),
+                payment_method="cash",
+                payment_status="pending",
+                cashier=request.user,
+            )
+
+        total_new = Decimal("0.00")
+        for charge in unbilled:
+            line = InvoiceLineItem.objects.create(
+                invoice=invoice,
+                branch=admission.branch,
+                service_type="admission",
+                description=f"Ward charge ({charge.get_ward_category_display()}) – {charge.charge_date:%d %b %Y}",
+                amount=charge.amount,
+                paid_amount=Decimal("0.00"),
+                payment_status="pending",
+                source_model="admission_daily_charge",
+                source_id=charge.pk,
+            )
+            charge.invoice_line = line
+            charge.save(update_fields=["invoice_line", "updated_at"])
+            total_new += charge.amount
+
+        invoice.total_amount = invoice.total_amount + total_new
+        invoice.services = (invoice.services or "") + f"\nWard charges: {total_new}"
+        invoice.save(update_fields=["total_amount", "services", "updated_at"])
+
+    messages.success(
+        request,
+        f"Daily ward charges of {total_new:,.0f} added to invoice {invoice.invoice_number}.",
+    )
+    return redirect("admission:daily_charges", pk=pk)
+
+
+@login_required
+@role_required("nurse", "doctor", "cashier", "system_admin", "director")
+@module_permission_required("admission", "view")
+def print_daily_invoice(request, pk):
+    """Print-ready view of daily charges for an admission."""
+    admission = _get_admission_for_user_or_404(request.user, pk)
+    _generate_daily_charges(admission)
+
+    date_filter = request.GET.get("date", "")
+    charges = admission.daily_charges.order_by("charge_date")
+    if date_filter:
+        try:
+            filter_date = datetime.date.fromisoformat(date_filter)
+            charges = charges.filter(charge_date=filter_date)
+        except ValueError:
+            pass
+
+    total = charges.aggregate(t=Sum("amount"))["t"] or Decimal("0.00")
+    from apps.settingsapp.models import SystemSettings
+
+    settings_obj = SystemSettings.objects.first()
+
+    return render(
+        request,
+        "admission/print_daily_invoice.html",
+        {
+            "admission": admission,
+            "charges": charges,
+            "total": total,
+            "date_filter": date_filter,
+            "settings_obj": settings_obj,
+        },
+    )

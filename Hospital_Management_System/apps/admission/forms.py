@@ -1,6 +1,6 @@
 from django import forms
 
-from apps.admission.models import Admission, Bed, NursingNote, VitalSign
+from apps.admission.models import Admission, Bed, NursingNote, VitalSign, Ward
 from apps.core.permissions import branch_queryset_for_user
 from apps.patients.models import Patient
 from apps.visits.models import Visit
@@ -82,6 +82,7 @@ class AdmissionForm(forms.ModelForm):
         if bed:
             instance.ward = bed.ward.name
             instance.bed = bed.bed_number
+            instance.ward_obj = bed.ward
         if commit:
             instance.save()
             if bed:
@@ -154,3 +155,100 @@ class VitalSignForm(forms.ModelForm):
         self.fields["oxygen_saturation"].widget.attrs["placeholder"] = "SpO2 %"
         for field in self.fields.values():
             field.widget.attrs["class"] = "form-control"
+
+
+class WardForm(forms.ModelForm):
+    """Create / edit a ward."""
+
+    auto_create_beds = forms.IntegerField(
+        min_value=0,
+        max_value=200,
+        initial=0,
+        required=False,
+        label="Auto-create beds",
+        help_text="Enter the number of beds to generate automatically (e.g. 10). "
+        "Beds will be numbered 1, 2, 3 … Leave 0 to add beds manually later.",
+    )
+    bed_number_prefix = forms.CharField(
+        max_length=20,
+        initial="B",
+        required=False,
+        label="Bed number prefix",
+        help_text="Prefix for auto-created beds, e.g. 'B' → B1, B2, B3 …",
+    )
+
+    class Meta:
+        model = Ward
+        fields = [
+            "name",
+            "ward_type",
+            "ward_category",
+            "floor",
+            "capacity",
+            "description",
+            "is_active",
+        ]
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self._user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if isinstance(field.widget, forms.CheckboxInput):
+                field.widget.attrs["class"] = "form-check-input"
+            elif isinstance(field.widget, forms.Select):
+                field.widget.attrs["class"] = "form-select"
+            else:
+                field.widget.attrs["class"] = "form-control"
+
+        # Pre-fill daily_rate from settings based on chosen category
+        from apps.settingsapp.services import get_all_ward_category_rates
+
+        self._ward_rates = get_all_ward_category_rates()
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        # Assign rate from settings
+        instance.daily_rate = self._ward_rates.get(instance.ward_category, 0)
+        if self._user and not instance.pk:
+            instance.branch = self._user.branch
+        if commit:
+            instance.save()
+            # Auto-create beds
+            count = self.cleaned_data.get("auto_create_beds") or 0
+            prefix = (self.cleaned_data.get("bed_number_prefix") or "B").strip()
+            existing_count = instance.beds.count()
+            for i in range(1, count + 1):
+                bed_number = f"{prefix}{existing_count + i}"
+                Bed.objects.get_or_create(
+                    ward=instance,
+                    bed_number=bed_number,
+                    defaults={
+                        "branch": instance.branch,
+                        "status": "available",
+                    },
+                )
+        return instance
+
+
+class BedForm(forms.ModelForm):
+    """Add / edit a single bed."""
+
+    class Meta:
+        model = Bed
+        fields = ["ward", "bed_number", "status"]
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields["ward"].queryset = branch_queryset_for_user(
+                user, Ward.objects.filter(is_active=True).order_by("name")
+            )
+        for field in self.fields.values():
+            if isinstance(field.widget, forms.Select):
+                field.widget.attrs["class"] = "form-select"
+            else:
+                field.widget.attrs["class"] = "form-control"

@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Daily Charges — {{ admission.patient.first_name }} {{ admission.patient.last_name }} — {{ clinic_name }}{% endblock %}
+{% block header_title %}Daily Ward Charges{% endblock %}
+
+{% block content %}
+<div class="cl-page-header d-flex flex-wrap align-items-center justify-content-between mb-4">
+  <div>
+    <h1 class="mb-1"><i class="bi bi-calendar3 me-2"></i>Daily Ward Charges</h1>
+    <p class="text-muted mb-0">
+      {{ admission.patient.first_name }} {{ admission.patient.last_name }}
+      &bull; {{ admission.ward|default:"—" }}
+      {% if admission.ward_obj %}({{ admission.ward_obj.get_ward_category_display }}){% endif %}
+      &bull; Admitted {{ admission.admission_date|date:"d M Y" }}
+      &bull; <strong>{{ admission.days_admitted }} day{{ admission.days_admitted|pluralize }}</strong>
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'admission:print_daily_invoice' admission.pk %}" class="btn btn-outline-secondary btn-sm" target="_blank"><i class="bi bi-printer me-1"></i>Print</a>
+    {% if total_unbilled > 0 %}
+    <form method="post" action="{% url 'admission:generate_daily_invoice' admission.pk %}" class="d-inline">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-receipt me-1"></i>Bill Unbilled ({{ total_unbilled|floatformat:0 }} UGX)</button>
+    </form>
+    {% endif %}
+    <a href="{% url 'admission:detail' admission.pk %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back</a>
+  </div>
+</div>
+
+<!-- Summary cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="cl-card shadow-sm text-center">
+      <div class="cl-card-body py-3">
+        <h4 class="mb-0 text-primary">{{ admission.daily_rate|floatformat:0 }}</h4>
+        <small class="text-muted">Daily Rate (UGX)</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="cl-card shadow-sm text-center">
+      <div class="cl-card-body py-3">
+        <h4 class="mb-0 text-info">{{ total_charged|floatformat:0 }}</h4>
+        <small class="text-muted">Total Charged</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="cl-card shadow-sm text-center">
+      <div class="cl-card-body py-3">
+        <h4 class="mb-0 text-success">{{ total_billed|floatformat:0 }}</h4>
+        <small class="text-muted">Invoiced</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="cl-card shadow-sm text-center">
+      <div class="cl-card-body py-3">
+        <h4 class="mb-0 {% if total_unbilled > 0 %}text-warning{% else %}text-success{% endif %}">{{ total_unbilled|floatformat:0 }}</h4>
+        <small class="text-muted">Unbilled</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="cl-card shadow-sm">
+  <div class="cl-card-header bg-light">
+    <h2 class="cl-card-title mb-0"><i class="bi bi-list-check me-2"></i>Charge Breakdown</h2>
+  </div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Date</th>
+            <th>Category</th>
+            <th class="text-end">Amount (UGX)</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for charge in charges %}
+          <tr>
+            <td>{{ charge.charge_date|date:"d M Y" }}</td>
+            <td>
+              <span class="badge {% if charge.ward_category == 'vvip' %}bg-warning text-dark{% elif charge.ward_category == 'vip' %}bg-info{% else %}bg-light text-dark border{% endif %}">
+                {{ charge.get_ward_category_display }}
+              </span>
+            </td>
+            <td class="text-end">{{ charge.amount|floatformat:0 }}</td>
+            <td>
+              {% if charge.invoice_line %}
+                {% if charge.invoice_line.payment_status == 'paid' %}
+                <span class="badge bg-success">Paid</span>
+                {% elif charge.invoice_line.payment_status == 'partial' %}
+                <span class="badge bg-warning text-dark">Partial</span>
+                {% else %}
+                <span class="badge bg-secondary">Invoiced</span>
+                {% endif %}
+              {% else %}
+                <span class="badge bg-outline-warning border text-dark">Not yet billed</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="text-center text-muted py-4">No daily charges recorded yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

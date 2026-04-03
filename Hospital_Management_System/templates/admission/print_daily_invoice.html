@@ -1,0 +1,113 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Daily Ward Invoice — {{ admission.patient.first_name }} {{ admission.patient.last_name }}</title>
+  <style>
+    @media print { .no-print { display: none !important; } }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; font-size: 14px; color: #333; }
+    .header { text-align: center; margin-bottom: 24px; border-bottom: 2px solid #333; padding-bottom: 12px; }
+    .header h1 { margin: 0; font-size: 22px; }
+    .header p { margin: 4px 0; color: #555; }
+    .info-grid { display: flex; justify-content: space-between; margin-bottom: 20px; }
+    .info-grid div { flex: 1; }
+    .info-grid dt { font-weight: 600; color: #555; font-size: 12px; text-transform: uppercase; }
+    .info-grid dd { margin: 0 0 8px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+    th { background: #f5f5f5; font-weight: 600; font-size: 12px; text-transform: uppercase; }
+    .text-right { text-align: right; }
+    .total-row { font-weight: 700; font-size: 16px; background: #f8f9fa; }
+    .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #999; }
+    .btn-print { margin-bottom: 20px; padding: 8px 20px; background: #0d6efd; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+    .btn-print:hover { background: #0b5ed7; }
+  </style>
+</head>
+<body>
+  <div class="no-print" style="text-align:center;">
+    <button class="btn-print" onclick="window.print()">🖨️ Print Invoice</button>
+    <a href="{% url 'admission:daily_charges' admission.pk %}" style="margin-left:10px;">← Back to charges</a>
+  </div>
+
+  <div class="header">
+    {% if settings_obj %}
+    <h1>{{ settings_obj.clinic_name }}</h1>
+    <p>{{ settings_obj.address }}{% if settings_obj.city %}, {{ settings_obj.city }}{% endif %}</p>
+    <p>{{ settings_obj.phone }} &bull; {{ settings_obj.system_email }}</p>
+    {% endif %}
+    <h2 style="margin-top:12px;">Daily Ward Charges Statement</h2>
+  </div>
+
+  <div class="info-grid">
+    <div>
+      <dl>
+        <dt>Patient</dt>
+        <dd>{{ admission.patient.first_name }} {{ admission.patient.last_name }} ({{ admission.patient.patient_id }})</dd>
+        <dt>Ward</dt>
+        <dd>{{ admission.ward|default:"—" }} {% if admission.ward_obj %}({{ admission.ward_obj.get_ward_category_display }}){% endif %}</dd>
+        <dt>Bed</dt>
+        <dd>{{ admission.bed|default:"—" }}</dd>
+      </dl>
+    </div>
+    <div>
+      <dl>
+        <dt>Admitted</dt>
+        <dd>{{ admission.admission_date|date:"d M Y H:i" }}</dd>
+        <dt>Days</dt>
+        <dd>{{ admission.days_admitted }}</dd>
+        <dt>Daily Rate</dt>
+        <dd>{{ admission.daily_rate|floatformat:0 }} UGX</dd>
+        {% if admission.discharge_date %}
+        <dt>Discharged</dt>
+        <dd>{{ admission.discharge_date|date:"d M Y H:i" }}</dd>
+        {% endif %}
+      </dl>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Date</th>
+        <th>Category</th>
+        <th class="text-right">Amount (UGX)</th>
+        <th>Payment Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for charge in charges %}
+      <tr>
+        <td>{{ forloop.counter }}</td>
+        <td>{{ charge.charge_date|date:"d M Y" }}</td>
+        <td>{{ charge.get_ward_category_display }}</td>
+        <td class="text-right">{{ charge.amount|floatformat:0 }}</td>
+        <td>
+          {% if charge.invoice_line %}
+            {% if charge.invoice_line.payment_status == 'paid' %}Paid
+            {% elif charge.invoice_line.payment_status == 'partial' %}Partial
+            {% else %}Invoiced{% endif %}
+          {% else %}
+            Pending
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" style="text-align:center;">No charges recorded.</td></tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr class="total-row">
+        <td colspan="3">Total</td>
+        <td class="text-right">{{ total|floatformat:0 }} UGX</td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="footer">
+    <p>Printed on {% now "d M Y H:i" %} &bull; This is a computer-generated document</p>
+  </div>
+</body>
+</html>

@@ -1,5 +1,9 @@
+from decimal import Decimal
+
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
+
 from apps.core.models import BranchScopedModel
 
 
@@ -15,16 +19,35 @@ class Ward(BranchScopedModel):
         ("emergency", "Emergency"),
         ("private", "Private"),
     ]
+
+    WARD_CATEGORIES = [
+        ("ordinary", "Ordinary"),
+        ("vip", "VIP"),
+        ("vvip", "VVIP"),
+    ]
+
     name = models.CharField(max_length=120)
     ward_type = models.CharField(max_length=20, choices=WARD_TYPES, default="general")
+    ward_category = models.CharField(
+        max_length=10, choices=WARD_CATEGORIES, default="ordinary"
+    )
+    daily_rate = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        help_text="Daily bed charge for this ward (set from Settings).",
+    )
     floor = models.CharField(max_length=40, blank=True)
+    capacity = models.PositiveIntegerField(default=0, help_text="Planned bed capacity")
+    description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
 
     class Meta(BranchScopedModel.Meta):
         unique_together = [("branch", "name")]
 
     def __str__(self):
-        return self.name
+        cat = self.get_ward_category_display()
+        return f"{self.name} ({cat})"
 
     @property
     def total_beds(self):
@@ -76,6 +99,14 @@ class Admission(BranchScopedModel):
         blank=True,
         related_name="admissions",
     )
+    ward_obj = models.ForeignKey(
+        Ward,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="admissions",
+        help_text="Links to the Ward for billing rate lookup.",
+    )
     admission_date = models.DateTimeField(auto_now_add=True)
     doctor = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -92,9 +123,34 @@ class Admission(BranchScopedModel):
     diagnosis = models.TextField()
     discharge_date = models.DateTimeField(null=True, blank=True)
     discharge_summary = models.TextField(blank=True)
+    last_billed_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="The last date a daily ward charge was billed for.",
+    )
 
     class Meta(BranchScopedModel.Meta):
         indexes = [models.Index(fields=["branch", "admission_date"])]
+
+    @property
+    def is_active(self):
+        return self.discharge_date is None
+
+    @property
+    def days_admitted(self):
+        end = self.discharge_date or timezone.now()
+        delta = end - self.admission_date
+        return max(delta.days, 1)
+
+    @property
+    def daily_rate(self):
+        if self.ward_obj:
+            return self.ward_obj.daily_rate
+        return Decimal("0.00")
+
+    @property
+    def running_ward_charges(self):
+        return self.daily_rate * self.days_admitted
 
 
 class NursingNote(BranchScopedModel):
@@ -176,3 +232,30 @@ class VitalSign(BranchScopedModel):
         if self.blood_pressure_systolic and self.blood_pressure_diastolic:
             return f"{self.blood_pressure_systolic}/{self.blood_pressure_diastolic}"
         return "—"
+
+
+class AdmissionDailyCharge(BranchScopedModel):
+    """One row per day a ward charge is billed to an admitted patient."""
+
+    admission = models.ForeignKey(
+        Admission,
+        on_delete=models.CASCADE,
+        related_name="daily_charges",
+    )
+    charge_date = models.DateField()
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    ward_category = models.CharField(max_length=10, choices=Ward.WARD_CATEGORIES)
+    invoice_line = models.ForeignKey(
+        "billing.InvoiceLineItem",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="daily_charges",
+    )
+
+    class Meta(BranchScopedModel.Meta):
+        unique_together = [("admission", "charge_date")]
+        ordering = ["-charge_date"]
+
+    def __str__(self):
+        return f"{self.admission.patient} – {self.charge_date} – {self.amount}"

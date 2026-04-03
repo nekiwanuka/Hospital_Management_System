@@ -65,6 +65,7 @@ class InvoiceLineItem(BranchScopedModel):
         ("radiology", "Radiology Scan"),
         ("pharmacy", "Pharmacy Medicine"),
         ("referral", "Referral"),
+        ("admission", "Admission / Ward Charge"),
     ]
     LINE_PAYMENT_STATUS = [
         ("pending", "Pending"),

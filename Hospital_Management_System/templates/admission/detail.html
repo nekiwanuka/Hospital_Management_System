@@ -6,9 +6,13 @@
 <div class="cl-page-header">
   <div>
     <h1>{{ admission.patient.first_name }} {{ admission.patient.last_name }}</h1>
-    <p>Admitted {{ admission.admission_date|date:"d M Y H:i" }} &bull; {{ admission.ward|default:"No ward" }}</p>
+    <p>Admitted {{ admission.admission_date|date:"d M Y H:i" }} &bull; {{ admission.ward|default:"No ward" }}
+    {% if admission.ward_obj %} ({{ admission.ward_obj.get_ward_category_display }}){% endif %}
+    &bull; <strong>{{ admission.days_admitted }} day{{ admission.days_admitted|pluralize }}</strong>
+    </p>
   </div>
   <div class="d-flex gap-2">
+    <a href="{% url 'admission:daily_charges' admission.pk %}" class="btn btn-info btn-sm"><i class="bi bi-calendar3"></i> Daily Charges</a>
     {% if not admission.discharge_date %}<a href="{% url 'admission:discharge' admission.pk %}" class="btn btn-warning btn-sm"><i class="bi bi-box-arrow-right"></i> Discharge</a>{% endif %}
     <a href="{% url 'admission:index' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
   </div>
@@ -22,8 +26,12 @@
         <dl class="row mb-0">
           <dt class="col-sm-4">Patient</dt><dd class="col-sm-8"><a href="{% url 'patients:detail' admission.patient.pk %}">{{ admission.patient.first_name }} {{ admission.patient.last_name }}</a></dd>
           <dt class="col-sm-4">Doctor</dt><dd class="col-sm-8">{{ admission.doctor|default:"—" }}</dd>
-          <dt class="col-sm-4">Ward</dt><dd class="col-sm-8">{{ admission.ward|default:"—" }}</dd>
-          <dt class="col-sm-4">Reason</dt><dd class="col-sm-8">{{ admission.reason|default:"—" }}</dd>
+          <dt class="col-sm-4">Ward</dt><dd class="col-sm-8">{{ admission.ward|default:"—" }}{% if admission.ward_obj %} <span class="badge {% if admission.ward_obj.ward_category == 'vvip' %}bg-warning text-dark{% elif admission.ward_obj.ward_category == 'vip' %}bg-info{% else %}bg-light text-dark border{% endif %}">{{ admission.ward_obj.get_ward_category_display }}</span>{% endif %}</dd>
+          <dt class="col-sm-4">Bed</dt><dd class="col-sm-8">{{ admission.bed|default:"—" }}</dd>
+          <dt class="col-sm-4">Daily Rate</dt><dd class="col-sm-8">{{ admission.daily_rate|floatformat:0 }} UGX</dd>
+          <dt class="col-sm-4">Days</dt><dd class="col-sm-8">{{ admission.days_admitted }}</dd>
+          <dt class="col-sm-4">Running Charges</dt><dd class="col-sm-8"><strong>{{ admission.running_ward_charges|floatformat:0 }} UGX</strong></dd>
+          <dt class="col-sm-4">Reason</dt><dd class="col-sm-8">{{ admission.diagnosis|default:"—" }}</dd>
           <dt class="col-sm-4">Status</dt><dd class="col-sm-8">{% if admission.discharge_date %}<span class="badge bg-secondary">Discharged {{ admission.discharge_date|date:"d M Y" }}</span>{% else %}<span class="badge bg-success">Active</span>{% endif %}</dd>
         </dl>
       </div>

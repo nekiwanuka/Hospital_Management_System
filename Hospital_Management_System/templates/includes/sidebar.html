@@ -50,14 +50,18 @@
     {% endif %}
 
     {% if user_modules.admission %}
-    <a href="{% url 'admission:index' %}" class="cl-nav-item {% if request.resolver_match.app_name == 'admission' %}active{% endif %}">
-      <i class="bi bi-building"></i> Admission
+    <div class="cl-nav-section">Wards &amp; Admission</div>
+    <a href="{% url 'admission:index' %}" class="cl-nav-item {% if request.resolver_match.app_name == 'admission' and request.resolver_match.url_name == 'index' %}active{% endif %}">
+      <i class="bi bi-building"></i> Admissions
     </a>
     <a href="{% url 'admission:nurse_station' %}" class="cl-nav-item {% if request.resolver_match.url_name == 'nurse_station' %}active{% endif %}">
       <i class="bi bi-clipboard2-pulse"></i> Nurse Station
     </a>
     <a href="{% url 'admission:bed_management' %}" class="cl-nav-item {% if request.resolver_match.url_name == 'bed_management' %}active{% endif %}">
-      <i class="bi bi-hospital"></i> Bed Management
+      <i class="bi bi-hospital"></i> Bed Status
+    </a>
+    <a href="{% url 'admission:ward_list' %}" class="cl-nav-item {% if request.resolver_match.url_name == 'ward_list' or request.resolver_match.url_name == 'ward_create' or request.resolver_match.url_name == 'ward_edit' %}active{% endif %}">
+      <i class="bi bi-gear"></i> Ward Setup
     </a>
     {% endif %}
 

@@ -11,6 +11,7 @@ from apps.settingsapp.services import (
     DEFAULT_CONSULTATION_FEE,
     DEFAULT_LAB_FEE,
     DEFAULT_RADIOLOGY_TYPE_RATES,
+    DEFAULT_WARD_CATEGORY_RATES,
 )
 
 
@@ -76,11 +77,17 @@ class SystemSettingsForm(forms.ModelForm):
 
     LAB_SERVICE_CHOICES = [(value, label) for value, label in LAB_TEST_CHOICES if value]
     RADIOLOGY_SERVICE_CHOICES = X_RAY_EXAMINATIONS + ULTRASOUND_EXAMINATIONS
+    WARD_CATEGORY_CHOICES = [
+        ("ordinary", "Ordinary Ward"),
+        ("vip", "VIP Ward"),
+        ("vvip", "VVIP Ward"),
+    ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._lab_rate_field_map = {}
         self._radiology_rate_field_map = {}
+        self._ward_rate_field_map = {}
 
         settings_obj = self.instance if getattr(self.instance, "pk", None) else None
         existing_lab_rates = (
@@ -88,6 +95,9 @@ class SystemSettingsForm(forms.ModelForm):
         )
         existing_radiology_rates = (
             (settings_obj.radiology_service_rates or {}) if settings_obj else {}
+        )
+        existing_ward_rates = (
+            (settings_obj.ward_category_rates or {}) if settings_obj else {}
         )
 
         self.lab_rate_fields = []
@@ -125,6 +135,23 @@ class SystemSettingsForm(forms.ModelForm):
             )
             self.radiology_rate_fields.append((label, self[field_name]))
 
+        self.ward_rate_fields = []
+        for code, label in self.WARD_CATEGORY_CHOICES:
+            field_name = f"ward_rate_{code}"
+            self._ward_rate_field_map[field_name] = code
+            initial = existing_ward_rates.get(
+                code, DEFAULT_WARD_CATEGORY_RATES.get(code, Decimal("0.00"))
+            )
+            self.fields[field_name] = forms.DecimalField(
+                max_digits=12,
+                decimal_places=2,
+                min_value=Decimal("0.00"),
+                initial=initial,
+                required=True,
+                label=f"{label} Daily Rate (UGX)",
+            )
+            self.ward_rate_fields.append((label, self[field_name]))
+
         for name, field in self.fields.items():
             if isinstance(field.widget, forms.FileInput):
                 css = "form-control"
@@ -152,11 +179,26 @@ class SystemSettingsForm(forms.ModelForm):
             if value is not None:
                 radiology_rates[code] = str(value)
 
+        ward_rates = {}
+        for field_name, code in self._ward_rate_field_map.items():
+            value = self.cleaned_data.get(field_name)
+            if value is not None:
+                ward_rates[code] = str(value)
+
         instance.lab_service_rates = lab_rates
         instance.radiology_service_rates = radiology_rates
+        instance.ward_category_rates = ward_rates
 
         if commit:
             instance.save()
+            # Sync ward daily_rate fields across all wards in all branches
+            from apps.admission.models import Ward
+
+            for cat_code, rate_str in ward_rates.items():
+                Ward.objects.filter(ward_category=cat_code).update(
+                    daily_rate=Decimal(rate_str)
+                )
+
         return instance
 
 

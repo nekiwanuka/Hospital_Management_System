@@ -1,12 +1,27 @@
 from django.contrib import admin
 
-from apps.admission.models import Admission, Bed, NursingNote, VitalSign, Ward
+from apps.admission.models import (
+    Admission,
+    AdmissionDailyCharge,
+    Bed,
+    NursingNote,
+    VitalSign,
+    Ward,
+)
 
 
 @admin.register(Ward)
 class WardAdmin(admin.ModelAdmin):
-    list_display = ("name", "ward_type", "floor", "is_active", "branch")
-    list_filter = ("branch", "ward_type", "is_active")
+    list_display = (
+        "name",
+        "ward_type",
+        "ward_category",
+        "daily_rate",
+        "floor",
+        "is_active",
+        "branch",
+    )
+    list_filter = ("branch", "ward_type", "ward_category", "is_active")
     search_fields = ("name",)
 
 
@@ -28,6 +43,13 @@ class NursingNoteAdmin(admin.ModelAdmin):
         "note",
     )
     raw_id_fields = ("admission", "nurse")
+
+
+@admin.register(AdmissionDailyCharge)
+class AdmissionDailyChargeAdmin(admin.ModelAdmin):
+    list_display = ("admission", "charge_date", "amount", "ward_category", "branch")
+    list_filter = ("branch", "ward_category", "charge_date")
+    raw_id_fields = ("admission", "invoice_line")
 
 
 @admin.register(Admission)
