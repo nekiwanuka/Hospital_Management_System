@@ -5,31 +5,52 @@
 {% block content %}
 <div class="cl-page-header">
   <div><h1>Module Permissions</h1></div>
-  <a href="{% url 'permissions:create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Grant Permission</a>
+  <div class="d-flex gap-2">
+    <a href="{% url 'permissions:access_requests' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-inbox me-1"></i> Access Requests{% if pending_access_requests_count %} <span class="badge bg-warning text-dark">{{ pending_access_requests_count }}</span>{% endif %}</a>
+    <a href="{% url 'permissions:create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Grant Permission</a>
+  </div>
 </div>
 
 <div class="cl-card">
   <div class="cl-card-body p-0">
     <div class="table-responsive">
-      <table class="table table-sm">
-        <thead><tr><th>User</th><th>Module</th><th>View</th><th>Create</th><th>Update</th><th>Delete</th><th>Granted By</th><th></th></tr></thead>
+      <table class="table table-sm table-hover mb-0">
+        <thead><tr><th>User</th><th>Role</th><th>Module</th><th>View</th><th>Create</th><th>Update</th><th>Delete</th><th>Status</th><th>Granted By</th><th class="text-end">Actions</th></tr></thead>
         <tbody>
           {% for p in permissions %}
-          <tr>
-            <td>{{ p.user.username }}</td>
-            <td>{{ p.module_name }}</td>
-            <td>{% if p.can_view %}<i class="bi bi-check text-success"></i>{% else %}<i class="bi bi-x text-danger"></i>{% endif %}</td>
-            <td>{% if p.can_create %}<i class="bi bi-check text-success"></i>{% else %}<i class="bi bi-x text-danger"></i>{% endif %}</td>
-            <td>{% if p.can_update %}<i class="bi bi-check text-success"></i>{% else %}<i class="bi bi-x text-danger"></i>{% endif %}</td>
-            <td>{% if p.can_delete %}<i class="bi bi-check text-success"></i>{% else %}<i class="bi bi-x text-danger"></i>{% endif %}</td>
-            <td>{{ p.granted_by.username|default:"—" }}</td>
+          <tr class="{% if not p.is_active %}table-secondary{% endif %}">
+            <td><strong>{{ p.user.get_full_name|default:p.user.username }}</strong></td>
+            <td><span class="badge bg-secondary">{{ p.user.get_role_display }}</span></td>
+            <td>{{ p.get_module_name_display }}</td>
+            <td>{% if p.can_view %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle text-danger"></i>{% endif %}</td>
+            <td>{% if p.can_create %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle text-danger"></i>{% endif %}</td>
+            <td>{% if p.can_update %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle text-danger"></i>{% endif %}</td>
+            <td>{% if p.can_delete_any %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle text-danger"></i>{% endif %}</td>
             <td>
-              <a href="{% url 'permissions:update' p.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i></a>
-              <a href="{% url 'permissions:delete' p.pk %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></a>
+              {% if p.is_active %}
+                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Active</span>
+              {% else %}
+                <span class="badge bg-warning text-dark"><i class="bi bi-pause-circle me-1"></i>Suspended</span>
+              {% endif %}
+            </td>
+            <td class="small text-muted">{{ p.granted_by.username|default:"—" }}</td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                <a href="{% url 'permissions:update' p.pk %}" class="btn btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                <form method="post" action="{% url 'permissions:toggle' p.pk %}" class="d-inline">
+                  {% csrf_token %}
+                  {% if p.is_active %}
+                    <button type="submit" class="btn btn-outline-warning" title="Suspend"><i class="bi bi-pause-circle"></i></button>
+                  {% else %}
+                    <button type="submit" class="btn btn-outline-success" title="Reactivate"><i class="bi bi-play-circle"></i></button>
+                  {% endif %}
+                </form>
+                <a href="{% url 'permissions:delete' p.pk %}" class="btn btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></a>
+              </div>
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="8" class="text-center text-muted py-4">No explicit permissions granted.</td></tr>
+          <tr><td colspan="10" class="text-center text-muted py-4">No explicit permissions granted yet. Use the button above to grant a permission directly.</td></tr>
           {% endfor %}
         </tbody>
       </table>

@@ -5,19 +5,19 @@
 {% block content %}
 <div class="cl-page-header">
   <div><h1>Delete Permission</h1></div>
-  <a href="{% url 'settingsapp:index' %}?tab=permissions" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+  <a href="{% url 'permissions:index' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
 </div>
 
 <div class="cl-card">
   <div class="cl-card-body">
     <div class="alert alert-warning">
-      <strong>Are you sure?</strong> This will revoke the <strong>{{ permission.module_name }}</strong> permission for <strong>{{ permission.user.username }}</strong>.
+      <strong>Are you sure?</strong> This will permanently revoke the <strong>{{ permission.get_module_name_display }}</strong> permission for <strong>{{ permission.user.get_full_name|default:permission.user.username }}</strong>.
     </div>
     <form method="post">
       {% csrf_token %}
       <div class="d-flex gap-2">
         <button type="submit" class="btn btn-danger"><i class="bi bi-trash"></i> Delete</button>
-        <a href="{% url 'settingsapp:index' %}?tab=permissions" class="btn btn-outline-secondary">Cancel</a>
+        <a href="{% url 'permissions:index' %}" class="btn btn-outline-secondary">Cancel</a>
       </div>
     </form>
   </div>

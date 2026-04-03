@@ -9,6 +9,7 @@ urlpatterns = [
     path("create/", views.create, name="create"),
     path("<int:pk>/edit/", views.update, name="update"),
     path("<int:pk>/delete/", views.delete, name="delete"),
+    path("<int:pk>/toggle/", views.toggle_permission, name="toggle"),
     path("request-access/", views.request_access, name="request_access"),
     path("access-requests/", views.access_requests_list, name="access_requests"),
     path(

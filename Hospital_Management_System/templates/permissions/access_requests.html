@@ -5,9 +5,10 @@
 <div class="container-fluid py-4">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="fw-bold mb-0"><i class="bi bi-shield-check me-2"></i>Permission Access Requests</h4>
-    <a href="{% url 'settingsapp:index' %}?tab=permissions" class="btn btn-outline-secondary btn-sm">
-      <i class="bi bi-arrow-left me-1"></i> Back to Settings
-    </a>
+    <div class="d-flex gap-2">
+      <a href="{% url 'permissions:index' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-list-check me-1"></i> All Permissions</a>
+      <a href="{% url 'permissions:create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i> Grant Permission</a>
+    </div>
   </div>
 
   <!-- Pending Requests -->
@@ -62,6 +63,75 @@
       {% endif %}
     </div>
   </div>
+
+  <!-- Active Grants Quick View -->
+  {% if active_grants %}
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-success bg-opacity-10 border-0 d-flex justify-content-between align-items-center">
+      <h6 class="mb-0 fw-semibold"><i class="bi bi-check-circle me-1 text-success"></i> Active Grants <span class="badge bg-success ms-1">{{ active_grants|length }}</span></h6>
+      <a href="{% url 'permissions:index' %}" class="btn btn-sm btn-outline-success">View All</a>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr><th>User</th><th>Role</th><th>Module</th><th>Granted By</th><th class="text-end">Actions</th></tr>
+          </thead>
+          <tbody>
+            {% for g in active_grants %}
+            <tr>
+              <td>{{ g.user.get_full_name|default:g.user.username }}</td>
+              <td><span class="badge bg-secondary">{{ g.user.get_role_display }}</span></td>
+              <td>{{ g.get_module_name_display }}</td>
+              <td class="small text-muted">{{ g.granted_by.username|default:"—" }}</td>
+              <td class="text-end">
+                <form method="post" action="{% url 'permissions:toggle' g.pk %}" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-warning" title="Suspend"><i class="bi bi-pause-circle me-1"></i>Suspend</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Suspended Grants -->
+  {% if suspended_grants %}
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-warning bg-opacity-10 border-0">
+      <h6 class="mb-0 fw-semibold"><i class="bi bi-pause-circle me-1 text-warning"></i> Suspended Grants <span class="badge bg-warning text-dark ms-1">{{ suspended_grants|length }}</span></h6>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr><th>User</th><th>Role</th><th>Module</th><th>Granted By</th><th class="text-end">Actions</th></tr>
+          </thead>
+          <tbody>
+            {% for g in suspended_grants %}
+            <tr class="table-secondary">
+              <td>{{ g.user.get_full_name|default:g.user.username }}</td>
+              <td><span class="badge bg-secondary">{{ g.user.get_role_display }}</span></td>
+              <td>{{ g.get_module_name_display }}</td>
+              <td class="small text-muted">{{ g.granted_by.username|default:"—" }}</td>
+              <td class="text-end">
+                <form method="post" action="{% url 'permissions:toggle' g.pk %}" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-success" title="Reactivate"><i class="bi bi-play-circle me-1"></i>Reactivate</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   <!-- Recently Reviewed -->
   {% if reviewed_requests %}
