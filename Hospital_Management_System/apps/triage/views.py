@@ -8,14 +8,16 @@ from apps.core.permissions import (
     module_permission_required,
     role_required,
 )
-from apps.triage.forms import TriageRecordForm
+from apps.triage.forms import TriageEditForm, TriageRecordForm
 from apps.triage.models import TriageRecord
 from apps.triage.services import get_triage_eligible_visits
 from apps.visits.services import transition_visit
 
 
 @login_required
-@role_required("receptionist", "triage_officer", "nurse", "system_admin", "director")
+@role_required(
+    "receptionist", "triage_officer", "nurse", "doctor", "system_admin", "director"
+)
 @module_permission_required("triage", "view")
 def index(request):
     eligible_visits = get_triage_eligible_visits(request.user)
@@ -50,6 +52,14 @@ def index(request):
             "eligible_visits": eligible_visits,
             "query": query,
             "outcome": outcome,
+            "can_edit_triage": request.user.role
+            in {
+                "doctor",
+                "triage_officer",
+                "nurse",
+                "system_admin",
+                "director",
+            },
         },
     )
 
@@ -105,5 +115,51 @@ def create(request):
             "form": form,
             "page_title": "Record Triage",
             "submit_label": "Save Triage Record",
+        },
+    )
+
+
+def _get_triage_record_or_404(user, pk):
+    from django.http import Http404
+
+    record = (
+        TriageRecord.objects.select_related("patient", "visit", "triage_officer")
+        .filter(pk=pk)
+        .first()
+    )
+    if not record:
+        raise Http404("Triage record not found")
+    scoped = branch_queryset_for_user(user, TriageRecord.objects.filter(pk=pk))
+    if not scoped.exists():
+        raise Http404("Triage record not found")
+    return record
+
+
+@login_required
+@role_required("doctor", "triage_officer", "nurse", "system_admin", "director")
+@module_permission_required("triage", "update")
+def edit(request, pk):
+    """Allow doctors/nurses to update medical data on a triage record.
+
+    Patient and visit fields are NOT editable here.
+    """
+    record = _get_triage_record_or_404(request.user, pk)
+
+    if request.method == "POST":
+        form = TriageEditForm(request.POST, instance=record)
+        if form.is_valid():
+            form.save()  # save() triggers auto-priority recalc
+            return redirect("triage:index")
+    else:
+        form = TriageEditForm(instance=record)
+
+    return render(
+        request,
+        "triage/form.html",
+        {
+            "form": form,
+            "record": record,
+            "page_title": f"Edit Triage — {record.patient}",
+            "submit_label": "Save Changes",
         },
     )

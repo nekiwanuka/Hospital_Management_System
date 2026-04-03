@@ -116,3 +116,65 @@ class TriageRecordForm(forms.ModelForm):
         if visit:
             cleaned_data["patient"] = visit.patient
         return cleaned_data
+
+
+class TriageEditForm(forms.ModelForm):
+    """Edit form for triage records — medical data only (no patient/visit)."""
+
+    class Meta:
+        model = TriageRecord
+        fields = [
+            "temperature",
+            "blood_pressure",
+            "pulse_rate",
+            "respiratory_rate",
+            "oxygen_level",
+            "weight",
+            "height",
+            "symptoms",
+            "outcome",
+        ]
+        widgets = {
+            "temperature": forms.NumberInput(
+                attrs={"placeholder": "36.5", "step": "0.1", "min": "30", "max": "45"}
+            ),
+            "blood_pressure": forms.TextInput(attrs={"placeholder": "120/80"}),
+            "pulse_rate": forms.NumberInput(
+                attrs={"placeholder": "72", "min": "20", "max": "300"}
+            ),
+            "respiratory_rate": forms.NumberInput(
+                attrs={"placeholder": "16", "min": "5", "max": "60"}
+            ),
+            "oxygen_level": forms.NumberInput(
+                attrs={"placeholder": "98", "min": "0", "max": "100"}
+            ),
+            "weight": forms.NumberInput(
+                attrs={"placeholder": "70.0", "step": "0.1", "min": "0.5", "max": "500"}
+            ),
+            "height": forms.NumberInput(
+                attrs={"placeholder": "170.0", "step": "0.1", "min": "20", "max": "300"}
+            ),
+            "symptoms": forms.Textarea(
+                attrs={
+                    "rows": 3,
+                    "placeholder": "Describe presenting complaints, onset, duration\u2026",
+                }
+            ),
+        }
+        help_texts = {
+            "temperature": "°C (normal 36.1–37.2)",
+            "blood_pressure": "mmHg — systolic/diastolic (normal ~120/80)",
+            "pulse_rate": "bpm (normal 60–100)",
+            "respiratory_rate": "breaths/min (normal 12–20)",
+            "oxygen_level": "SpO₂ % (normal 95–100)",
+            "weight": "kg",
+            "height": "cm",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            css = "form-control"
+            if isinstance(field.widget, forms.Select):
+                css = "form-select"
+            field.widget.attrs["class"] = css

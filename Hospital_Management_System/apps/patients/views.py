@@ -144,7 +144,7 @@ def detail(request, pk):
         "yes",
     }
 
-    can_edit_patient = request.user.role in {"receptionist", "system_admin", "director"}
+    can_edit_patient = request.user.role in {"system_admin", "director"}
     can_initiate_visit = request.user.role in {
         "receptionist",
         "nurse",
@@ -204,7 +204,7 @@ def detail(request, pk):
 
 
 @login_required
-@role_required("receptionist", "system_admin", "director")
+@role_required("system_admin", "director")
 @module_permission_required("patients", "update")
 def edit(request, pk):
     patient = _get_patient_for_user_or_404(request.user, pk)
