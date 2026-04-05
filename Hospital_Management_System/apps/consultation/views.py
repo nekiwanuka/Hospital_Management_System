@@ -6,8 +6,11 @@ from django.shortcuts import redirect, render
 from django.db.models import Exists, OuterRef, Q
 from django.urls import reverse
 
+from decimal import Decimal
+
 from apps.admission.models import Admission
-from apps.billing.models import Invoice
+from apps.billing.models import Invoice, InvoiceLineItem
+from apps.billing.services import add_post_payment_line_for_admitted
 from apps.consultation.models import Consultation
 from apps.consultation.forms import (
     ConsultationForm,
@@ -30,11 +33,24 @@ from apps.pharmacy.services import (
     available_medicines_queryset,
     sync_branch_medicine_catalog,
 )
+from apps.patients.models import PatientDocument
 from apps.radiology.models import ImagingRequest
 from apps.referrals.models import Referral
+from apps.settingsapp.services import get_lab_fee, get_radiology_fee
 from apps.triage.models import TriageRecord
 from apps.visits.models import Visit
 from apps.visits.services import transition_visit
+
+
+def _is_admitted_visit(visit):
+    """Return True if the visit belongs to an admitted patient (credit workflow)."""
+    return visit.status == "admitted"
+
+
+def _source_already_billed(source_model, source_id):
+    return InvoiceLineItem.objects.filter(
+        source_model=source_model, source_id=source_id
+    ).exists()
 
 
 def _normalize_panel(panel):
@@ -278,17 +294,36 @@ def request_lab_test(request, visit_id):
         comments=comments,
     )
 
-    transition_visit(
-        visit,
-        "billing_queue",
-        request.user,
-        notes="Doctor requested lab test; use Send To Cashier for billing invoice generation.",
-    )
-
-    messages.success(
-        request,
-        f"Lab request '{test_name}' created. Patient remains on your consultation workbench while waiting for results.",
-    )
+    if _is_admitted_visit(visit):
+        # Admitted patient → add to post-payment invoice (pending cashier authorisation)
+        charge = get_lab_fee(test_name)
+        if not _source_already_billed("lab", lab_request.pk):
+            add_post_payment_line_for_admitted(
+                branch=visit.branch,
+                patient=visit.patient,
+                visit=visit,
+                user=request.user,
+                service_type="lab",
+                description=f"Laboratory: {test_name}",
+                amount=charge,
+                source_model="lab",
+                source_id=lab_request.pk,
+            )
+        messages.success(
+            request,
+            f"Lab request '{test_name}' added to post-payment invoice – pending cashier authorisation.",
+        )
+    else:
+        transition_visit(
+            visit,
+            "billing_queue",
+            request.user,
+            notes="Doctor requested lab test; use Send To Cashier for billing invoice generation.",
+        )
+        messages.success(
+            request,
+            f"Lab request '{test_name}' created. Patient remains on your consultation workbench while waiting for results.",
+        )
     return _redirect_consultation_start(visit.pk, selected_panel)
 
 
@@ -353,7 +388,7 @@ def request_radiology(request, visit_id):
     priority = form.cleaned_data["priority"]
     clinical_notes = (form.cleaned_data.get("clinical_notes") or "").strip()
 
-    ImagingRequest.objects.create(
+    imaging_request = ImagingRequest.objects.create(
         branch=visit.branch,
         patient=visit.patient,
         visit=visit,
@@ -364,17 +399,37 @@ def request_radiology(request, visit_id):
         status="requested",
     )
 
-    transition_visit(
-        visit,
-        "billing_queue",
-        request.user,
-        notes="Doctor requested radiology; use Send To Cashier for billing invoice generation.",
-    )
-
-    messages.success(
-        request,
-        "Radiology request submitted. Patient must clear payment at cashier before radiology processing.",
-    )
+    if _is_admitted_visit(visit):
+        charge = get_radiology_fee(
+            imaging_type, form.cleaned_data.get("specific_examination", "")
+        )
+        if not _source_already_billed("radiology", imaging_request.pk):
+            add_post_payment_line_for_admitted(
+                branch=visit.branch,
+                patient=visit.patient,
+                visit=visit,
+                user=request.user,
+                service_type="radiology",
+                description=f"Radiology: {imaging_request.get_imaging_type_display()}",
+                amount=charge,
+                source_model="radiology",
+                source_id=imaging_request.pk,
+            )
+        messages.success(
+            request,
+            f"Radiology request added to post-payment invoice – pending cashier authorisation.",
+        )
+    else:
+        transition_visit(
+            visit,
+            "billing_queue",
+            request.user,
+            notes="Doctor requested radiology; use Send To Cashier for billing invoice generation.",
+        )
+        messages.success(
+            request,
+            "Radiology request submitted. Patient must clear payment at cashier before radiology processing.",
+        )
     return _redirect_consultation_start(visit.pk, selected_panel)
 
 
@@ -454,7 +509,7 @@ def request_pharmacy(request, visit_id):
             continue
         medicine = form.cleaned_data["medicine"]
         quantity = form.cleaned_data["quantity"]
-        PharmacyRequest.objects.create(
+        pr = PharmacyRequest.objects.create(
             branch=visit.branch,
             patient=visit.patient,
             visit=visit,
@@ -465,23 +520,49 @@ def request_pharmacy(request, visit_id):
             notes=notes,
             status="requested",
         )
-        created.append(f"{medicine.name} x{quantity}")
+        created.append((pr, medicine, quantity))
 
     if not created:
         messages.error(request, "Please select at least one medicine.")
         return _redirect_consultation_start(visit_id, selected_panel)
 
-    transition_visit(
-        visit,
-        "billing_queue",
-        request.user,
-        notes="Doctor requested pharmacy items; send to cashier for billing clearance.",
-    )
-    summary = ", ".join(created)
-    messages.success(
-        request,
-        f"Pharmacy request(s) submitted: {summary}. Patient remains on your consultation workbench while awaiting cashier clearance.",
-    )
+    if _is_admitted_visit(visit):
+        # Admitted patient → add each item to post-payment invoice (pending cashier auth)
+        for pr, medicine, quantity in created:
+            amount = medicine.selling_price * Decimal(quantity)
+            total_cost = medicine.current_purchase_price * Decimal(quantity)
+            if not _source_already_billed("pharmacy_request", pr.pk):
+                add_post_payment_line_for_admitted(
+                    branch=visit.branch,
+                    patient=visit.patient,
+                    visit=visit,
+                    user=request.user,
+                    service_type="pharmacy",
+                    description=f"Pharmacy: {medicine.name} x{quantity}",
+                    amount=amount,
+                    source_model="pharmacy_request",
+                    source_id=pr.pk,
+                    unit_cost=medicine.current_purchase_price,
+                    total_cost=total_cost,
+                    profit_amount=amount - total_cost,
+                )
+        summary = ", ".join(f"{m.name} x{q}" for _, m, q in created)
+        messages.success(
+            request,
+            f"Pharmacy request(s) submitted: {summary} – pending cashier authorisation.",
+        )
+    else:
+        transition_visit(
+            visit,
+            "billing_queue",
+            request.user,
+            notes="Doctor requested pharmacy items; send to cashier for billing clearance.",
+        )
+        summary = ", ".join(f"{m.name} x{q}" for _, m, q in created)
+        messages.success(
+            request,
+            f"Pharmacy request(s) submitted: {summary}. Patient remains on your consultation workbench while awaiting cashier clearance.",
+        )
     return _redirect_consultation_start(visit.pk, selected_panel)
 
 
@@ -627,25 +708,23 @@ def medicine_search_api(request):
     if not user.can_view_all_branches:
         qs = qs.filter(branch_id=user.branch_id)
 
-    qs = qs.filter(Q(name__icontains=q) | Q(category__icontains=q))[:20]
+    qs = qs.filter(
+        Q(name__icontains=q)
+        | Q(category__icontains=q)
+        | Q(strength__icontains=q)
+        | Q(dosage_form__icontains=q)
+    )[:20]
 
     results = []
     for med in qs:
-        item = med.inventory_item
-        strength = getattr(item, "strength", "") if item else ""
-        dosage_form = (
-            getattr(item, "get_dosage_form_display", lambda: "")() if item else ""
-        )
-        label = med.name
-        if strength:
-            label = f"{med.name} {strength}"
-        if dosage_form:
-            label = f"{label} ({dosage_form})"
         results.append(
             {
                 "id": med.pk,
-                "name": label,
+                "name": med.name,
                 "category": med.category,
+                "strength": med.strength or "",
+                "dosage_form": med.dosage_form or "",
+                "stock": med.stock_quantity,
             }
         )
     return JsonResponse(results, safe=False)
@@ -780,6 +859,9 @@ def start(request, visit_id):
                             request.user,
                             Invoice.objects.filter(visit=visit).order_by("-created_at"),
                         )[:10],
+                        "patient_documents": PatientDocument.objects.filter(
+                            patient=patient
+                        ).order_by("-created_at"),
                     },
                 )
 
@@ -891,6 +973,9 @@ def start(request, visit_id):
             request.user,
             Invoice.objects.filter(visit=visit).order_by("-created_at"),
         )[:10],
+        "patient_documents": PatientDocument.objects.filter(
+            patient=visit.patient
+        ).order_by("-created_at"),
     }
     return render(request, "consultation/form.html", context)
 

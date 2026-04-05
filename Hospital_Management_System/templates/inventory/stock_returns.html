@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Stock Returns — {{ clinic_name }}{% endblock %}
+{% block header_title %}Stock Returns{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Stock Returns</h1></div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'inventory:create_stock_return' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> New Return</a>
+    <a href="{% url 'inventory:medical_store_dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Dashboard</a>
+  </div>
+</div>
+
+<!-- Status Filter -->
+<div class="d-flex flex-wrap gap-1 mb-3">
+  <a href="{% url 'inventory:stock_returns' %}" class="badge {% if not status_filter or status_filter == 'all' %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none py-2 px-3">All</a>
+  <a href="{% url 'inventory:stock_returns' %}?status=pending" class="badge {% if status_filter == 'pending' %}bg-warning text-dark{% else %}bg-secondary{% endif %} text-decoration-none py-2 px-3">Pending</a>
+  <a href="{% url 'inventory:stock_returns' %}?status=accepted" class="badge {% if status_filter == 'accepted' %}bg-success{% else %}bg-secondary{% endif %} text-decoration-none py-2 px-3">Accepted</a>
+  <a href="{% url 'inventory:stock_returns' %}?status=rejected" class="badge {% if status_filter == 'rejected' %}bg-danger{% else %}bg-secondary{% endif %} text-decoration-none py-2 px-3">Rejected</a>
+</div>
+
+<!-- Returns Table -->
+<div class="cl-card">
+  <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-arrow-return-left text-warning me-2"></i>Returns</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Date</th>
+            <th>Item</th>
+            <th>Batch</th>
+            <th class="text-center">Qty</th>
+            <th>From</th>
+            <th>Reason</th>
+            <th>Returned By</th>
+            <th>Status</th>
+            {% if can_verify %}<th class="text-center">Action</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in returns %}
+          <tr>
+            <td>{{ r.created_at|date:"d M Y H:i" }}</td>
+            <td><strong>{{ r.item.item_name }}</strong></td>
+            <td>{{ r.batch.batch_number|default:"—" }}</td>
+            <td class="text-center">{{ r.quantity }}</td>
+            <td>{{ r.get_return_source_display }}</td>
+            <td><small>{{ r.reason|truncatewords:10|default:"—" }}</small></td>
+            <td>{{ r.returned_by.get_full_name|default:r.returned_by.username }}</td>
+            <td>
+              <span class="badge bg-{% if r.status == 'pending' %}warning text-dark{% elif r.status == 'accepted' %}success{% else %}danger{% endif %}">
+                {{ r.get_status_display }}
+              </span>
+              {% if r.status != 'pending' %}
+              <br><small class="text-muted">{{ r.verified_by.get_full_name|default:"" }} {{ r.verified_at|date:"d M H:i" }}</small>
+              {% endif %}
+            </td>
+            {% if can_verify %}
+            <td class="text-center">
+              {% if r.status == 'pending' %}
+              <div class="d-flex gap-1 justify-content-center">
+                <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#acceptModal{{ r.pk }}" title="Accept"><i class="bi bi-check-lg"></i></button>
+                <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectReturnModal{{ r.pk }}" title="Reject"><i class="bi bi-x-lg"></i></button>
+              </div>
+              {% else %}
+              <small class="text-muted">—</small>
+              {% endif %}
+            </td>
+            {% endif %}
+          </tr>
+          {% empty %}
+          <tr><td colspan="{% if can_verify %}9{% else %}8{% endif %}" class="text-center text-muted py-4">No returns found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Accept / Reject Modals -->
+{% if can_verify %}
+{% for r in returns %}
+{% if r.status == 'pending' %}
+<!-- Accept Modal -->
+<div class="modal fade" id="acceptModal{{ r.pk }}" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <form method="post" action="{% url 'inventory:verify_stock_return' r.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="accept">
+      <div class="modal-content">
+        <div class="modal-header bg-success bg-opacity-10">
+          <h5 class="modal-title"><i class="bi bi-check-circle text-success"></i> Accept Return</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2"><strong>{{ r.item.item_name }}</strong> &times; {{ r.quantity }}</p>
+          <p class="mb-2 text-muted small">Returned from {{ r.get_return_source_display }} by {{ r.returned_by.get_full_name }}</p>
+          <div class="alert alert-info py-1 px-2 small mb-2"><i class="bi bi-info-circle"></i> Stock will be restored to the source store.</div>
+          <label class="form-label">Verification notes</label>
+          <textarea name="notes" class="form-control form-control-sm" rows="2" placeholder="Optional notes..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check-lg"></i> Accept</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectReturnModal{{ r.pk }}" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <form method="post" action="{% url 'inventory:verify_stock_return' r.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="reject">
+      <div class="modal-content">
+        <div class="modal-header bg-danger bg-opacity-10">
+          <h5 class="modal-title"><i class="bi bi-x-circle text-danger"></i> Reject Return</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2"><strong>{{ r.item.item_name }}</strong> &times; {{ r.quantity }}</p>
+          <label class="form-label">Reason for rejection <span class="text-danger">*</span></label>
+          <textarea name="notes" class="form-control form-control-sm" rows="2" required placeholder="Reason..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-x-lg"></i> Reject</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endblock %}

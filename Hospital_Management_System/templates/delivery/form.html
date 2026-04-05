@@ -5,7 +5,7 @@
 {% block content %}
 <div class="cl-page-header d-flex flex-wrap align-items-center justify-content-between mb-4">
   <h1 class="mb-0"><i class="bi bi-heart-pulse-fill me-2 text-danger"></i>{{ page_title }}</h1>
-  <a href="{% url 'delivery:index' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back</a>
+  <a href="{% if back_pk %}{% url back_url back_pk %}{% else %}{% url 'delivery:index' %}{% endif %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back</a>
 </div>
 
 <div class="cl-card shadow-sm">
@@ -35,7 +35,7 @@
 
       <div class="mt-4">
         <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>{{ submit_label }}</button>
-        <a href="{% url 'delivery:index' %}" class="btn btn-outline-secondary ms-2">Cancel</a>
+        <a href="{% if back_pk %}{% url back_url back_pk %}{% else %}{% url 'delivery:index' %}{% endif %}" class="btn btn-outline-secondary ms-2">Cancel</a>
       </div>
     </form>
   </div>

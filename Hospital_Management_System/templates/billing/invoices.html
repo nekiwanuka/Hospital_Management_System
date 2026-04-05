@@ -21,7 +21,7 @@
         {% for invoice in invoices %}
         <tr>
             <td>{{ invoice.invoice_number }}</td>
-            <td>{{ invoice.patient.name }}</td>
+            <td>{{ invoice.customer_display_name }}</td>
             <td>{{ invoice.payment_status }}</td>
             <td>{{ invoice.total_amount }}</td>
             <td><a href="{% url 'billing:detail' invoice.pk %}">View</a></td>

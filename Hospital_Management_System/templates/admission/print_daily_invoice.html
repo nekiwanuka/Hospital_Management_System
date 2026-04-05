@@ -57,7 +57,7 @@
         <dt>Days</dt>
         <dd>{{ admission.days_admitted }}</dd>
         <dt>Daily Rate</dt>
-        <dd>{{ admission.daily_rate|floatformat:0 }} UGX</dd>
+        <dd>{{ admission.daily_rate|commas }} UGX</dd>
         {% if admission.discharge_date %}
         <dt>Discharged</dt>
         <dd>{{ admission.discharge_date|date:"d M Y H:i" }}</dd>
@@ -82,7 +82,7 @@
         <td>{{ forloop.counter }}</td>
         <td>{{ charge.charge_date|date:"d M Y" }}</td>
         <td>{{ charge.get_ward_category_display }}</td>
-        <td class="text-right">{{ charge.amount|floatformat:0 }}</td>
+        <td class="text-right">{{ charge.amount|commas }}</td>
         <td>
           {% if charge.invoice_line %}
             {% if charge.invoice_line.payment_status == 'paid' %}Paid
@@ -100,7 +100,7 @@
     <tfoot>
       <tr class="total-row">
         <td colspan="3">Total</td>
-        <td class="text-right">{{ total|floatformat:0 }} UGX</td>
+        <td class="text-right">{{ total|commas }} UGX</td>
         <td></td>
       </tr>
     </tfoot>

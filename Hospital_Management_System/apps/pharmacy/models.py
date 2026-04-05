@@ -17,6 +17,12 @@ class Medicine(BranchScopedModel):
     )
     name = models.CharField(max_length=255)
     category = models.CharField(max_length=120)
+    strength = models.CharField(
+        max_length=120, blank=True, help_text="e.g. 500mg, 250mg/5ml"
+    )
+    dosage_form = models.CharField(
+        max_length=30, blank=True, help_text="e.g. Tablet, Syrup, Injection"
+    )
     manufacturer = models.CharField(max_length=120)
     batch_number = models.CharField(max_length=100)
     expiry_date = models.DateField()
@@ -32,7 +38,22 @@ class Medicine(BranchScopedModel):
         ]
 
     def __str__(self):
-        return f"{self.name} ({self.batch_number})"
+        parts = [self.name]
+        if self.strength:
+            parts.append(self.strength)
+        if self.dosage_form:
+            parts.append(f"({self.dosage_form})")
+        return " ".join(parts)
+
+    @property
+    def display_name(self):
+        """Full name with strength and form for UI display."""
+        parts = [self.name]
+        if self.strength:
+            parts.append(self.strength)
+        if self.dosage_form:
+            parts.append(f"({self.dosage_form})")
+        return " ".join(parts)
 
     @property
     def available_quantity(self):
@@ -177,6 +198,15 @@ class DispenseRecord(BranchScopedModel):
                             {
                                 "quantity": f"Only {medicine.available_quantity} units available in stock."
                             }
+                        )
+
+                    # Enforce minimum sale quantity
+                    min_qty = (
+                        getattr(medicine.inventory_item, "min_sale_quantity", 1) or 1
+                    )
+                    if self.quantity < min_qty:
+                        raise ValidationError(
+                            {"quantity": f"Minimum dispensable quantity is {min_qty}."}
                         )
 
                     if not self.unit_price:
@@ -434,3 +464,125 @@ class MedicalStoreRequest(BranchScopedModel):
 
     def __str__(self):
         return f"{self.medicine_name} x{self.quantity_requested} ({self.request_scope_label})"
+
+
+class PharmacyShift(BranchScopedModel):
+    STATUS_CHOICES = [
+        ("open", "Open"),
+        ("closed", "Closed"),
+    ]
+
+    opened_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.PROTECT,
+        related_name="pharmacy_shifts_opened",
+    )
+    closed_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="pharmacy_shifts_closed",
+    )
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="open")
+    opened_at = models.DateTimeField(auto_now_add=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+
+    class Meta(BranchScopedModel.Meta):
+        ordering = ["-opened_at"]
+        indexes = [
+            models.Index(fields=["branch", "opened_by", "status"]),
+            models.Index(fields=["branch", "-opened_at"]),
+        ]
+
+    def __str__(self):
+        return f"Pharmacy Shift #{self.pk} — {self.opened_by} ({self.get_status_display()})"
+
+    def get_dispenses(self):
+        """Return DispenseRecords created during this shift by the shift owner."""
+        qs = DispenseRecord.objects.filter(
+            branch=self.branch,
+            dispensed_by=self.opened_by,
+            dispensed_at__gte=self.opened_at,
+        )
+        if self.closed_at:
+            qs = qs.filter(dispensed_at__lte=self.closed_at)
+        return qs.select_related("patient", "medicine", "dispensed_by", "prescribed_by")
+
+
+class WalkInSale(BranchScopedModel):
+    """A walk-in customer sale that must be cleared by cashier before dispensing."""
+
+    WALKIN_STATUS = [
+        ("pending_payment", "Pending Payment"),
+        ("cleared", "Cleared by Cashier"),
+        ("dispensed", "Dispensed"),
+        ("cancelled", "Cancelled"),
+    ]
+
+    customer_name = models.CharField(max_length=255)
+    customer_phone = models.CharField(max_length=50)
+    invoice = models.ForeignKey(
+        "billing.Invoice",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="walkin_sales",
+    )
+    status = models.CharField(
+        max_length=20, choices=WALKIN_STATUS, default="pending_payment"
+    )
+    created_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.PROTECT,
+        related_name="walkin_sales_created",
+    )
+    cleared_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="walkin_sales_cleared",
+    )
+    cleared_at = models.DateTimeField(null=True, blank=True)
+    dispensed_at = models.DateTimeField(null=True, blank=True)
+    total_amount = models.DecimalField(
+        max_digits=14, decimal_places=2, default=Decimal("0.00")
+    )
+    payment_method = models.CharField(max_length=20, blank=True, default="cash")
+
+    class Meta(BranchScopedModel.Meta):
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["branch", "status"]),
+        ]
+
+    def __str__(self):
+        return (
+            f"Walk-In #{self.pk} — {self.customer_name} ({self.get_status_display()})"
+        )
+
+    def recalculate_total(self):
+        total = sum(
+            (line.unit_price * Decimal(line.quantity) for line in self.lines.all()),
+            Decimal("0.00"),
+        )
+        self.total_amount = total.quantize(Decimal("0.01"))
+
+
+class WalkInSaleLine(BranchScopedModel):
+    sale = models.ForeignKey(WalkInSale, on_delete=models.CASCADE, related_name="lines")
+    medicine = models.ForeignKey(Medicine, on_delete=models.PROTECT)
+    quantity = models.PositiveIntegerField()
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2)
+
+    class Meta(BranchScopedModel.Meta):
+        pass
+
+    @property
+    def line_total(self):
+        return (self.unit_price * Decimal(self.quantity)).quantize(Decimal("0.01"))
+
+    def __str__(self):
+        return f"{self.medicine.name} x{self.quantity}"

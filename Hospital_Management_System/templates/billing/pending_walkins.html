@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load currency %}
+{% block title %}Walk-In Invoices — {{ clinic_name }}{% endblock %}
+{% block header_title %}Walk-In Invoices{% endblock %}
+
+{% block content %}
+<div class="cl-page-header d-flex flex-wrap align-items-center justify-content-between mb-4">
+  <div><h1><i class="bi bi-person-walking me-2 text-warning"></i>Walk-In Invoices</h1></div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'billing:index' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Billing</a>
+  </div>
+</div>
+
+{% for sale in sales %}
+<div class="cl-card shadow-sm mb-3 {% if sale.invoice and sale.invoice.payment_status == 'paid' %}border-success{% else %}border-warning{% endif %}">
+  <div class="cl-card-header bg-light d-flex justify-content-between align-items-center">
+    <div>
+      <strong><i class="bi bi-person me-1"></i>{{ sale.customer_name }}</strong>
+      <small class="text-muted ms-2">{{ sale.customer_phone }}</small>
+      <small class="text-muted ms-2">— {{ sale.created_at|date:"d M Y H:i" }}</small>
+      {% if sale.invoice %}
+      <span class="badge bg-secondary ms-2">{{ sale.invoice.invoice_number }}</span>
+      {% endif %}
+    </div>
+    <div>
+      {% if sale.invoice and sale.invoice.payment_status == 'paid' %}
+      <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Paid — Awaiting Dispensing</span>
+      {% elif sale.invoice and sale.invoice.payment_status == 'partial' %}
+      <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-circle me-1"></i>Partially Paid</span>
+      {% elif sale.invoice %}
+      <span class="badge bg-danger"><i class="bi bi-clock me-1"></i>Pending Payment</span>
+      {% else %}
+      <span class="badge bg-secondary"><i class="bi bi-exclamation-triangle me-1"></i>No Invoice</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="cl-card-body">
+    <div class="table-responsive">
+      <table class="table table-sm mb-2">
+        <thead><tr><th>Medicine</th><th class="text-center">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Total</th></tr></thead>
+        <tbody>
+          {% for line in sale.lines.all %}
+          <tr>
+            <td>{{ line.medicine.name }}</td>
+            <td class="text-center">{{ line.quantity }}</td>
+            <td class="text-end">{{ line.unit_price|commas }}</td>
+            <td class="text-end">{{ line.line_total|commas }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="table-light">
+          <tr><td colspan="3" class="fw-bold">Total</td><td class="text-end fw-bold">{{ sale.total_amount|commas }} UGX</td></tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="d-flex gap-2 mt-2">
+      {% if sale.invoice and sale.invoice.payment_status != 'paid' %}
+      <a href="{% url 'billing:detail' sale.invoice.pk %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-credit-card me-1"></i>Process Payment
+      </a>
+      {% elif sale.invoice and sale.invoice.payment_status == 'paid' %}
+      <span class="text-success fw-semibold"><i class="bi bi-check-circle me-1"></i>Payment complete — pharmacy will dispense</span>
+      {% else %}
+      <span class="text-muted"><i class="bi bi-exclamation-triangle me-1"></i>Invoice not yet created</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% empty %}
+<div class="alert alert-info"><i class="bi bi-info-circle me-2"></i>No pending walk-in sales.</div>
+{% endfor %}
+{% endblock %}

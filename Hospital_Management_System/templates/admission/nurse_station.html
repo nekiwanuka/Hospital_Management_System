@@ -48,7 +48,7 @@
     <div class="table-responsive">
       <table class="table table-hover align-middle mb-0">
         <thead class="table-light">
-          <tr><th>Patient</th><th>Ward / Bed</th><th>Category</th><th>Doctor</th><th>Admitted</th><th>Days</th><th class="text-end">Running Charges</th><th class="text-end">Actions</th></tr>
+          <tr><th>Patient</th><th>Ward / Bed</th><th>Category</th><th>Doctor</th><th>Admitted</th><th>Days</th><th class="text-end">Running Charges</th><th class="text-end">Invoiced / Credit</th><th class="text-end">Actions</th></tr>
         </thead>
         <tbody>
           {% for a in my_patients %}
@@ -66,7 +66,23 @@
             <td>{{ a.doctor.get_full_name|default:a.doctor.username }}</td>
             <td class="text-muted">{{ a.admission_date|date:"d M Y" }}</td>
             <td>{{ a.days_admitted }}</td>
-            <td class="text-end"><strong>{{ a.running_ward_charges|floatformat:0 }}</strong></td>
+            <td class="text-end"><strong>{{ a.running_ward_charges|commas }}</strong></td>
+            <td class="text-end">
+              {% with inv_info=admission_invoice_map|dictsort:a.pk %}
+              {% if admission_invoice_map %}
+                {% for key, val in admission_invoice_map.items %}
+                  {% if key == a.pk %}
+                    <span title="Total invoiced">{{ val.total_invoiced|commas }}</span>
+                    {% if val.outstanding > 0 %}
+                    <br><span class="badge bg-warning text-dark" title="Outstanding credit">Credit: {{ val.outstanding|commas }}</span>
+                    {% endif %}
+                  {% endif %}
+                {% endfor %}
+              {% else %}
+              —
+              {% endif %}
+              {% endwith %}
+            </td>
             <td class="text-end">
               <a href="{% url 'admission:detail' a.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Detail"><i class="bi bi-eye"></i></a>
               <a href="{% url 'admission:daily_charges' a.pk %}" class="btn btn-sm btn-outline-info me-1" title="Daily Charges"><i class="bi bi-calendar3"></i></a>
@@ -92,7 +108,7 @@
     <div class="table-responsive">
       <table class="table table-hover align-middle mb-0">
         <thead class="table-light">
-          <tr><th>Patient</th><th>Ward / Bed</th><th>Category</th><th>Doctor</th><th>Nurse</th><th>Days</th><th class="text-end">Running Charges</th><th class="text-end">Actions</th></tr>
+          <tr><th>Patient</th><th>Ward / Bed</th><th>Category</th><th>Doctor</th><th>Nurse</th><th>Days</th><th class="text-end">Running Charges</th><th class="text-end">Invoiced / Credit</th><th class="text-end">Actions</th></tr>
         </thead>
         <tbody>
           {% for a in other_patients %}
@@ -110,7 +126,21 @@
             <td>{{ a.doctor.get_full_name|default:a.doctor.username }}</td>
             <td>{{ a.nurse.get_full_name|default:"—" }}</td>
             <td>{{ a.days_admitted }}</td>
-            <td class="text-end"><strong>{{ a.running_ward_charges|floatformat:0 }}</strong></td>
+            <td class="text-end"><strong>{{ a.running_ward_charges|commas }}</strong></td>
+            <td class="text-end">
+              {% if admission_invoice_map %}
+                {% for key, val in admission_invoice_map.items %}
+                  {% if key == a.pk %}
+                    <span title="Total invoiced">{{ val.total_invoiced|commas }}</span>
+                    {% if val.outstanding > 0 %}
+                    <br><span class="badge bg-warning text-dark" title="Outstanding credit">Credit: {{ val.outstanding|commas }}</span>
+                    {% endif %}
+                  {% endif %}
+                {% endfor %}
+              {% else %}
+              —
+              {% endif %}
+            </td>
             <td class="text-end">
               <a href="{% url 'admission:detail' a.pk %}" class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-eye"></i></a>
               <a href="{% url 'admission:daily_charges' a.pk %}" class="btn btn-sm btn-outline-info me-1" title="Daily Charges"><i class="bi bi-calendar3"></i></a>

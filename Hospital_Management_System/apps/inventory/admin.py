@@ -11,6 +11,7 @@ from apps.inventory.models import (
     StockIssue,
     StockItem,
     StockMovement,
+    StockReturn,
     Supplier,
 )
 
@@ -137,3 +138,19 @@ class StockIssueAdmin(admin.ModelAdmin):
     )
     search_fields = ("stock_item__item_name", "notes")
     list_filter = ("branch", "issued_to", "created_at")
+
+
+@admin.register(StockReturn)
+class StockReturnAdmin(admin.ModelAdmin):
+    list_display = (
+        "item",
+        "quantity",
+        "return_source",
+        "status",
+        "returned_by",
+        "verified_by",
+        "created_at",
+        "branch",
+    )
+    search_fields = ("item__item_name", "reason")
+    list_filter = ("branch", "status", "return_source", "created_at")

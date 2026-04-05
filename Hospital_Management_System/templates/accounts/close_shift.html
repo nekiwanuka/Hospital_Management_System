@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Close Shift — {{ clinic_name }}{% endblock %}
+{% block header_title %}Close Shift{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-5 col-md-7">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <div class="text-center mb-4">
+          <div class="rounded-circle bg-warning bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width:64px;height:64px;">
+            <i class="bi bi-stop-circle text-warning" style="font-size:1.75rem;"></i>
+          </div>
+          <h4 class="mt-3 mb-1">Close Your Shift</h4>
+          <p class="text-muted small">You are about to end your current shift.</p>
+        </div>
+
+        <div class="bg-light rounded p-3 mb-3 small">
+          <div class="row">
+            <div class="col-6"><strong>Opened:</strong></div>
+            <div class="col-6">{{ shift.opened_at|date:"d M Y, H:i" }}</div>
+          </div>
+          <div class="row mt-1">
+            <div class="col-6"><strong>Branch:</strong></div>
+            <div class="col-6">{{ shift.branch.branch_code }} — {{ shift.branch.branch_name }}</div>
+          </div>
+        </div>
+
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="id_notes" class="form-label">{{ form.notes.label }}</label>
+            {{ form.notes }}
+          </div>
+          <button type="submit" class="btn btn-warning w-100"><i class="bi bi-stop-circle"></i> Close Shift</button>
+          <a href="{% url 'core:dashboard' %}" class="btn btn-outline-secondary w-100 mt-2">Cancel</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

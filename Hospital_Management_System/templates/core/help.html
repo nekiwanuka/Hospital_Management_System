@@ -51,6 +51,7 @@
           <a class="nav-link" href="#billing" data-section="billing"><i class="bi bi-receipt"></i>Billing</a>
           <a class="nav-link" href="#reports" data-section="reports"><i class="bi bi-bar-chart-line"></i>Reports</a>
           <a class="nav-link" href="#referrals" data-section="referrals"><i class="bi bi-send"></i>Referrals</a>
+          <a class="nav-link" href="#documents" data-section="documents"><i class="bi bi-paperclip"></i>Documents</a>
           <a class="nav-link" href="#permissions" data-section="permissions"><i class="bi bi-shield-lock"></i>Permissions</a>
           <a class="nav-link" href="#settings" data-section="settings"><i class="bi bi-gear"></i>Settings</a>
         </nav>
@@ -133,7 +134,10 @@
         </ul>
 
         <h3>Patient Detail Page</h3>
-        <p>Click on any patient to see their complete medical history, including triage records, consultations, lab results, imaging, invoices, admissions, and referrals — all in one place.</p>
+        <p>Click on any patient to see their complete medical history, including triage records, consultations, lab results, imaging, invoices, admissions, referrals, and uploaded documents — all in one place.</p>
+
+        <h3>Uploading Documents</h3>
+        <p>You can attach documents (scans, referral letters, external lab results, ID copies, insurance cards, etc.) directly from the patient detail page. See the <a href="#documents">Patient Documents</a> section for full details.</p>
       </div>
     </section>
 
@@ -221,6 +225,9 @@
 
         <h3>Editing Triage Data</h3>
         <p>Doctors, nurses, and triage officers can update the medical vitals on any triage record by clicking the <i class="bi bi-pencil"></i> edit button. Patient and visit details are not editable from this form.</p>
+
+        <h3>Attaching Documents</h3>
+        <p>When editing a triage record, a <strong>Patient Documents</strong> panel appears below the vitals form. You can upload supporting files (e.g. referral letters, prior test results, insurance documents) which are linked to the patient and automatically categorised as "Triage". See the <a href="#documents">Patient Documents</a> section for supported file types and limits.</p>
       </div>
     </section>
 
@@ -250,6 +257,9 @@
 
         <h3>Completing a Consultation</h3>
         <p>After documenting everything, submit the consultation. The system will route orders to the appropriate departments (lab, radiology, pharmacy).</p>
+
+        <h3>Attaching Documents</h3>
+        <p>A <strong>Patient Documents</strong> panel is available at the bottom of the consultation workbench. Doctors can upload clinical photographs, external reports, consent forms, or any supporting files during the consultation. Documents are linked to both the patient and the current visit and categorised as "Consultation" by default. See the <a href="#documents">Patient Documents</a> section for details.</p>
 
         <div class="help-quick-tip">
           <strong><i class="bi bi-lightbulb"></i> Tip:</strong> Review triage auto-notes on the patient's card to quickly spot abnormalities before examining the patient.
@@ -332,6 +342,9 @@
         <h3>Test Categories</h3>
         <p>Tests are organised by category (haematology, biochemistry, urinalysis, etc.). Each test has a defined panel with normal ranges displayed alongside results.</p>
 
+        <h3>Attaching Documents</h3>
+        <p>The lab detail page includes a <strong>Patient Documents</strong> panel where technicians can upload scanned worksheets, external reference results, or sample images. Files are auto-categorised as "Laboratory". See the <a href="#documents">Patient Documents</a> section for details.</p>
+
         <div class="help-quick-tip">
           <strong><i class="bi bi-lightbulb"></i> Tip:</strong> Flag any critical or panic values immediately by marking them as urgent so the doctor is alerted.
         </div>
@@ -384,8 +397,19 @@
           <li>Stock is replenished from the central Medical Store (see Inventory).</li>
         </ul>
 
+        <h3>Walk-In Sales</h3>
+        <p>For over-the-counter sales to non-registered customers:</p>
+        <ol>
+          <li>Navigate to <strong>Pharmacy → Walk-In Sales</strong>.</li>
+          <li>Enter the customer's name, phone, and select medicines with quantities.</li>
+          <li>Submit the sale — an <strong>Invoice</strong> is automatically created.</li>
+          <li>The system redirects you to the invoice where payment can be collected by the cashier.</li>
+          <li>Once paid, the walk-in sale is automatically cleared.</li>
+        </ol>
+        <p>All walk-in sales generate invoices and receipts, ensuring a complete financial audit trail.</p>
+
         <div class="help-warning">
-          <strong><i class="bi bi-exclamation-triangle"></i> Important:</strong> Never dispense medicines without a valid prescription from a doctor. All dispensing is logged for audit purposes.
+          <strong><i class="bi bi-exclamation-triangle"></i> Important:</strong> Never dispense medicines without a valid prescription from a doctor. Walk-in sales are for over-the-counter items only. All dispensing is logged for audit purposes.
         </div>
       </div>
     </section>
@@ -445,6 +469,16 @@
         <h3>Post-Pay Privilege</h3>
         <p>In some cases, a cashier can approve a patient to proceed to triage before payment. This requires approval and is logged for audit.</p>
 
+        <h3>Walk-In Payments</h3>
+        <p>Walk-in sales (e.g. pharmacy over-the-counter purchases without a registered patient visit) are now fully integrated into the invoice system:</p>
+        <ol>
+          <li>A walk-in sale in Pharmacy automatically creates an <strong>Invoice</strong> with the customer's name and phone number.</li>
+          <li>The cashier processes payment against that invoice — the same way as any patient invoice.</li>
+          <li>Receipts are generated and linked to the invoice for audit.</li>
+          <li>When the invoice is fully paid, the walk-in sale status is automatically marked as <span class="badge bg-success">Cleared</span>.</li>
+        </ol>
+        <p>Walk-in invoices appear in the main billing list and can be searched by the customer name or invoice number.</p>
+
         <div class="help-quick-tip">
           <strong><i class="bi bi-lightbulb"></i> Tip:</strong> Use the billing search to find invoices by patient name, invoice number, or status (paid, pending, partial).
         </div>
@@ -491,6 +525,57 @@
 
         <h3>Tracking Referrals</h3>
         <p>All referrals are listed with their status. Follow up on outcomes and record feedback when available.</p>
+      </div>
+    </section>
+
+    <hr class="help-divider">
+
+    <!-- ========== DOCUMENTS ========== -->
+    <section id="documents" class="help-section cl-card">
+      <div class="cl-card-body">
+        <h2><i class="bi bi-paperclip"></i> Patient Documents</h2>
+        <p>Upload and manage documents for any patient — referral letters, external lab results, scanned forms, clinical photographs, insurance cards, consent forms, and more.</p>
+
+        <h3>Where to Upload</h3>
+        <p>The <strong>Patient Documents</strong> panel appears in several places across the system:</p>
+        <ul>
+          <li><strong>Patient Detail Page</strong> — Upload general documents for any patient.</li>
+          <li><strong>Consultation Workbench</strong> — Attach files during a consultation (auto-categorised as "Consultation").</li>
+          <li><strong>Triage Edit Form</strong> — Attach documents while editing vitals (auto-categorised as "Triage").</li>
+          <li><strong>Laboratory Detail</strong> — Attach worksheets or reference material (auto-categorised as "Laboratory").</li>
+        </ul>
+
+        <h3>Uploading a Document</h3>
+        <ol>
+          <li>Click the <strong><i class="bi bi-upload"></i> Upload</strong> button in the Patient Documents panel.</li>
+          <li>The upload form expands with three fields:
+            <ul>
+              <li><strong>Title</strong> — A short description (optional; defaults to the filename).</li>
+              <li><strong>Category</strong> — Select the relevant department: Triage, Consultation, Laboratory, Radiology, Admission, Pharmacy, Referral, or Other.</li>
+              <li><strong>File</strong> — Choose the file to upload (max 10 MB).</li>
+            </ul>
+          </li>
+          <li>Click <strong><i class="bi bi-cloud-upload"></i> Upload Document</strong>.</li>
+        </ol>
+
+        <h3>Supported File Types</h3>
+        <ul>
+          <li><strong>Images</strong> — JPG, JPEG, PNG, GIF, WebP, BMP</li>
+          <li><strong>Documents</strong> — PDF, DOC, DOCX, RTF, TXT</li>
+          <li><strong>Spreadsheets</strong> — XLS, XLSX, CSV</li>
+          <li><strong>Medical</strong> — DICOM, DCM</li>
+        </ul>
+
+        <h3>Viewing &amp; Deleting</h3>
+        <p>All uploaded documents are listed in a table showing the title, category, who uploaded it, and when. Use the <i class="bi bi-eye"></i> button to view/download, or the <i class="bi bi-trash"></i> button to delete a document (with confirmation).</p>
+
+        <div class="help-quick-tip">
+          <strong><i class="bi bi-lightbulb"></i> Tip:</strong> Documents are shared across all modules — a file uploaded during triage is also visible on the patient detail page and during consultation. This ensures the complete picture is always available.
+        </div>
+
+        <div class="help-warning">
+          <strong><i class="bi bi-exclamation-triangle"></i> Important:</strong> The maximum file size is <strong>10 MB</strong>. Files exceeding this limit will be rejected. Compress large scans or images before uploading.
+        </div>
       </div>
     </section>
 

@@ -182,9 +182,9 @@ class MedicalStoreRequestForm(forms.ModelForm):
             queryset = queryset.filter(branch_id=user.branch_id)
 
         self.fields["item"].queryset = queryset
-        self.fields["item"].label = "Source Store Item (select item to request)"
+        self.fields["item"].label = "Select Item from Available Stock"
         self.fields["item"].label_from_instance = (
-            lambda item: f"{item.item_name} ({item.category.name}) [{item.get_store_department_display()}] - available: {sellable_quantity_for_item(item)}"
+            lambda item: f"{item.item_name} ({item.category.name if item.category else 'N/A'}) [{item.get_store_department_display()}] — {sellable_quantity_for_item(item)} available"
         )
 
         for field in self.fields.values():
@@ -257,7 +257,7 @@ def walkin_line_formset_factory(user=None, data=None, extra=1):
             super().__init__(*args, **kwargs)
 
     LineFormSet = formset_factory(
-        _UserBoundLineForm, extra=extra, min_num=1, validate_min=True
+        _UserBoundLineForm, extra=extra, min_num=1, validate_min=True, max_num=50
     )
     return LineFormSet(data=data, prefix="lines")
 

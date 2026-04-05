@@ -26,6 +26,9 @@
     <a href="{% url 'billing:receipts' %}" class="btn btn-outline-info btn-sm">
       <i class="bi bi-journal-check"></i> Receipts
     </a>
+    <a href="{% url 'billing:pending_walkins' %}" class="btn btn-outline-warning btn-sm">
+      <i class="bi bi-person-walking"></i> Walk-In Payments{% if pending_walkin_count %} <span class="badge bg-warning text-dark">{{ pending_walkin_count }}</span>{% endif %}
+    </a>
     <a href="{% url 'billing:shift_sessions_report' %}" class="btn btn-outline-secondary btn-sm">
       <i class="bi bi-graph-up"></i> Reports
     </a>
@@ -38,7 +41,7 @@
   <i class="bi bi-check-circle-fill fs-4 me-3"></i>
   <div class="flex-grow-1">
     <strong>Shift Active</strong> &mdash; Opened at {{ active_shift.created_at|date:"d M Y H:i" }}
-    <span class="ms-2 badge bg-light text-dark">Float: {{ active_shift.opening_float|floatformat:0 }}</span>
+    <span class="ms-2 badge bg-light text-dark">Float: {{ active_shift.opening_float|commas }}</span>
   </div>
   <form method="post" action="{% url 'billing:close_shift' active_shift.pk %}" class="ms-3">
     {% csrf_token %}
@@ -88,6 +91,69 @@
     </div>
   </div>
 </div>
+
+<!-- Pending Cashier Authorizations (Post-Payment / Credit) -->
+{% if pending_authorizations %}
+<div class="cl-card mb-4 shadow-sm border-warning">
+  <div class="cl-card-header bg-warning bg-opacity-10">
+    <h2 class="cl-card-title mb-0">
+      <i class="bi bi-shield-lock text-warning me-2"></i>Pending Cashier Authorisation
+      <span class="badge bg-warning text-dark ms-2">{{ pending_authorizations|length }}</span>
+    </h2>
+    <small class="text-muted ms-auto">Admitted patients — authorise before service can be provided</small>
+  </div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover table-sm align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Department</th>
+            <th>Patient</th>
+            <th>Invoice</th>
+            <th>Service / Item</th>
+            <th class="text-end">Amount</th>
+            <th>Requested</th>
+            <th class="text-end">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for line in pending_authorizations %}
+          <tr>
+            <td>
+              <span class="badge bg-{% if line.service_type == 'pharmacy' %}success{% elif line.service_type == 'lab' %}info{% elif line.service_type == 'radiology' %}purple{% elif line.service_type == 'admission' %}primary{% else %}secondary{% endif %} bg-opacity-75">
+                {{ line.get_service_type_display }}
+              </span>
+            </td>
+            <td class="fw-medium">{{ line.invoice.customer_display_name }}</td>
+            <td><code>{{ line.invoice.invoice_number }}</code></td>
+            <td>{{ line.description }}</td>
+            <td class="text-end fw-semibold">{{ line.amount|commas }}</td>
+            <td class="text-muted">{{ line.created_at|date:"d M H:i" }}</td>
+            <td class="text-end">
+              <form method="post" action="{% url 'billing:authorize_line_item' line.pk %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="authorize">
+                <button type="submit" class="btn btn-sm btn-success me-1" title="Authorise this charge">
+                  <i class="bi bi-check-lg"></i> Authorise
+                </button>
+              </form>
+              <form method="post" action="{% url 'billing:authorize_line_item' line.pk %}" class="d-inline"
+                    onsubmit="return confirm('Reject and remove this charge from the invoice?')">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="reject">
+                <button type="submit" class="btn btn-sm btn-outline-danger" title="Reject this charge">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 <!-- Pending Requests -->
 {% if pending_requests %}
@@ -159,7 +225,7 @@
             <td class="fw-medium">{{ item.visit.patient.first_name }} {{ item.visit.patient.last_name }}</td>
             <td><code>{{ item.visit.visit_number }}</code></td>
             <td>{% if item.invoice %}<code>{{ item.invoice.invoice_number }}</code>{% else %}<span class="text-muted">—</span>{% endif %}</td>
-            <td>{% if item.invoice %}<strong>{{ item.invoice.total_amount|floatformat:0 }}</strong>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+            <td>{% if item.invoice %}<strong>{{ item.invoice.total_amount|commas }}</strong>{% else %}<span class="text-muted">—</span>{% endif %}</td>
             <td class="text-end">
               {% if item.invoice %}
               <a href="{% url 'billing:detail' item.invoice.pk %}" class="btn btn-sm btn-success"><i class="bi bi-credit-card me-1"></i>Pay</a>
@@ -239,7 +305,7 @@
           <tr>
             <td><code class="fw-bold">{{ inv.invoice_number }}</code></td>
             <td>{{ inv.patient.first_name }} {{ inv.patient.last_name }}</td>
-            <td class="text-end fw-semibold">{{ inv.total_amount|floatformat:0 }}</td>
+            <td class="text-end fw-semibold">{{ inv.total_amount|commas }}</td>
             <td class="text-center">
               <span class="badge rounded-pill bg-{% if inv.payment_status == 'paid' %}success{% elif inv.payment_status == 'post_payment' %}info{% elif inv.payment_status == 'partial' %}warning text-dark{% else %}danger{% endif %}">
                 {{ inv.get_payment_status_display }}

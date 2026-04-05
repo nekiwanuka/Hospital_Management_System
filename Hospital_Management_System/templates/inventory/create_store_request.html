@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Request Stock — {{ store_label }} — {{ clinic_name }}{% endblock %}
+{% block header_title %}Request Stock{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Request Stock for {{ store_label }}</h1></div>
+  <a href="{% url 'inventory:medical_store_dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Dashboard</a>
+</div>
+
+<div class="cl-card">
+  <div class="cl-card-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Item <span class="text-danger">*</span></label>
+          <select name="item" class="form-select" required>
+            <option value="">— Select Item from Available Stock —</option>
+            {% for item in items %}
+            <option value="{{ item.pk }}">{{ item.item_name }} ({{ item.quantity_on_hand }} {{ item.unit_of_measure }} available)</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Quantity <span class="text-danger">*</span></label>
+          <input type="number" name="quantity" class="form-control" min="1" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Priority</label>
+          <select name="priority" class="form-select">
+            <option value="normal" selected>Normal</option>
+            <option value="urgent">Urgent</option>
+          </select>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Notes</label>
+          <textarea name="notes" class="form-control" rows="2" placeholder="Optional notes for the store manager..."></textarea>
+        </div>
+      </div>
+      <div class="mt-3">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-box-arrow-in-right"></i> Submit Request</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if items %}
+<div class="cl-card mt-4">
+  <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-box-seam text-info me-2"></i>Available Stock in Source Stores</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Item</th>
+            <th>Store</th>
+            <th class="text-center">Available</th>
+            <th>Unit</th>
+            <th>Category</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in available_items %}
+          <tr>
+            <td><strong>{{ item.item_name }}</strong>{% if item.is_variant %} <span class="badge bg-secondary">{{ item.variant_label }}</span>{% endif %}</td>
+            <td>{{ item.get_store_department_display }}</td>
+            <td class="text-center">{{ item.quantity_on_hand }}</td>
+            <td>{{ item.unit_of_measure }}</td>
+            <td>{{ item.category|default:"—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

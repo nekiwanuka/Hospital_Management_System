@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Shift Report #{{ shift.pk }} — {{ clinic_name }}{% endblock %}
+{% block header_title %}Pharmacy Shift Report{% endblock %}
+
+{% block content %}
+<div class="cl-page-header d-flex flex-wrap align-items-center justify-content-between mb-4">
+  <div>
+    <h1 class="mb-1"><i class="bi bi-clipboard-data me-2 text-primary"></i>Shift Report #{{ shift.pk }}</h1>
+    <p class="text-muted mb-0">{{ shift.opened_by.get_full_name|default:shift.opened_by.username }}</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'pharmacy:shift_history' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-clock-history me-1"></i>All Shifts</a>
+    <a href="{% url 'pharmacy:index' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Pharmacy</a>
+  </div>
+</div>
+
+<!-- Shift Info Banner -->
+<div class="alert alert-{% if shift.status == 'closed' %}success{% else %}info{% endif %} d-flex align-items-center mb-4 shadow-sm">
+  <i class="bi bi-{% if shift.status == 'closed' %}check-circle-fill{% else %}clock{% endif %} fs-4 me-3"></i>
+  <div>
+    <strong>{{ shift.get_status_display }}</strong> &mdash;
+    Opened {{ shift.opened_at|date:"d M Y H:i" }}
+    {% if shift.closed_at %}&mdash; Closed {{ shift.closed_at|date:"d M Y H:i" }}{% endif %}
+  </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-md-3">
+    <div class="cl-stat"><div class="cl-stat-icon primary"><i class="bi bi-capsule"></i></div><div class="cl-stat-label">Total Dispenses</div><div class="cl-stat-value">{{ total_dispenses }}</div></div>
+  </div>
+  <div class="col-sm-6 col-md-3">
+    <div class="cl-stat"><div class="cl-stat-icon info"><i class="bi bi-file-medical"></i></div><div class="cl-stat-label"><span class="badge bg-info text-white me-1">℞</span> Prescriptions</div><div class="cl-stat-value">{{ prescription_count }}</div></div>
+  </div>
+  <div class="col-sm-6 col-md-3">
+    <div class="cl-stat"><div class="cl-stat-icon warning"><i class="bi bi-person-walking"></i></div><div class="cl-stat-label"><span class="badge bg-warning text-dark me-1">W</span> Walk-Ins</div><div class="cl-stat-value">{{ walkin_count }}</div></div>
+  </div>
+  <div class="col-sm-6 col-md-3">
+    <div class="cl-stat"><div class="cl-stat-icon success"><i class="bi bi-box-seam"></i></div><div class="cl-stat-label">Items Dispensed</div><div class="cl-stat-value">{{ total_items }}</div></div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="cl-card shadow-sm h-100 text-center py-3">
+      <h5 class="text-primary mb-0">{{ total_revenue|commas }} <small class="text-muted">UGX</small></h5>
+      <small class="text-muted">Total Revenue</small>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="cl-card shadow-sm h-100 text-center py-3">
+      <h5 class="text-info mb-0">{{ total_items }}</h5>
+      <small class="text-muted">Total Items Dispensed</small>
+    </div>
+  </div>
+</div>
+
+<!-- Dispense Details Table -->
+<div class="cl-card shadow-sm mb-4">
+  <div class="cl-card-header bg-light d-flex justify-content-between align-items-center">
+    <h2 class="cl-card-title mb-0"><i class="bi bi-list-ul text-primary me-2"></i>Dispense Details</h2>
+    <div>
+      <span class="badge bg-info text-white me-1">℞</span> = Prescription
+      <span class="badge bg-warning text-dark ms-2 me-1">W</span> = Walk-In
+    </div>
+  </div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Type</th>
+            <th>Patient / Customer</th>
+            <th>Medicine</th>
+            <th class="text-center">Qty</th>
+            <th class="text-end">Unit Price</th>
+            <th class="text-end">Total</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in dispenses %}
+          <tr>
+            <td>
+              {% if d.sale_type == 'walk_in' %}
+              <span class="badge bg-warning text-dark" title="Walk-In Sale">W</span>
+              {% else %}
+              <span class="badge bg-info text-white" title="Doctor Prescription">℞</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if d.patient %}
+                {{ d.patient.first_name }} {{ d.patient.last_name }}
+                {% if d.visit %}<small class="text-muted">(Visit #{{ d.visit_id }})</small>{% endif %}
+              {% else %}
+                {{ d.walk_in_name|default:"Walk-in" }}
+                {% if d.walk_in_phone %}<small class="text-muted">({{ d.walk_in_phone }})</small>{% endif %}
+              {% endif %}
+            </td>
+            <td>{{ d.medicine.name }}</td>
+            <td class="text-center">{{ d.quantity }}</td>
+            <td class="text-end">{{ d.unit_price|commas }}</td>
+            <td class="text-end">{{ d.total_amount|commas }}</td>
+            <td>{{ d.dispensed_at|date:"H:i" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-center text-muted py-4">No dispenses during this shift.</td></tr>
+          {% endfor %}
+        </tbody>
+        {% if dispenses %}
+        <tfoot class="table-light fw-bold">
+          <tr>
+            <td colspan="3">Totals</td>
+            <td class="text-center">{{ total_items }}</td>
+            <td></td>
+            <td class="text-end">{{ total_revenue|commas }}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
+    </div>
+  </div>
+</div>
+
+{% if shift.notes %}
+<div class="cl-card shadow-sm mb-4">
+  <div class="cl-card-header bg-light"><h2 class="cl-card-title mb-0"><i class="bi bi-journal-text me-2"></i>Shift Notes</h2></div>
+  <div class="cl-card-body">{{ shift.notes }}</div>
+</div>
+{% endif %}
+{% endblock %}

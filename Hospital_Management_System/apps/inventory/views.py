@@ -24,12 +24,18 @@ from apps.inventory.models import (
     Category,
     InventoryStoreProfile,
     Item,
+    StockReturn,
     StockTransfer,
     Supplier,
 )
 from apps.pharmacy.models import MedicalStoreRequest
 from apps.pharmacy.services import sync_medicine_catalog_for_item
-from apps.inventory.services import fulfill_store_request, record_stock_entry
+from apps.inventory.services import (
+    bin_card_movements,
+    fulfill_store_request,
+    process_stock_return,
+    record_stock_entry,
+)
 
 
 STORE_LABELS = {
@@ -526,6 +532,9 @@ def medical_store_entry(request, store=None):
                             service_type=form.cleaned_data.get("service_type", ""),
                             service_code=form.cleaned_data.get("service_code", ""),
                             reorder_level=form.cleaned_data["reorder_level"],
+                            min_sale_quantity=form.cleaned_data.get(
+                                "min_sale_quantity", 1
+                            ),
                             description=form.cleaned_data.get("description", ""),
                             control_status=form.cleaned_data.get(
                                 "control_status", "none"
@@ -540,6 +549,13 @@ def medical_store_entry(request, store=None):
                             default_pack_size_units=form.cleaned_data[
                                 "pack_size_units"
                             ],
+                            parent=form.cleaned_data.get("parent_item"),
+                            l1_name=form.cleaned_data.get("l1_name", ""),
+                            l1_qty=form.cleaned_data.get("l1_qty") or 0,
+                            l2_name=form.cleaned_data.get("l2_name", ""),
+                            l2_qty=form.cleaned_data.get("l2_qty") or 0,
+                            l3_name=form.cleaned_data.get("l3_name", ""),
+                            l3_qty=form.cleaned_data.get("l3_qty") or 0,
                         )
                     else:
                         update_fields = []
@@ -555,6 +571,9 @@ def medical_store_entry(request, store=None):
                             "service_type": form.cleaned_data.get("service_type", ""),
                             "service_code": form.cleaned_data.get("service_code", ""),
                             "reorder_level": form.cleaned_data["reorder_level"],
+                            "min_sale_quantity": form.cleaned_data.get(
+                                "min_sale_quantity", 1
+                            ),
                             "description": form.cleaned_data.get("description", ""),
                             "control_status": form.cleaned_data.get(
                                 "control_status", item.control_status
@@ -568,11 +587,19 @@ def medical_store_entry(request, store=None):
                             "default_pack_size_units": form.cleaned_data[
                                 "pack_size_units"
                             ],
+                            "l1_name": form.cleaned_data.get("l1_name", ""),
+                            "l1_qty": form.cleaned_data.get("l1_qty") or 0,
+                            "l2_name": form.cleaned_data.get("l2_name", ""),
+                            "l2_qty": form.cleaned_data.get("l2_qty") or 0,
+                            "l3_name": form.cleaned_data.get("l3_name", ""),
+                            "l3_qty": form.cleaned_data.get("l3_qty") or 0,
                         }
                         if not existing_item_id:
                             updates["category"] = category
                         if form.cleaned_data.get("sku"):
                             updates["sku"] = form.cleaned_data["sku"]
+                        if form.cleaned_data.get("parent_item") is not None:
+                            updates["parent"] = form.cleaned_data["parent_item"]
 
                         for field_name, field_value in updates.items():
                             if getattr(item, field_name) != field_value:
@@ -877,5 +904,285 @@ def stock_transfer_report(request):
                 "total_cost_value": summary["total_cost_value"] or Decimal("0.00"),
                 "total_retail_value": summary["total_retail_value"] or Decimal("0.00"),
             },
+        },
+    )
+
+
+# ── Bin Card / Stock Ledger ─────────────────────────────────────
+@login_required
+@role_required(
+    "pharmacist",
+    "lab_technician",
+    "radiology_technician",
+    "system_admin",
+    "director",
+)
+@module_permission_required("inventory", "view")
+def bin_card(request, item_pk):
+    item = get_object_or_404(Item, pk=item_pk)
+    if not branch_queryset_for_user(
+        request.user, Item.objects.filter(pk=item_pk)
+    ).exists():
+        return redirect("inventory:index")
+
+    today = timezone.localdate()
+    default_start = today - timedelta(days=90)
+    date_from = request.GET.get("date_from", "")
+    date_to = request.GET.get("date_to", "")
+    batch_filter = request.GET.get("batch", "")
+    try:
+        date_from = timezone.datetime.strptime(date_from, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        date_from = default_start
+    try:
+        date_to = timezone.datetime.strptime(date_to, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        date_to = today
+
+    batch_obj = None
+    if batch_filter:
+        batch_obj = Batch.objects.filter(item=item, pk=batch_filter).first()
+
+    movements = bin_card_movements(
+        item, batch=batch_obj, date_from=date_from, date_to=date_to
+    )[:500]
+
+    batches = Batch.objects.filter(item=item).order_by("-date_received")
+    packaging = item.packaging_breakdown(item.quantity_on_hand)
+
+    return render(
+        request,
+        "inventory/bin_card.html",
+        {
+            "item": item,
+            "movements": movements,
+            "batches": batches,
+            "batch_filter": batch_filter,
+            "date_from": date_from,
+            "date_to": date_to,
+            "packaging": packaging,
+        },
+    )
+
+
+# ── Stock Returns ───────────────────────────────────────────────
+@login_required
+@role_required(
+    "pharmacist",
+    "lab_technician",
+    "radiology_technician",
+    "system_admin",
+    "director",
+)
+@module_permission_required("inventory", "view")
+def stock_returns(request):
+    status_filter = (request.GET.get("status") or "pending").strip().lower()
+    if status_filter not in ("all", "pending", "accepted", "rejected"):
+        status_filter = "pending"
+
+    returns_qs = branch_queryset_for_user(
+        request.user,
+        StockReturn.objects.select_related(
+            "item", "batch", "returned_by", "verified_by"
+        ).order_by("-created_at"),
+    )
+    if status_filter != "all":
+        returns_qs = returns_qs.filter(status=status_filter)
+
+    can_verify = hasattr(request.user, "role") and request.user.role in (
+        "system_admin",
+        "director",
+        "pharmacist",
+    )
+
+    return render(
+        request,
+        "inventory/stock_returns.html",
+        {
+            "returns": returns_qs[:100],
+            "status_filter": status_filter,
+            "can_verify": can_verify,
+        },
+    )
+
+
+@login_required
+@role_required(
+    "pharmacist",
+    "lab_technician",
+    "radiology_technician",
+    "system_admin",
+    "director",
+)
+@module_permission_required("inventory", "create")
+def create_stock_return(request):
+    if request.method != "POST":
+        # GET: show form with item selection
+        items = branch_queryset_for_user(
+            request.user,
+            Item.objects.filter(is_active=True)
+            .select_related("category", "brand")
+            .order_by("item_name"),
+        )[:300]
+        batches = branch_queryset_for_user(
+            request.user,
+            Batch.objects.filter(quantity_remaining__gt=0)
+            .select_related("item")
+            .order_by("item__item_name", "batch_number"),
+        )[:500]
+        return render(
+            request,
+            "inventory/create_stock_return.html",
+            {"items": items, "batches": batches},
+        )
+
+    item_id = request.POST.get("item")
+    batch_id = request.POST.get("batch")
+    quantity = request.POST.get("quantity", "0")
+    return_source = request.POST.get("return_source", "pharmacy")
+    reason = (request.POST.get("reason") or "").strip()
+
+    try:
+        quantity = int(quantity)
+    except (ValueError, TypeError):
+        messages.error(request, "Invalid quantity.")
+        return redirect("inventory:stock_returns")
+
+    if quantity <= 0:
+        messages.error(request, "Enter a valid quantity.")
+        return redirect("inventory:create_stock_return")
+
+    item = get_object_or_404(Item, pk=item_id)
+    batch = Batch.objects.filter(pk=batch_id, item=item).first() if batch_id else None
+
+    StockReturn.objects.create(
+        branch=request.user.branch,
+        item=item,
+        batch=batch,
+        quantity=quantity,
+        return_source=return_source,
+        reason=reason,
+        returned_by=request.user,
+    )
+    messages.success(request, "Stock return submitted for verification.")
+    return redirect("inventory:stock_returns")
+
+
+@login_required
+@role_required("system_admin", "director", "pharmacist")
+@module_permission_required("inventory", "update")
+def verify_stock_return(request, pk):
+    if request.method != "POST":
+        return redirect("inventory:stock_returns")
+
+    stock_return = get_object_or_404(StockReturn, pk=pk)
+    if not branch_queryset_for_user(
+        request.user, StockReturn.objects.filter(pk=pk)
+    ).exists():
+        return redirect("inventory:stock_returns")
+
+    action = (request.POST.get("action") or "").strip().lower()
+    notes = (request.POST.get("notes") or "").strip()
+
+    try:
+        process_stock_return(stock_return, request.user, action, notes=notes)
+        messages.success(request, f"Stock return {action}.")
+    except ValidationError as exc:
+        error_msg = exc.message if hasattr(exc, "message") else str(exc)
+        messages.error(request, f"Cannot process return: {error_msg}")
+
+    return redirect("inventory:stock_returns")
+
+
+# ── Generic Store Request (used by lab, radiology, etc.) ────────
+@login_required
+@role_required(
+    "pharmacist",
+    "lab_technician",
+    "radiology_technician",
+    "system_admin",
+    "director",
+)
+@module_permission_required("inventory", "create")
+def create_store_request(request, store=None):
+    """Create a stock request from any department store."""
+    store = (store or "pharmacy").strip().lower()
+    valid_stores = dict(MedicalStoreRequest.REQUESTED_FOR_CHOICES)
+    if store not in valid_stores:
+        messages.error(request, "Invalid store department.")
+        return redirect("inventory:medical_store_dashboard")
+
+    requested_unit = ""
+    if store == "radiology":
+        requested_unit = _normalize_request_unit(
+            request.POST.get("requested_unit", "")
+            if request.method == "POST"
+            else request.GET.get("requested_unit", "")
+        )
+
+    if request.method == "POST":
+        item_id = request.POST.get("item")
+        quantity = request.POST.get(
+            "quantity", request.POST.get("quantity_requested", "0")
+        )
+        notes = (request.POST.get("notes") or "").strip()
+
+        try:
+            quantity = int(quantity)
+        except (ValueError, TypeError):
+            quantity = 0
+
+        if not item_id or quantity <= 0:
+            messages.error(request, "Select an item and enter a valid quantity.")
+            return redirect("inventory:create_store_request", store=store)
+
+        item = get_object_or_404(
+            Item, pk=item_id, is_department_stock=False, is_active=True
+        )
+
+        MedicalStoreRequest.objects.create(
+            branch=request.user.branch,
+            item=item,
+            medicine_name=item.item_name,
+            category=item.category.name if item.category else "",
+            requested_for=store,
+            requested_unit=requested_unit,
+            quantity_requested=quantity,
+            notes=notes,
+            requested_by=request.user,
+        )
+        messages.success(
+            request,
+            f"Stock request for {item.item_name} submitted to medical stores.",
+        )
+        return redirect("inventory:medical_store_dashboard_by_store", store=store)
+
+    # GET: show available items from source stores
+    available_items = branch_queryset_for_user(
+        request.user,
+        Item.objects.filter(
+            is_active=True,
+            is_department_stock=False,
+            batches__quantity_remaining__gt=0,
+            batches__exp_date__gte=timezone.localdate(),
+        )
+        .select_related("category", "brand")
+        .distinct()
+        .order_by("item_name"),
+    )[:300]
+
+    # Annotate each item with available quantity
+    for itm in available_items:
+        itm._available_qty = itm.quantity_on_hand
+
+    return render(
+        request,
+        "inventory/create_store_request.html",
+        {
+            "items": available_items,
+            "store": store,
+            "store_label": valid_stores.get(store, store),
+            "requested_unit": requested_unit,
+            "request_unit_choices": MedicalStoreRequest.REQUESTED_UNIT_CHOICES[1:],
         },
     )

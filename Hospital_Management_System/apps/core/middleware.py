@@ -15,6 +15,45 @@ class BranchContextMiddleware:
         return response
 
 
+class ShiftRequiredMiddleware:
+    """
+    After login, redirect to the 'open shift' page if the user
+    does not have an active shift. Exempt paths: login, logout,
+    static/media, admin, shift open itself, and setup.
+    """
+
+    EXEMPT_PREFIXES = (
+        "/accounts/login/",
+        "/accounts/logout/",
+        "/accounts/shift/open/",
+        "/static/",
+        "/media/",
+        "/admin/",
+        "/setup/",
+    )
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if (
+            hasattr(request, "user")
+            and request.user.is_authenticated
+            and not request.path.startswith(self.EXEMPT_PREFIXES)
+        ):
+            from apps.accounts.models import Shift
+
+            has_open_shift = Shift.objects.filter(
+                user=request.user, status="open"
+            ).exists()
+            if not has_open_shift:
+                from django.shortcuts import redirect
+
+                return redirect("accounts:open_shift")
+
+        return self.get_response(request)
+
+
 class SetupRequiredMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response

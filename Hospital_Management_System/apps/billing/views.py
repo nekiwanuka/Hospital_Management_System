@@ -36,7 +36,7 @@ from apps.core.permissions import (
 )
 from apps.laboratory.models import LabRequest
 from apps.inventory.services import allocate_service_stock, service_stock_cost
-from apps.pharmacy.models import DispenseRecord, PharmacyRequest
+from apps.pharmacy.models import DispenseRecord, PharmacyRequest, WalkInSale
 from apps.pharmacy.services import sync_branch_medicine_catalog
 from apps.patients.models import Patient
 from apps.radiology.models import ImagingRequest
@@ -627,7 +627,7 @@ def _build_auto_invoice_lines(patient, branch, visit=None):
             lines.append(
                 {
                     "service_type": "consultation",
-                    "description": f"Consultation - {item.created_at:%Y-%m-%d}",
+                    "description": f"Consultation: {item.created_at:%Y-%m-%d}",
                     "amount": charge,
                     "unit_cost": cost,
                     "total_cost": cost,
@@ -651,7 +651,7 @@ def _build_auto_invoice_lines(patient, branch, visit=None):
             lines.append(
                 {
                     "service_type": "lab",
-                    "description": f"Lab Test - {item.test_type}",
+                    "description": f"Laboratory: {item.test_type}",
                     "amount": charge,
                     "unit_cost": Decimal("0.00"),
                     "total_cost": Decimal("0.00"),
@@ -685,7 +685,7 @@ def _build_auto_invoice_lines(patient, branch, visit=None):
             lines.append(
                 {
                     "service_type": "radiology",
-                    "description": f"Radiology - {item.get_imaging_type_display()}",
+                    "description": f"Radiology: {item.get_imaging_type_display()}",
                     "amount": charge,
                     "unit_cost": Decimal("0.00"),
                     "total_cost": Decimal("0.00"),
@@ -704,7 +704,7 @@ def _build_auto_invoice_lines(patient, branch, visit=None):
             lines.append(
                 {
                     "service_type": "referral",
-                    "description": f"Referral - {item.facility_name}",
+                    "description": f"Referral: {item.facility_name}",
                     "amount": REFERRAL_FEE,
                     "unit_cost": Decimal("0.00"),
                     "total_cost": Decimal("0.00"),
@@ -733,7 +733,7 @@ def _build_auto_invoice_lines(patient, branch, visit=None):
             lines.append(
                 {
                     "service_type": "pharmacy",
-                    "description": f"Pharmacy Request - {item.medicine.name} x{item.quantity}",
+                    "description": f"Pharmacy: {item.medicine.name} x{item.quantity}",
                     "amount": amount,
                     "unit_cost": item.medicine.current_purchase_price,
                     "total_cost": total_cost,
@@ -775,7 +775,7 @@ def _build_auto_invoice_lines(patient, branch, visit=None):
             lines.append(
                 {
                     "service_type": "pharmacy",
-                    "description": f"Pharmacy - {item.medicine.name} x{item.quantity}",
+                    "description": f"Pharmacy: {item.medicine.name} x{item.quantity}",
                     "amount": amount,
                     "unit_cost": unit_cost,
                     "total_cost": total_cost,
@@ -1002,6 +1002,21 @@ def index(request):
     page_obj = paginator.get_page(request.GET.get("page"))
     active_shift = _get_open_shift_for_user(request.user)
 
+    # Line items on post-payment invoices awaiting cashier authorisation
+    pending_authorizations = (
+        branch_queryset_for_user(
+            request.user,
+            InvoiceLineItem.objects.select_related(
+                "invoice", "invoice__patient", "invoice__visit"
+            )
+            .filter(
+                cashier_authorized=False,
+                invoice__payment_status="post_payment",
+            )
+            .order_by("-created_at"),
+        )
+    )[:50]
+
     return render(
         request,
         "billing/index.html",
@@ -1015,6 +1030,11 @@ def index(request):
             "pending_request_counts": pending_request_counts,
             "pending_requests": pending_requests,
             "visit_pending_invoices": visit_pending_invoices,
+            "pending_authorizations": pending_authorizations,
+            "pending_walkin_count": branch_queryset_for_user(
+                request.user,
+                WalkInSale.objects.filter(status="pending_payment"),
+            ).count(),
             "active_shift": active_shift,
             "return_to": return_to,
         },
@@ -1033,6 +1053,76 @@ def _get_invoice_for_user_or_404(user, pk):
     if not scoped.exists():
         raise Http404("Invoice not found")
     return invoice
+
+
+@login_required
+@role_required("cashier", "system_admin", "director")
+@module_permission_required("billing", "update")
+def authorize_line_item(request, line_id):
+    """Cashier authorises a pending post-payment line item so the
+    downstream department can act on it (e.g. pharmacy can dispense)."""
+    if request.method != "POST":
+        return redirect("billing:index")
+
+    line = branch_queryset_for_user(
+        request.user,
+        InvoiceLineItem.objects.select_related("invoice").filter(pk=line_id),
+    ).first()
+    if not line:
+        raise Http404("Line item not found.")
+
+    if line.cashier_authorized:
+        messages.info(request, "This item is already authorised.")
+        return redirect("billing:detail", pk=line.invoice_id)
+
+    action = request.POST.get("action", "authorize")
+
+    if action == "reject":
+        # Remove the line item and adjust invoice total
+        invoice = line.invoice
+        invoice.total_amount = max(invoice.total_amount - line.amount, Decimal("0.00"))
+        invoice.save(update_fields=["total_amount", "updated_at"])
+        line.delete()
+        _log_financial_event(
+            request,
+            action="billing.line_item.reject_authorization",
+            object_type="invoice_line_item",
+            object_id=line_id,
+            after={"invoice": invoice.invoice_number, "rejected": True},
+        )
+        messages.warning(request, "Charge rejected and removed from invoice.")
+        return redirect("billing:index")
+
+    # Authorize
+    line.cashier_authorized = True
+    line.authorized_by = request.user
+    line.authorized_at = timezone.now()
+    line.save(
+        update_fields=[
+            "cashier_authorized",
+            "authorized_by",
+            "authorized_at",
+            "updated_at",
+        ]
+    )
+
+    _log_financial_event(
+        request,
+        action="billing.line_item.authorize",
+        object_type="invoice_line_item",
+        object_id=line.pk,
+        after={
+            "invoice": line.invoice.invoice_number,
+            "description": line.description,
+            "amount": str(line.amount),
+        },
+    )
+
+    messages.success(
+        request,
+        f"Authorised: {line.description} ({line.amount:,.0f})",
+    )
+    return redirect("billing:index")
 
 
 @login_required
@@ -1332,6 +1422,16 @@ def update_payment_status(request, pk):
                     invoice.save(update_fields=update_fields)
                     if previous_status != "paid":
                         _consume_stock_for_invoice(invoice, consumed_by=request.user)
+                    # Update linked walk-in sale status to "cleared"
+                    WalkInSale.objects.filter(
+                        invoice=invoice,
+                        status="pending_payment",
+                    ).update(
+                        status="cleared",
+                        cleared_by=request.user,
+                        cleared_at=timezone.now(),
+                        payment_method=invoice.payment_method,
+                    )
                     rcpt = _create_receipt(
                         invoice,
                         amount_to_apply,
@@ -1545,6 +1645,16 @@ def pay_line_item(request, pk, line_id):
                     ]
                 )
                 _consume_stock_for_invoice(invoice, consumed_by=request.user)
+                # Update linked walk-in sale status to "cleared"
+                WalkInSale.objects.filter(
+                    invoice=invoice,
+                    status="pending_payment",
+                ).update(
+                    status="cleared",
+                    cleared_by=request.user,
+                    cleared_at=timezone.now(),
+                    payment_method=form.cleaned_data["payment_method"],
+                )
                 rcpt_type = "full"
             elif paid_total > 0:
                 invoice.payment_status = "partial"
@@ -2320,3 +2430,38 @@ def receipts(request):
     paginator = Paginator(queryset, 25)
     page = paginator.get_page(request.GET.get("page"))
     return render(request, "billing/receipts.html", {"receipts": page, "query": query})
+
+
+# ── Walk-in Sale Payment Clearance ─────────────────────────────
+@login_required
+@role_required("receptionist", "cashier", "system_admin", "director")
+@module_permission_required("billing", "view")
+def pending_walkins(request):
+    """List walk-in pharmacy sales awaiting cashier payment."""
+    queryset = branch_queryset_for_user(
+        request.user,
+        WalkInSale.objects.select_related("invoice")
+        .prefetch_related("lines__medicine")
+        .filter(status__in=["pending_payment", "cleared"])
+        .order_by("-created_at"),
+    )
+    return render(request, "billing/pending_walkins.html", {"sales": queryset})
+
+
+@login_required
+@role_required("cashier", "receptionist", "system_admin", "director")
+@module_permission_required("billing", "update")
+def clear_walkin_sale(request, sale_pk):
+    """Redirect cashier to the walk-in sale's invoice for normal payment processing."""
+    sale = get_object_or_404(WalkInSale, pk=sale_pk)
+    scoped = branch_queryset_for_user(
+        request.user, WalkInSale.objects.filter(pk=sale_pk)
+    )
+    if not scoped.exists():
+        raise Http404("Walk-in sale not found")
+
+    if not sale.invoice:
+        messages.error(request, "This walk-in sale does not have an invoice yet.")
+        return redirect("billing:pending_walkins")
+
+    return redirect("billing:detail", pk=sale.invoice.pk)

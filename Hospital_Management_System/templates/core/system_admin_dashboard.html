@@ -4,7 +4,10 @@
 
 {% block content %}
 <div class="cl-page-header">
-  <div><h1>System Admin Dashboard</h1><p>System administration overview</p></div>
+  <div>
+    <h1><i class="bi bi-gear-wide-connected me-2" style="color:#7c3aed;"></i>System Admin Dashboard</h1>
+    <p>System administration overview</p>
+  </div>
   <div class="d-flex gap-2">
     {% if available_branches %}
     <form method="get" class="d-flex gap-2">
@@ -24,7 +27,9 @@
   {% for key, val in metrics.items %}
   <div class="col-6 col-md-3">
     <div class="cl-stat">
-      <div class="cl-stat-icon info"><i class="bi bi-server"></i></div>
+      <div class="cl-stat-icon {% cycle 'info' 'primary' 'success' 'danger' %}">
+        <i class="bi {% cycle 'bi-server' 'bi-people-fill' 'bi-shield-check' 'bi-hdd-stack' %}"></i>
+      </div>
       <div><div class="cl-stat-label">{{ key }}</div><div class="cl-stat-value">{{ val }}</div></div>
     </div>
   </div>
@@ -33,14 +38,16 @@
 {% endif %}
 
 {% if role_distribution %}
-<div class="cl-card">
-  <div class="cl-card-header"><h2 class="cl-card-title">User Role Distribution</h2></div>
+<div class="cl-card mb-4">
+  <div class="cl-card-header">
+    <h2 class="cl-card-title"><i class="bi bi-person-badge me-2" style="color:#7c3aed;"></i>User Role Distribution</h2>
+  </div>
   <div class="cl-card-body">
     <div class="row g-3">
       {% for item in role_distribution %}
       <div class="col-6 col-md-3">
         <div class="cl-stat">
-          <div class="cl-stat-icon primary"><i class="bi bi-person-badge"></i></div>
+          <div class="cl-stat-icon {% cycle 'primary' 'success' 'info' 'danger' 'warning' %}"><i class="bi bi-person-badge"></i></div>
           <div><div class="cl-stat-label">{{ item.role }}</div><div class="cl-stat-value">{{ item.count }}</div></div>
         </div>
       </div>
@@ -51,15 +58,17 @@
 {% endif %}
 
 {% if branch_rows %}
-<div class="cl-card">
-  <div class="cl-card-header"><h2 class="cl-card-title">Branch Overview</h2></div>
+<div class="cl-card mb-4">
+  <div class="cl-card-header">
+    <h2 class="cl-card-title"><i class="bi bi-building me-2" style="color:#0891b2;"></i>Branch Overview</h2>
+  </div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
-      <table class="table">
-        <thead><tr><th>Branch</th><th>Patients</th><th>Visits</th><th>Revenue</th></tr></thead>
+      <table class="table table-hover mb-0">
+        <thead class="table-light"><tr><th>Branch</th><th>Patients</th><th>Visits</th><th class="text-end">Revenue</th></tr></thead>
         <tbody>
           {% for row in branch_rows %}
-          <tr><td>{{ row.branch }}</td><td>{{ row.patients }}</td><td>{{ row.visits }}</td><td>{{ row.revenue }}</td></tr>
+          <tr><td><strong>{{ row.branch }}</strong></td><td>{{ row.patients }}</td><td>{{ row.visits }}</td><td class="text-end fw-semibold">{{ row.revenue }}</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -70,14 +79,16 @@
 
 {% if recent_audits %}
 <div class="cl-card">
-  <div class="cl-card-header"><h2 class="cl-card-title">Recent Audit Log</h2></div>
+  <div class="cl-card-header">
+    <h2 class="cl-card-title"><i class="bi bi-journal-text me-2" style="color:#059669;"></i>Recent Audit Log</h2>
+  </div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
-      <table class="table">
-        <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
+      <table class="table table-hover mb-0">
+        <thead class="table-light"><tr><th>Time</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
         <tbody>
           {% for a in recent_audits %}
-          <tr><td>{{ a.created_at|timesince }} ago</td><td>{{ a.user|default:"System" }}</td><td>{{ a.action }}</td><td class="text-muted">{{ a.details|truncatechars:80 }}</td></tr>
+          <tr><td><small class="text-muted">{{ a.created_at|timesince }} ago</small></td><td>{{ a.user|default:"System" }}</td><td><span class="badge bg-primary bg-opacity-10 text-primary">{{ a.action }}</span></td><td class="text-muted">{{ a.details|truncatechars:80 }}</td></tr>
           {% endfor %}
         </tbody>
       </table>

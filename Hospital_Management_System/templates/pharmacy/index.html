@@ -4,10 +4,13 @@
 
 {% block content %}
 <div class="cl-page-header">
-  <div><h1>Pharmacy</h1></div>
-  <div class="d-flex gap-2">
+  <div>
+    <h1><i class="bi bi-capsule me-2" style="color:#db2777;"></i>Pharmacy</h1>
+    <p>Medicine dispensing, prescriptions &amp; stock</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
     <form method="get" class="d-flex gap-2">
-      <input type="text" name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="Search medicines...">
+      <input type="text" name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="Search by name, category...">
       <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-search"></i></button>
       {% if query %}<a href="{% url 'pharmacy:index' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg"></i></a>{% endif %}
     </form>
@@ -17,21 +20,34 @@
     <a href="{% url 'pharmacy:dispense_prescription' %}" class="btn btn-outline-info btn-sm"><i class="bi bi-file-medical"></i> Prescription</a>
     <a href="{% url 'pharmacy:pharmacy_receipts' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-receipt"></i> Receipts</a>
     <a href="{% url 'pharmacy:transfer_report' %}" class="btn btn-outline-info btn-sm"><i class="bi bi-arrow-left-right"></i> Transfer Report</a>
+    <a href="{% url 'pharmacy:pending_walkins' %}" class="btn btn-outline-warning btn-sm"><i class="bi bi-hourglass-split"></i> Pending Walk-Ins</a>
+    <a href="{% url 'pharmacy:shift_history' %}" class="btn btn-outline-dark btn-sm"><i class="bi bi-clock-history"></i> Shift History</a>
   </div>
+</div>
+
+<!-- Shift Banner -->
+<div class="alert {% if current_shift %}alert-success{% else %}alert-secondary{% endif %} d-flex align-items-center justify-content-between mb-4">
+  {% if current_shift %}
+  <span><i class="bi bi-play-circle-fill me-1"></i> Shift opened at {{ current_shift.opened_at|date:"d M Y H:i" }}</span>
+  <a href="{% url 'pharmacy:close_shift' shift_pk=current_shift.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-stop-fill me-1"></i>Close Shift</a>
+  {% else %}
+  <span><i class="bi bi-stop-circle me-1"></i> No active shift</span>
+  <a href="{% url 'pharmacy:open_shift' %}" class="btn btn-sm btn-success"><i class="bi bi-play-fill me-1"></i>Open Shift</a>
+  {% endif %}
 </div>
 
 <div class="row g-3 mb-4">
   <div class="col-sm-6 col-md-3">
-    <div class="cl-stat"><div class="cl-stat-icon primary"><i class="bi bi-capsule"></i></div><div class="cl-stat-label">Medicines</div><div class="cl-stat-value">{{ medicines|length }}</div></div>
+    <div class="cl-stat"><div class="cl-stat-icon primary"><i class="bi bi-capsule"></i></div><div><div class="cl-stat-label">Medicines</div><div class="cl-stat-value">{{ medicines|length }}</div></div></div>
   </div>
   <div class="col-sm-6 col-md-3">
-    <div class="cl-stat"><div class="cl-stat-icon {% if pending_rx %}danger{% else %}success{% endif %}"><i class="bi bi-file-medical"></i></div><div class="cl-stat-label">Pending Rx</div><div class="cl-stat-value">{{ pending_rx|length }}</div></div>
+    <div class="cl-stat"><div class="cl-stat-icon {% if pending_rx %}danger{% else %}success{% endif %}"><i class="bi bi-file-medical"></i></div><div><div class="cl-stat-label">Pending Rx</div><div class="cl-stat-value">{{ pending_rx|length }}</div></div></div>
   </div>
   <div class="col-sm-6 col-md-3">
-    <div class="cl-stat"><div class="cl-stat-icon warning"><i class="bi bi-exclamation-triangle"></i></div><div class="cl-stat-label">Low Stock</div><div class="cl-stat-value">{{ low_stock|length }}</div></div>
+    <div class="cl-stat"><div class="cl-stat-icon danger"><i class="bi bi-exclamation-triangle"></i></div><div><div class="cl-stat-label">Low Stock</div><div class="cl-stat-value">{{ low_stock|length }}</div></div></div>
   </div>
   <div class="col-sm-6 col-md-3">
-    <div class="cl-stat"><div class="cl-stat-icon info"><i class="bi bi-clock-history"></i></div><div class="cl-stat-label">Expiring</div><div class="cl-stat-value">{{ expiring|length }}</div></div>
+    <div class="cl-stat"><div class="cl-stat-icon info"><i class="bi bi-clock-history"></i></div><div><div class="cl-stat-label">Expiring</div><div class="cl-stat-value">{{ expiring|length }}</div></div></div>
   </div>
 </div>
 
@@ -77,6 +93,37 @@
 </div>
 {% endif %}
 
+<!-- Pending Walk-In Sales -->
+{% if pending_walkin_sales %}
+<div class="cl-card mb-4 border-warning">
+  <div class="cl-card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center">
+    <h2 class="cl-card-title mb-0"><i class="bi bi-hourglass-split text-warning me-1"></i> Pending Walk-In Sales <span class="badge bg-warning text-dark ms-1">{{ pending_walkin_sales|length }}</span></h2>
+    <a href="{% url 'pharmacy:pending_walkins' %}" class="btn btn-sm btn-outline-warning">View All</a>
+  </div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0">
+        <thead><tr><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Created</th></tr></thead>
+        <tbody>
+          {% for ws in pending_walkin_sales %}
+          <tr>
+            <td>{{ ws.customer_name }}</td>
+            <td>{{ ws.lines.count }}</td>
+            <td>{{ ws.total_amount }}</td>
+            <td>
+              {% if ws.status == 'cleared' %}<span class="badge bg-success">Cleared</span>
+              {% else %}<span class="badge bg-warning text-dark">Pending Payment</span>{% endif %}
+            </td>
+            <td>{{ ws.created_at|date:"d M H:i" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <!-- Recent Store Requests -->
 {% if recent_store_requests %}
 <div class="cl-card mb-4">
@@ -107,23 +154,29 @@
 </div>
 {% endif %}
 
-<!-- Medicines Catalog -->
+<!-- Medicine Display -->
 <div class="cl-card mb-4">
-  <div class="cl-card-header"><h2 class="cl-card-title">Medicines</h2></div>
+  <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-grid-3x3-gap text-primary me-1"></i> Medicine Display</h2></div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
-      <table class="table table-sm">
-        <thead><tr><th>Name</th><th>Stock</th><th>Selling Price</th><th>Expiry</th></tr></thead>
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light"><tr><th>Name</th><th>Category</th><th>Form &amp; Strength</th><th class="text-center">Stock</th><th class="text-end">Price</th><th>Expiry</th></tr></thead>
         <tbody>
           {% for m in medicines %}
           <tr>
-            <td>{{ m.name }}</td>
-            <td>{{ m.stock_quantity }}</td>
-            <td>{{ m.current_selling_price }}</td>
+            <td><strong>{{ m.name }}</strong></td>
+            <td><span class="badge bg-primary bg-opacity-10 text-primary">{{ m.category }}</span></td>
+            <td>
+              {% if m.dosage_form %}<span class="text-muted">{{ m.dosage_form }}</span>{% endif %}
+              {% if m.strength %}<strong class="ms-1">{{ m.strength }}</strong>{% endif %}
+              {% if not m.dosage_form and not m.strength %}—{% endif %}
+            </td>
+            <td class="text-center">{% if m.stock_quantity <= 10 %}<span class="badge bg-danger">{{ m.stock_quantity }}</span>{% else %}{{ m.stock_quantity }}{% endif %}</td>
+            <td class="text-end">{{ m.current_selling_price }}</td>
             <td>{{ m.expiry_date|date:"d M Y"|default:"—" }}</td>
           </tr>
           {% empty %}
-          <tr><td colspan="4" class="text-center text-muted py-4">No medicines found.</td></tr>
+          <tr><td colspan="6" class="text-center text-muted py-4">No medicines found.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -138,10 +191,11 @@
   <div class="cl-card-body p-0">
     <div class="table-responsive">
       <table class="table table-sm">
-        <thead><tr><th>Patient</th><th>Medicine</th><th>Qty</th><th>By</th><th>Date</th></tr></thead>
+        <thead><tr><th>Type</th><th>Patient</th><th>Medicine</th><th>Qty</th><th>By</th><th>Date</th></tr></thead>
         <tbody>
           {% for d in recent_dispenses %}
           <tr>
+            <td>{% if d.sale_type == 'walk_in' %}<span class="badge bg-warning text-dark" title="Walk-in">W</span>{% else %}<span class="badge bg-info" title="Prescription">℞</span>{% endif %}</td>
             <td>{% if d.patient %}{{ d.patient.first_name }} {{ d.patient.last_name }}{% else %}{{ d.walk_in_name|default:"Walk-in" }}{% endif %}</td>
             <td>{{ d.medicine.name }}</td>
             <td>{{ d.quantity }}</td>

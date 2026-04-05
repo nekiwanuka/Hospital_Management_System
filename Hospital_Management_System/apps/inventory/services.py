@@ -13,6 +13,7 @@ from apps.inventory.models import (
     Item,
     ServiceConsumption,
     StockMovement,
+    StockReturn,
 )
 
 
@@ -642,9 +643,17 @@ def fulfill_store_request(store_request, fulfilled_by, remarks=""):
                 store_department=actual_dest,
                 is_department_stock=True,
                 reorder_level=source_item.reorder_level,
+                min_sale_quantity=source_item.min_sale_quantity,
                 description=source_item.description,
                 is_active=True,
                 default_pack_size_units=source_item.default_pack_size_units,
+                parent=source_item.parent,
+                l1_name=source_item.l1_name,
+                l1_qty=source_item.l1_qty,
+                l2_name=source_item.l2_name,
+                l2_qty=source_item.l2_qty,
+                l3_name=source_item.l3_name,
+                l3_qty=source_item.l3_qty,
             )
 
         transfers = []
@@ -778,3 +787,72 @@ def fulfill_store_request(store_request, fulfilled_by, remarks=""):
         )
 
         return transfers
+
+
+def process_stock_return(stock_return, verified_by, action, notes=""):
+    """Accept or reject a stock return. If accepted, restore stock to the batch."""
+    if stock_return.status != "pending":
+        raise ValidationError("This return has already been processed.")
+
+    if action not in ("accepted", "rejected"):
+        raise ValidationError("Invalid action. Must be 'accepted' or 'rejected'.")
+
+    with transaction.atomic():
+        stock_return.verified_by = verified_by
+        stock_return.verified_at = timezone.now()
+        stock_return.verification_notes = notes
+        stock_return.status = action
+        stock_return.save(
+            update_fields=[
+                "status",
+                "verified_by",
+                "verified_at",
+                "verification_notes",
+                "updated_at",
+            ]
+        )
+
+        if action == "accepted":
+            batch = stock_return.batch
+            if batch:
+                batch.quantity_remaining += stock_return.quantity
+                batch.save(update_fields=["quantity_remaining", "updated_at"])
+
+                StockMovement.objects.create(
+                    branch=stock_return.branch,
+                    item=stock_return.item,
+                    batch=batch,
+                    movement_type="RETURN",
+                    quantity=stock_return.quantity,
+                    reference=f"Stock return #{stock_return.pk} accepted",
+                    user=verified_by,
+                )
+
+            # Re-sync Medicine catalog if pharmacy item
+            if stock_return.item.store_department == "pharmacy":
+                from apps.pharmacy.services import sync_medicine_catalog_for_item
+
+                sync_medicine_catalog_for_item(stock_return.item)
+
+    return stock_return
+
+
+def bin_card_movements(item, batch=None, date_from=None, date_to=None):
+    """Return stockMovement queryset for bin card / stock ledger."""
+    qs = (
+        StockMovement.objects.filter(
+            branch=item.branch,
+            item=item,
+        )
+        .select_related("batch", "user")
+        .order_by("date", "id")
+    )
+
+    if batch:
+        qs = qs.filter(batch=batch)
+    if date_from:
+        qs = qs.filter(date__date__gte=date_from)
+    if date_to:
+        qs = qs.filter(date__date__lte=date_to)
+
+    return qs

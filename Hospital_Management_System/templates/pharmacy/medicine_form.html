@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load currency %}
 {% block title %}{{ page_title }} — {{ clinic_name }}{% endblock %}
 {% block header_title %}{{ page_title }}{% endblock %}
 
@@ -8,24 +9,211 @@
   <a href="{% url section_index_url %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to {{ section_label }}</a>
 </div>
 
+{% if errors %}
+<div class="alert alert-danger">
+  <strong>Some items could not be requested:</strong>
+  <ul class="mb-0 mt-1">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+{% if available_items %}
+{# ── Available Stock Table (select items to add) ── #}
 <div class="cl-card">
+  <div class="cl-card-header d-flex justify-content-between align-items-center">
+    <h2 class="cl-card-title mb-0"><i class="bi bi-box-seam text-info me-2"></i>Available Stock in Medical Stores</h2>
+    <input type="text" id="stockFilter" class="form-control form-control-sm" style="max-width:260px" placeholder="Filter items…">
+  </div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive" style="max-height:380px;overflow-y:auto">
+      <table class="table table-sm table-hover mb-0" id="stockTable">
+        <thead class="table-light sticky-top">
+          <tr>
+            <th style="width:40px"></th>
+            <th>Item</th>
+            <th>Category</th>
+            <th>Dosage</th>
+            <th class="text-center">Available</th>
+            <th>Unit</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in available_items %}
+          <tr data-id="{{ item.pk }}" data-name="{{ item.item_name }}{% if item.strength %} {{ item.strength }}{% endif %}" data-avail="{{ item.sellable_qty }}" data-unit="{{ item.unit_of_measure }}" class="stock-row" style="cursor:pointer">
+            <td class="text-center"><button type="button" class="btn btn-sm btn-outline-primary add-item-btn" title="Add to request"><i class="bi bi-plus-lg"></i></button></td>
+            <td><strong>{{ item.item_name }}</strong>{% if item.strength %} <small class="text-muted">{{ item.strength }}</small>{% endif %}</td>
+            <td>{{ item.category.name|default:"—" }}</td>
+            <td>{{ item.get_dosage_form_display|default:"—" }}</td>
+            <td class="text-center"><strong>{{ item.sellable_qty }}</strong></td>
+            <td>{{ item.unit_of_measure }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{# ── Request Cart ── #}
+<div class="cl-card mt-3">
+  <div class="cl-card-header">
+    <h2 class="cl-card-title mb-0"><i class="bi bi-cart3 text-primary me-2"></i>Request Cart <span id="cartCount" class="badge bg-primary ms-1">0</span></h2>
+  </div>
   <div class="cl-card-body">
-    <form method="post" novalidate>
+    <form method="post" id="requestForm" novalidate>
       {% csrf_token %}
-      {% for field in form %}
-      <div class="mb-3">
-        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-        {{ field }}
-        {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-        {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+      <div class="table-responsive">
+        <table class="table table-sm mb-0" id="cartTable">
+          <thead class="table-light">
+            <tr>
+              <th>Item</th>
+              <th style="width:130px">Qty</th>
+              <th class="text-center" style="width:100px">Available</th>
+              <th style="width:50px"></th>
+            </tr>
+          </thead>
+          <tbody id="cartBody">
+            <tr id="emptyCartRow"><td colspan="4" class="text-muted text-center py-3"><i class="bi bi-inbox"></i> Click <strong>+</strong> on an item above to add it here</td></tr>
+          </tbody>
+        </table>
       </div>
-      {% endfor %}
-      {% if form.non_field_errors %}<div class="alert alert-danger">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>{% endif %}
+      <div class="mb-3 mt-3">
+        <label for="notes" class="form-label">Notes (optional)</label>
+        <textarea name="notes" id="notes" class="form-control" rows="2" placeholder="e.g. Urgent, needed for ward restocking…"></textarea>
+      </div>
       <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> {{ submit_label }}</button>
+        <button type="submit" class="btn btn-primary" id="submitBtn" disabled><i class="bi bi-send"></i> Submit Request</button>
         <a href="{% url section_index_url %}" class="btn btn-outline-secondary">Cancel</a>
       </div>
     </form>
   </div>
 </div>
+
+{% else %}
+<div class="alert alert-info mt-3"><i class="bi bi-info-circle"></i> No stock currently available in medical stores. Items will appear here once stock is received via inventory.</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+  const cart = {};  // { itemId: {name, avail, unit, qty} }
+  const cartBody = document.getElementById('cartBody');
+  const cartCount = document.getElementById('cartCount');
+  const emptyRow = document.getElementById('emptyCartRow');
+  const submitBtn = document.getElementById('submitBtn');
+  const filterInput = document.getElementById('stockFilter');
+
+  // Filter stock table
+  if(filterInput){
+    filterInput.addEventListener('input', function(){
+      const q = this.value.toLowerCase();
+      document.querySelectorAll('#stockTable tbody .stock-row').forEach(function(row){
+        row.style.display = row.dataset.name.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
+
+  // Add item buttons
+  document.querySelectorAll('.add-item-btn').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      const row = this.closest('tr');
+      const id = row.dataset.id;
+      if(cart[id]) return;  // already in cart
+      cart[id] = {
+        name: row.dataset.name,
+        avail: parseInt(row.dataset.avail),
+        unit: row.dataset.unit,
+        qty: 1
+      };
+      row.classList.add('table-success');
+      this.disabled = true;
+      renderCart();
+    });
+  });
+
+  // Also allow clicking the row itself
+  document.querySelectorAll('.stock-row').forEach(function(row){
+    row.addEventListener('click', function(){
+      const btn = this.querySelector('.add-item-btn');
+      if(btn && !btn.disabled) btn.click();
+    });
+  });
+
+  function renderCart(){
+    const ids = Object.keys(cart);
+    if(!ids.length){
+      emptyRow.style.display = '';
+      submitBtn.disabled = true;
+      cartCount.textContent = '0';
+      return;
+    }
+    emptyRow.style.display = 'none';
+    submitBtn.disabled = false;
+    cartCount.textContent = ids.length;
+
+    // Remove existing cart rows (not the empty row)
+    cartBody.querySelectorAll('.cart-item-row').forEach(function(r){ r.remove(); });
+
+    ids.forEach(function(id){
+      const c = cart[id];
+      const tr = document.createElement('tr');
+      tr.className = 'cart-item-row';
+      tr.innerHTML =
+        '<td>' + escapeHtml(c.name) + ' <small class="text-muted">(' + escapeHtml(c.unit) + ')</small>' +
+          '<input type="hidden" name="item_ids" value="' + id + '">' +
+        '</td>' +
+        '<td><input type="number" name="quantities" class="form-control form-control-sm qty-input" min="1" max="' + c.avail + '" value="' + c.qty + '" data-id="' + id + '" required></td>' +
+        '<td class="text-center">' + c.avail + '</td>' +
+        '<td><button type="button" class="btn btn-sm btn-outline-danger remove-btn" data-id="' + id + '"><i class="bi bi-trash"></i></button></td>';
+      cartBody.appendChild(tr);
+    });
+
+    // Bind qty change
+    cartBody.querySelectorAll('.qty-input').forEach(function(inp){
+      inp.addEventListener('change', function(){
+        const cid = this.dataset.id;
+        let v = parseInt(this.value) || 1;
+        if(v < 1) v = 1;
+        if(v > cart[cid].avail) v = cart[cid].avail;
+        this.value = v;
+        cart[cid].qty = v;
+      });
+    });
+
+    // Bind remove
+    cartBody.querySelectorAll('.remove-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        const cid = this.dataset.id;
+        delete cart[cid];
+        // Re-enable stock row
+        const sr = document.querySelector('#stockTable tr[data-id="' + cid + '"]');
+        if(sr){
+          sr.classList.remove('table-success');
+          const ab = sr.querySelector('.add-item-btn');
+          if(ab) ab.disabled = false;
+        }
+        renderCart();
+      });
+    });
+  }
+
+  function escapeHtml(s){
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  // Validate on submit
+  const form = document.getElementById('requestForm');
+  if(form){
+    form.addEventListener('submit', function(e){
+      if(!Object.keys(cart).length){
+        e.preventDefault();
+        alert('Please add at least one item to the request.');
+      }
+    });
+  }
+})();
+</script>
 {% endblock %}

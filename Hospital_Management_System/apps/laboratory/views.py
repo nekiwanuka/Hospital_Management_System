@@ -16,6 +16,7 @@ from apps.core.permissions import (
     module_permission_required,
     role_required,
 )
+from apps.patients.models import PatientDocument
 from apps.inventory.forms import (
     ServiceConsumptionCorrectionForm,
     build_service_consumable_formset,
@@ -60,6 +61,7 @@ def _is_lab_request_payment_cleared(lab_request):
         source_model="lab",
         source_id=lab_request.pk,
         invoice__payment_status__in=["paid", "post_payment"],
+        cashier_authorized=True,
     ).exists()
 
 
@@ -169,6 +171,7 @@ def index(request):
     cleared_lab_ids = InvoiceLineItem.objects.filter(
         source_model="lab",
         invoice__payment_status__in=["paid", "post_payment"],
+        cashier_authorized=True,
     ).values_list("source_id", flat=True)
 
     queryset = branch_queryset_for_user(
@@ -221,6 +224,7 @@ def result_feed_queue(request):
     cleared_lab_ids = InvoiceLineItem.objects.filter(
         source_model="lab",
         invoice__payment_status__in=["paid", "post_payment"],
+        cashier_authorized=True,
     ).values_list("source_id", flat=True)
 
     queryset = branch_queryset_for_user(
@@ -565,6 +569,9 @@ def detail(request, pk):
             "consumption_total_cost": consumption_total_cost,
             "consumables_recorded": consumables_recorded,
             "can_correct_consumables": _can_correct_consumables(request.user),
+            "patient_documents": PatientDocument.objects.filter(
+                patient=lab_request.patient
+            ).order_by("-created_at"),
         },
     )
 

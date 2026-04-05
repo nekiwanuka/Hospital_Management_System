@@ -55,6 +55,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.core.middleware.BranchContextMiddleware",
+    "apps.core.middleware.ShiftRequiredMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -75,6 +76,9 @@ TEMPLATES = [
             "libraries": {
                 "currency": "apps.core.templatetags.currency",
             },
+            "builtins": [
+                "apps.core.templatetags.currency",
+            ],
         },
     }
 ]

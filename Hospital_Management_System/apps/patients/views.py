@@ -2,9 +2,9 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import Http404, JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
 
 from apps.admission.models import Admission
 from apps.billing.models import Invoice
@@ -16,7 +16,7 @@ from apps.core.permissions import (
 )
 from apps.laboratory.models import LabRequest
 from apps.patients.forms import PatientForm
-from apps.patients.models import Patient
+from apps.patients.models import Patient, PatientDocument
 from apps.radiology.models import ImagingRequest, RadiologyNotification
 from apps.referrals.models import Referral
 from apps.triage.models import TriageRecord
@@ -199,6 +199,9 @@ def detail(request, pk):
             "show_patient_actions": not history_only,
             "can_edit_patient": can_edit_patient,
             "can_initiate_visit": can_initiate_visit,
+            "patient_documents": PatientDocument.objects.filter(
+                patient=patient
+            ).order_by("-created_at"),
         },
     )
 
@@ -269,3 +272,120 @@ def check_duplicate(request):
         for p in qs[:5]
     ]
     return JsonResponse({"matches": matches})
+
+
+def _safe_next_url(request):
+    next_url = request.POST.get("next") or request.GET.get("next") or ""
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url, allowed_hosts={request.get_host()}
+    ):
+        return next_url
+    return None
+
+
+ALLOWED_EXTENSIONS = {
+    "pdf",
+    "jpg",
+    "jpeg",
+    "png",
+    "gif",
+    "webp",
+    "bmp",
+    "doc",
+    "docx",
+    "xls",
+    "xlsx",
+    "csv",
+    "txt",
+    "rtf",
+    "dicom",
+    "dcm",
+}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
+
+@login_required
+@require_POST
+def upload_document(request, pk):
+    patient = _get_patient_for_user_or_404(request.user, pk)
+    next_url = _safe_next_url(request)
+
+    uploaded_file = request.FILES.get("file")
+    if not uploaded_file:
+        return JsonResponse({"ok": False, "error": "No file provided."}, status=400)
+
+    ext = (
+        uploaded_file.name.rsplit(".", 1)[-1].lower()
+        if "." in uploaded_file.name
+        else ""
+    )
+    if ext not in ALLOWED_EXTENSIONS:
+        return JsonResponse(
+            {"ok": False, "error": f"File type .{ext} is not allowed."}, status=400
+        )
+
+    if uploaded_file.size > MAX_FILE_SIZE:
+        return JsonResponse(
+            {"ok": False, "error": "File exceeds 10 MB limit."}, status=400
+        )
+
+    title = (request.POST.get("title") or "").strip() or uploaded_file.name
+    category = (request.POST.get("category") or "other").strip()
+    visit_id = (request.POST.get("visit_id") or "").strip()
+
+    valid_categories = {c[0] for c in PatientDocument.CATEGORY_CHOICES}
+    if category not in valid_categories:
+        category = "other"
+
+    doc = PatientDocument(
+        branch=patient.branch,
+        patient=patient,
+        title=title,
+        category=category,
+        file=uploaded_file,
+        uploaded_by=request.user,
+    )
+    if visit_id and visit_id.isdigit():
+        from apps.visits.models import Visit
+
+        visit = Visit.objects.filter(pk=int(visit_id), patient=patient).first()
+        if visit:
+            doc.visit = visit
+    doc.save()
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return JsonResponse(
+            {
+                "ok": True,
+                "doc": {
+                    "id": doc.pk,
+                    "title": doc.title,
+                    "category": doc.get_category_display(),
+                    "file_url": doc.file.url,
+                    "is_image": doc.is_image,
+                    "uploaded_at": doc.created_at.strftime("%d %b %Y %H:%M"),
+                },
+            }
+        )
+
+    if next_url:
+        return redirect(next_url)
+    return redirect("patients:detail", pk=patient.pk)
+
+
+@login_required
+@require_POST
+def delete_document(request, pk, doc_pk):
+    patient = _get_patient_for_user_or_404(request.user, pk)
+    doc = get_object_or_404(PatientDocument, pk=doc_pk, patient=patient)
+    next_url = _safe_next_url(request)
+
+    doc.file.delete(save=False)
+    doc.delete()
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return JsonResponse({"ok": True})
+
+    if next_url:
+        return redirect(next_url)
+    return redirect("patients:detail", pk=patient.pk)

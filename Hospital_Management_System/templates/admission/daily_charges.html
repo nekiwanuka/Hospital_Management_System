@@ -19,7 +19,7 @@
     {% if total_unbilled > 0 %}
     <form method="post" action="{% url 'admission:generate_daily_invoice' admission.pk %}" class="d-inline">
       {% csrf_token %}
-      <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-receipt me-1"></i>Bill Unbilled ({{ total_unbilled|floatformat:0 }} UGX)</button>
+      <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-receipt me-1"></i>Bill Unbilled ({{ total_unbilled|commas }} UGX)</button>
     </form>
     {% endif %}
     <a href="{% url 'admission:detail' admission.pk %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back</a>
@@ -31,7 +31,7 @@
   <div class="col-md-3">
     <div class="cl-card shadow-sm text-center">
       <div class="cl-card-body py-3">
-        <h4 class="mb-0 text-primary">{{ admission.daily_rate|floatformat:0 }}</h4>
+        <h4 class="mb-0 text-primary">{{ admission.daily_rate|commas }}</h4>
         <small class="text-muted">Daily Rate (UGX)</small>
       </div>
     </div>
@@ -39,7 +39,7 @@
   <div class="col-md-3">
     <div class="cl-card shadow-sm text-center">
       <div class="cl-card-body py-3">
-        <h4 class="mb-0 text-info">{{ total_charged|floatformat:0 }}</h4>
+        <h4 class="mb-0 text-info">{{ total_charged|commas }}</h4>
         <small class="text-muted">Total Charged</small>
       </div>
     </div>
@@ -47,7 +47,7 @@
   <div class="col-md-3">
     <div class="cl-card shadow-sm text-center">
       <div class="cl-card-body py-3">
-        <h4 class="mb-0 text-success">{{ total_billed|floatformat:0 }}</h4>
+        <h4 class="mb-0 text-success">{{ total_billed|commas }}</h4>
         <small class="text-muted">Invoiced</small>
       </div>
     </div>
@@ -55,7 +55,7 @@
   <div class="col-md-3">
     <div class="cl-card shadow-sm text-center">
       <div class="cl-card-body py-3">
-        <h4 class="mb-0 {% if total_unbilled > 0 %}text-warning{% else %}text-success{% endif %}">{{ total_unbilled|floatformat:0 }}</h4>
+        <h4 class="mb-0 {% if total_unbilled > 0 %}text-warning{% else %}text-success{% endif %}">{{ total_unbilled|commas }}</h4>
         <small class="text-muted">Unbilled</small>
       </div>
     </div>
@@ -86,7 +86,7 @@
                 {{ charge.get_ward_category_display }}
               </span>
             </td>
-            <td class="text-end">{{ charge.amount|floatformat:0 }}</td>
+            <td class="text-end">{{ charge.amount|commas }}</td>
             <td>
               {% if charge.invoice_line %}
                 {% if charge.invoice_line.payment_status == 'paid' %}

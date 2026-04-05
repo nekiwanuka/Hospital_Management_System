@@ -17,6 +17,11 @@ urlpatterns = [
         name="review_approval_request",
     ),
     path("sequence-anomalies/", views.sequence_anomalies, name="sequence_anomalies"),
+    path(
+        "line/<int:line_id>/authorize/",
+        views.authorize_line_item,
+        name="authorize_line_item",
+    ),
     path("create/", views.create, name="create"),
     path("<int:pk>/", views.detail, name="detail"),
     path("<int:pk>/invoice/", views.invoice_document, name="invoice_document"),
@@ -27,4 +32,11 @@ urlpatterns = [
     path("receipt/<int:receipt_pk>/", views.receipt_detail, name="receipt_detail"),
     path("invoices/", views.invoices, name="invoices"),
     path("receipts/", views.receipts, name="receipts"),
+    # Walk-in pharmacy sale clearance
+    path("walkins/", views.pending_walkins, name="pending_walkins"),
+    path(
+        "walkins/<int:sale_pk>/clear/",
+        views.clear_walkin_sale,
+        name="clear_walkin_sale",
+    ),
 ]

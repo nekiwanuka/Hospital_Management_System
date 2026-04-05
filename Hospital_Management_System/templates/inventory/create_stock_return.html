@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}New Stock Return — {{ clinic_name }}{% endblock %}
+{% block header_title %}New Stock Return{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div><h1>Return Stock to Store</h1></div>
+  <a href="{% url 'inventory:stock_returns' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+
+<div class="cl-card">
+  <div class="cl-card-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Item <span class="text-danger">*</span></label>
+          <select name="item" class="form-select" required id="id_item">
+            <option value="">— Select Item —</option>
+            {% for item in items %}
+            <option value="{{ item.pk }}">{{ item.item_name }} ({{ item.get_store_department_display }} — {{ item.quantity_on_hand }} on hand)</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Batch <span class="text-danger">*</span></label>
+          <select name="batch" class="form-select" required id="id_batch">
+            <option value="">— Select Batch —</option>
+            {% for b in batches %}
+            <option value="{{ b.pk }}" data-item="{{ b.item_id }}">{{ b.batch_number }} — {{ b.item.item_name }} ({{ b.quantity_remaining }} remaining, exp: {{ b.exp_date|date:"d M Y" }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Quantity <span class="text-danger">*</span></label>
+          <input type="number" name="quantity" class="form-control" min="1" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Return Source <span class="text-danger">*</span></label>
+          <select name="return_source" class="form-select" required>
+            <option value="">— Select —</option>
+            <option value="pharmacy">Pharmacy</option>
+            <option value="laboratory">Laboratory</option>
+            <option value="radiology">Radiology</option>
+            <option value="ward">Ward</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Reason</label>
+          <input type="text" name="reason" class="form-control" placeholder="Reason for return...">
+        </div>
+      </div>
+      <div class="mt-3">
+        <button type="submit" class="btn btn-warning"><i class="bi bi-arrow-return-left"></i> Submit Return</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const itemSelect = document.getElementById('id_item');
+  const batchSelect = document.getElementById('id_batch');
+  const allOptions = Array.from(batchSelect.querySelectorAll('option[data-item]'));
+
+  itemSelect.addEventListener('change', function() {
+    const selectedItem = this.value;
+    batchSelect.innerHTML = '<option value="">— Select Batch —</option>';
+    allOptions.forEach(function(opt) {
+      if (!selectedItem || opt.dataset.item === selectedItem) {
+        batchSelect.appendChild(opt.cloneNode(true));
+      }
+    });
+  });
+});
+</script>
+{% endblock %}

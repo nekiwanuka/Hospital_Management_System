@@ -23,6 +23,9 @@
     --cl-warning: #e97316;
     --cl-danger: #dc2626;
     --cl-info: #0891b2;
+    /* Override Bootstrap yellow → amber/orange */
+    --bs-warning:     #f59e0b;
+    --bs-warning-rgb: 245,158,11;
     --cl-radius: 0.5rem;
     --cl-radius-lg: 0.75rem;
     --cl-shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
@@ -30,6 +33,16 @@
     --cl-shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
     --cl-transition: 0.2s ease;
 }
+
+/* Override Bootstrap warning from yellow to amber */
+.bg-warning  { background-color: #f59e0b !important; }
+.text-warning { color: #d97706 !important; }
+.btn-warning { background-color: #f59e0b; border-color: #f59e0b; color: #fff; }
+.btn-warning:hover { background-color: #d97706; border-color: #d97706; color: #fff; }
+.btn-outline-warning { color: #d97706; border-color: #d97706; }
+.btn-outline-warning:hover { background-color: #d97706; border-color: #d97706; color: #fff; }
+.border-warning { border-color: #f59e0b !important; }
+.alert-warning { background-color: rgba(245,158,11,0.1); border-color: #f59e0b; color: #92400e; }
 
 /* ---------- Reset & Base ---------- */
 *,

@@ -58,12 +58,16 @@ def sync_medicine_catalog_for_item(item):
     defaults = {
         "name": item.item_name,
         "category": item.category.name,
+        "strength": getattr(item, "strength", "") or "",
+        "dosage_form": (
+            getattr(item, "get_dosage_form_display", lambda: "")()
+            if hasattr(item, "get_dosage_form_display")
+            else ""
+        ),
         "manufacturer": item.brand.manufacturer or item.brand.name,
         "batch_number": batch.batch_number if batch else "",
         "expiry_date": batch.exp_date if batch else timezone.localdate(),
-        "purchase_price": (
-            batch.unit_cost.quantize(Decimal("0.01")) if batch else Decimal("0.00")
-        ),
+        "purchase_price": Decimal("0.00"),  # hidden from pharmacy staff
         "selling_price": batch.selling_price_per_unit if batch else Decimal("0.00"),
         "stock_quantity": sellable_quantity_for_item(item),
     }

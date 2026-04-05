@@ -203,10 +203,54 @@ class MedicalStoreEntryForm(forms.Form):
         initial=10,
         help_text="Minimum stock level before a low-stock alert triggers.",
     )
+    min_sale_quantity = forms.IntegerField(
+        min_value=1,
+        initial=1,
+        help_text="Minimum dispensable quantity (e.g. 1 for tablets, 10 for a strip).",
+    )
     description = forms.CharField(
         widget=forms.Textarea(attrs={"rows": 2}),
         required=False,
         help_text="Any additional notes about this item.",
+    )
+    parent_item = forms.ModelChoiceField(
+        queryset=Item.objects.none(),
+        required=False,
+        help_text="Optional: group this item as a variant of a parent item.",
+    )
+    # Hierarchical packaging
+    l1_name = forms.CharField(
+        max_length=60,
+        required=False,
+        help_text="Level 1 package name (e.g. 'Strip', 'Blister').",
+    )
+    l1_qty = forms.IntegerField(
+        min_value=0,
+        initial=0,
+        required=False,
+        help_text="Base units per L1 package.",
+    )
+    l2_name = forms.CharField(
+        max_length=60,
+        required=False,
+        help_text="Level 2 package name (e.g. 'Box', 'Inner carton').",
+    )
+    l2_qty = forms.IntegerField(
+        min_value=0,
+        initial=0,
+        required=False,
+        help_text="L1 packages per L2 package.",
+    )
+    l3_name = forms.CharField(
+        max_length=60,
+        required=False,
+        help_text="Level 3 package name (e.g. 'Carton', 'Outer carton').",
+    )
+    l3_qty = forms.IntegerField(
+        min_value=0,
+        initial=0,
+        required=False,
+        help_text="L2 packages per L3 package.",
     )
 
     batch_number = forms.CharField(
@@ -335,6 +379,12 @@ class MedicalStoreEntryForm(forms.Form):
             self.fields["supplier"].queryset = Supplier.objects.filter(
                 branch_id=user.branch_id
             ).order_by("name")
+            self.fields["parent_item"].queryset = Item.objects.filter(
+                branch_id=user.branch_id,
+                is_active=True,
+                parent__isnull=True,
+                is_department_stock=False,
+            ).order_by("item_name")
 
     def clean(self):
         cleaned = super().clean()

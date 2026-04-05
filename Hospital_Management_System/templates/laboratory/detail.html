@@ -73,4 +73,6 @@
   </div>
 </div>
 {% endif %}
+
+{% include "includes/patient_documents.html" with doc_patient=lab_request.patient doc_category="laboratory" doc_visit=lab_request.visit %}
 {% endblock %}

@@ -28,9 +28,9 @@
           <dt class="col-sm-4">Doctor</dt><dd class="col-sm-8">{{ admission.doctor|default:"—" }}</dd>
           <dt class="col-sm-4">Ward</dt><dd class="col-sm-8">{{ admission.ward|default:"—" }}{% if admission.ward_obj %} <span class="badge {% if admission.ward_obj.ward_category == 'vvip' %}bg-warning text-dark{% elif admission.ward_obj.ward_category == 'vip' %}bg-info{% else %}bg-light text-dark border{% endif %}">{{ admission.ward_obj.get_ward_category_display }}</span>{% endif %}</dd>
           <dt class="col-sm-4">Bed</dt><dd class="col-sm-8">{{ admission.bed|default:"—" }}</dd>
-          <dt class="col-sm-4">Daily Rate</dt><dd class="col-sm-8">{{ admission.daily_rate|floatformat:0 }} UGX</dd>
+          <dt class="col-sm-4">Daily Rate</dt><dd class="col-sm-8">{{ admission.daily_rate|commas }} UGX</dd>
           <dt class="col-sm-4">Days</dt><dd class="col-sm-8">{{ admission.days_admitted }}</dd>
-          <dt class="col-sm-4">Running Charges</dt><dd class="col-sm-8"><strong>{{ admission.running_ward_charges|floatformat:0 }} UGX</strong></dd>
+          <dt class="col-sm-4">Running Charges</dt><dd class="col-sm-8"><strong>{{ admission.running_ward_charges|commas }} UGX</strong></dd>
           <dt class="col-sm-4">Reason</dt><dd class="col-sm-8">{{ admission.diagnosis|default:"—" }}</dd>
           <dt class="col-sm-4">Status</dt><dd class="col-sm-8">{% if admission.discharge_date %}<span class="badge bg-secondary">Discharged {{ admission.discharge_date|date:"d M Y" }}</span>{% else %}<span class="badge bg-success">Active</span>{% endif %}</dd>
         </dl>
@@ -122,6 +122,57 @@
       <p class="mb-0">{{ note.note }}</p>
     </div>
     {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Invoices & Billing (Post-Payment / Credit) -->
+{% if admission_invoices %}
+<div class="cl-card mb-3 shadow-sm">
+  <div class="cl-card-header d-flex justify-content-between align-items-center">
+    <h2 class="cl-card-title"><i class="bi bi-receipt me-2 text-info"></i>Invoices &amp; Billing</h2>
+    {% if total_credit > 0 %}
+    <span class="badge bg-warning text-dark">Outstanding Credit: {{ total_credit|commas }} UGX</span>
+    {% endif %}
+  </div>
+  <div class="cl-card-body">
+    <div class="row g-3 mb-3">
+      <div class="col-md-4 text-center">
+        <h5 class="mb-0 text-primary">{{ total_invoiced|commas }}</h5>
+        <small class="text-muted">Total Invoiced (UGX)</small>
+      </div>
+      <div class="col-md-4 text-center">
+        <h5 class="mb-0 text-success">{{ total_paid|commas }}</h5>
+        <small class="text-muted">Paid (UGX)</small>
+      </div>
+      <div class="col-md-4 text-center">
+        <h5 class="mb-0 {% if total_credit > 0 %}text-danger{% else %}text-success{% endif %}">{{ total_credit|commas }}</h5>
+        <small class="text-muted">Outstanding Credit (UGX)</small>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light">
+          <tr><th>Invoice #</th><th>Date</th><th class="text-end">Total</th><th class="text-end">Paid</th><th>Status</th><th class="text-end">Action</th></tr>
+        </thead>
+        <tbody>
+          {% for inv in admission_invoices %}
+          <tr>
+            <td>{{ inv.invoice_number }}</td>
+            <td>{{ inv.created_at|date:"d M Y H:i" }}</td>
+            <td class="text-end">{{ inv.total_amount|commas }}</td>
+            <td class="text-end">{{ inv.amount_paid|commas }}</td>
+            <td>
+              <span class="badge bg-{% if inv.payment_status == 'paid' %}success{% elif inv.payment_status == 'post_payment' %}info{% elif inv.payment_status == 'partial' %}warning text-dark{% else %}secondary{% endif %}">
+                {{ inv.get_payment_status_display }}
+              </span>
+            </td>
+            <td class="text-end"><a href="{% url 'billing:detail' inv.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 {% endif %}

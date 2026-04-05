@@ -143,6 +143,17 @@
     <a href="{% url 'permissions:index' %}" class="cl-nav-item {% if request.resolver_match.app_name == 'permissions' and request.resolver_match.url_name == 'index' %}active{% endif %}">
       <i class="bi bi-key"></i> Permissions
     </a>
+    <a href="{% url 'accounts:manage_secret_codes' %}" class="cl-nav-item {% if request.resolver_match.url_name == 'manage_secret_codes' %}active{% endif %}">
+      <i class="bi bi-shield-shaded"></i> Shift Codes
+    </a>
+    <a href="{% url 'accounts:shift_history' %}" class="cl-nav-item {% if request.resolver_match.url_name == 'shift_history' %}active{% endif %}">
+      <i class="bi bi-clock-history"></i> Shift History
+    </a>
+    {% else %}
+    <div class="cl-nav-section">Shift</div>
+    <a href="{% url 'accounts:shift_history' %}" class="cl-nav-item {% if request.resolver_match.url_name == 'shift_history' %}active{% endif %}">
+      <i class="bi bi-clock-history"></i> My Shifts
+    </a>
     {% endif %}
   </nav>
 
@@ -152,6 +163,9 @@
       <div class="user-info">
         <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
         <div class="user-role">{{ user.get_role_display|default:user.role }}</div>
+        {% if request.branch %}
+        <div class="user-branch" style="font-size:0.7rem;color:var(--cl-sidebar-text);margin-top:2px;"><i class="bi bi-geo-alt"></i> {{ request.branch.branch_code }} &mdash; {{ request.branch.branch_name }}</div>
+        {% endif %}
       </div>
     </div>
   </div>

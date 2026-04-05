@@ -39,4 +39,24 @@ urlpatterns = [
         views.stock_transfer_report,
         name="stock_transfer_report",
     ),
+    # Bin card / stock ledger
+    path(
+        "bin-card/<int:item_pk>/",
+        views.bin_card,
+        name="bin_card",
+    ),
+    # Stock returns
+    path("returns/", views.stock_returns, name="stock_returns"),
+    path("returns/new/", views.create_stock_return, name="create_stock_return"),
+    path(
+        "returns/<int:pk>/verify/",
+        views.verify_stock_return,
+        name="verify_stock_return",
+    ),
+    # Generic store request (for any department)
+    path(
+        "store-request/<str:store>/",
+        views.create_store_request,
+        name="create_store_request",
+    ),
 ]

@@ -244,6 +244,66 @@
           </div>
           {% endwith %}
 
+          {% with fld=form.min_sale_quantity %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: Minimum quantity that can be dispensed at once" title="Minimum quantity that can be dispensed at once">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+
+          {% with fld=form.parent_item %}
+          <div class="col-md-4">
+            <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: Link this item as a variant (e.g. different strength) of a parent item" title="Link this item as a variant (e.g. different strength) of a parent item">?</span></label>
+            {{ fld }}
+            {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+          </div>
+          {% endwith %}
+        </div>
+
+        <!-- Packaging Hierarchy -->
+        <h6 class="mt-4 mb-2 text-secondary"><i class="bi bi-box"></i> Packaging Hierarchy <small class="text-muted">(optional)</small></h6>
+        <p class="text-muted mb-3" style="font-size:.82rem">Define how base units are packaged. E.g. 1 Strip = 10 Tablets, 1 Box = 10 Strips, 1 Carton = 12 Boxes.</p>
+        <div class="row g-3">
+          {% with fld=form.l1_name %}
+          <div class="col-md-3">
+            <label for="{{ fld.id_for_label }}" class="form-label">Level 1 Name</label>
+            {{ fld }}
+          </div>
+          {% endwith %}
+          {% with fld=form.l1_qty %}
+          <div class="col-md-3">
+            <label for="{{ fld.id_for_label }}" class="form-label">Base units per L1</label>
+            {{ fld }}
+          </div>
+          {% endwith %}
+          {% with fld=form.l2_name %}
+          <div class="col-md-3">
+            <label for="{{ fld.id_for_label }}" class="form-label">Level 2 Name</label>
+            {{ fld }}
+          </div>
+          {% endwith %}
+          {% with fld=form.l2_qty %}
+          <div class="col-md-3">
+            <label for="{{ fld.id_for_label }}" class="form-label">L1 units per L2</label>
+            {{ fld }}
+          </div>
+          {% endwith %}
+          {% with fld=form.l3_name %}
+          <div class="col-md-3">
+            <label for="{{ fld.id_for_label }}" class="form-label">Level 3 Name</label>
+            {{ fld }}
+          </div>
+          {% endwith %}
+          {% with fld=form.l3_qty %}
+          <div class="col-md-3">
+            <label for="{{ fld.id_for_label }}" class="form-label">L1 units per L3</label>
+            {{ fld }}
+          </div>
+          {% endwith %}
+        </div>
+
+        <div class="row g-3 mt-1">
           {% with fld=form.description %}
           <div class="col-12">
             <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
@@ -659,7 +719,7 @@
 
   // ── Step fields for error detection ──
   const stepFields = {
-    1: ['item_name','generic_name','item_type','sku','dosage_form','strength','unit_of_measure','category','new_category_name','brand','new_brand_name','pack_size','barcode','control_status','storage_class','batch_tracking','reorder_level','description','store_department','service_type','service_code'],
+    1: ['item_name','generic_name','item_type','sku','dosage_form','strength','unit_of_measure','category','new_category_name','brand','new_brand_name','pack_size','barcode','control_status','storage_class','batch_tracking','reorder_level','min_sale_quantity','parent_item','l1_name','l1_qty','l2_name','l2_qty','l3_name','l3_qty','description','store_department','service_type','service_code'],
     2: ['batch_number','mfg_date','exp_date','batch_barcode','weight','volume','location','supplier','new_supplier_name','supplier_contact','supplier_address'],
     3: ['pack_size_units','packs_received','purchase_price_per_pack','target_profit_margin','selling_price_override','manual_selling_price']
   };

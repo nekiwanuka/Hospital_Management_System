@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Bin Card — {{ item.item_name }} — {{ clinic_name }}{% endblock %}
+{% block header_title %}Bin Card{% endblock %}
+
+{% block content %}
+<div class="cl-page-header">
+  <div>
+    <h1>{{ item.item_name }}{% if item.is_variant %} <span class="badge bg-secondary">{{ item.variant_label }}</span>{% endif %}</h1>
+    <small class="text-muted">{{ item.get_store_department_display }} &middot; {{ item.unit_of_measure }} &middot; On Hand: <strong>{{ item.quantity_on_hand }}</strong></small>
+  </div>
+  <a href="{% url 'inventory:medical_store_dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+
+{% if item.l1_name %}
+<div class="alert alert-light border mb-3">
+  <strong>Packaging:</strong>
+  1 {{ item.l1_name }} = {{ item.l1_qty }} {{ item.unit_of_measure }}{% if item.l2_name %} &middot; 1 {{ item.l2_name }} = {{ item.l2_qty }} {{ item.l1_name }}{% endif %}{% if item.l3_name %} &middot; 1 {{ item.l3_name }} = {{ item.l3_qty }} {{ item.l2_name }}{% endif %}
+</div>
+{% endif %}
+
+<!-- Filters -->
+<div class="cl-card mb-3">
+  <div class="cl-card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3"><label class="form-label">From</label><input type="date" name="from" value="{{ filters.from_date|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+      <div class="col-md-3"><label class="form-label">To</label><input type="date" name="to" value="{{ filters.to_date|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+      <div class="col-md-3"><label class="form-label">Batch</label><input type="text" name="batch" value="{{ filters.batch }}" class="form-control form-control-sm" placeholder="Batch #..."></div>
+      <div class="col-md-3"><button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel"></i> Filter</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- Movement Ledger -->
+<div class="cl-card">
+  <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-journal-text text-primary me-2"></i>Stock Movements</h2></div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Batch</th>
+            <th class="text-end">Qty</th>
+            <th>Reference</th>
+            <th>User</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in movements %}
+          <tr>
+            <td>{{ m.created_at|date:"d M Y H:i" }}</td>
+            <td>
+              <span class="badge bg-{% if m.movement_type == 'IN' %}success{% elif m.movement_type == 'OUT' %}danger{% elif m.movement_type == 'TRANSFER' %}info{% elif m.movement_type == 'ADJUSTMENT' %}warning text-dark{% elif m.movement_type == 'RETURN' %}primary{% else %}secondary{% endif %}">
+                {{ m.get_movement_type_display }}
+              </span>
+            </td>
+            <td>{{ m.batch.batch_number|default:"—" }}</td>
+            <td class="text-end">
+              {% if m.movement_type == 'IN' or m.movement_type == 'RETURN' %}
+                <span class="text-success">+{{ m.quantity }}</span>
+              {% elif m.movement_type == 'OUT' %}
+                <span class="text-danger">-{{ m.quantity }}</span>
+              {% else %}
+                {{ m.quantity }}
+              {% endif %}
+            </td>
+            <td><small>{{ m.reference|default:"—" }}</small></td>
+            <td>{{ m.user.get_full_name|default:m.user.username }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-center text-muted py-4">No movements found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

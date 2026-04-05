@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from apps.core.models import BranchScopedModel
 
@@ -65,3 +66,54 @@ class Patient(BranchScopedModel):
         if not self.patient_id:
             self.patient_id = self._generate_patient_id()
         super().save(*args, **kwargs)
+
+
+class PatientDocument(BranchScopedModel):
+    CATEGORY_CHOICES = [
+        ("triage", "Triage"),
+        ("consultation", "Consultation"),
+        ("laboratory", "Laboratory"),
+        ("radiology", "Radiology"),
+        ("admission", "Admission"),
+        ("pharmacy", "Pharmacy"),
+        ("referral", "Referral"),
+        ("other", "Other"),
+    ]
+
+    patient = models.ForeignKey(
+        Patient, on_delete=models.CASCADE, related_name="documents"
+    )
+    visit = models.ForeignKey(
+        "visits.Visit",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="documents",
+    )
+    category = models.CharField(
+        max_length=20, choices=CATEGORY_CHOICES, default="other"
+    )
+    title = models.CharField(max_length=255)
+    file = models.FileField(upload_to="patient_documents/%Y/%m/")
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True
+    )
+
+    class Meta(BranchScopedModel.Meta):
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["branch", "patient", "-created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.title} — {self.patient}"
+
+    @property
+    def file_extension(self):
+        return (
+            self.file.name.rsplit(".", 1)[-1].lower() if "." in self.file.name else ""
+        )
+
+    @property
+    def is_image(self):
+        return self.file_extension in ("jpg", "jpeg", "png", "gif", "webp", "bmp")

@@ -1,6 +1,6 @@
 from django import forms
 
-from apps.delivery.models import DeliveryRecord, DeliveryNote
+from apps.delivery.models import DeliveryRecord, DeliveryNote, BabyRecord
 from apps.core.permissions import branch_queryset_for_user
 from apps.patients.models import Patient
 from apps.visits.models import Visit
@@ -67,11 +67,6 @@ class DeliveryOutcomeForm(forms.ModelForm):
         fields = [
             "delivery_type",
             "delivery_datetime",
-            "baby_gender",
-            "baby_weight_kg",
-            "apgar_score_1min",
-            "apgar_score_5min",
-            "outcome",
             "complications",
         ]
         widgets = {
@@ -85,6 +80,37 @@ class DeliveryOutcomeForm(forms.ModelForm):
             css = "form-control"
             if isinstance(field.widget, forms.Select):
                 css = "form-select"
+            field.widget.attrs["class"] = css
+
+
+class BabyRecordForm(forms.ModelForm):
+    class Meta:
+        model = BabyRecord
+        fields = [
+            "birth_order",
+            "baby_name",
+            "gender",
+            "weight_kg",
+            "apgar_score_1min",
+            "apgar_score_5min",
+            "outcome",
+            "head_circumference_cm",
+            "length_cm",
+            "resuscitation_needed",
+            "notes",
+        ]
+        widgets = {
+            "notes": forms.Textarea(attrs={"rows": 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            css = "form-control"
+            if isinstance(field.widget, forms.Select):
+                css = "form-select"
+            elif isinstance(field.widget, forms.CheckboxInput):
+                css = "form-check-input"
             field.widget.attrs["class"] = css
 
 

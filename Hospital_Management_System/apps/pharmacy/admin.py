@@ -6,6 +6,9 @@ from apps.pharmacy.models import (
     MedicalStoreRequest,
     Medicine,
     PharmacyRequest,
+    PharmacyShift,
+    WalkInSale,
+    WalkInSaleLine,
 )
 
 
@@ -113,3 +116,33 @@ class PharmacyRequestAdmin(admin.ModelAdmin):
         "medicine__name",
         "requested_by__username",
     )
+
+
+@admin.register(PharmacyShift)
+class PharmacyShiftAdmin(admin.ModelAdmin):
+    list_display = ("pk", "opened_by", "status", "opened_at", "closed_at", "branch")
+    list_filter = ("status", "branch", "opened_at")
+    search_fields = ("opened_by__username", "notes")
+
+
+class WalkInSaleLineInline(admin.TabularInline):
+    model = WalkInSaleLine
+    extra = 0
+    readonly_fields = ("medicine", "quantity", "unit_price")
+
+
+@admin.register(WalkInSale)
+class WalkInSaleAdmin(admin.ModelAdmin):
+    list_display = (
+        "pk",
+        "customer_name",
+        "status",
+        "total_amount",
+        "created_by",
+        "cleared_by",
+        "branch",
+        "created_at",
+    )
+    list_filter = ("status", "branch", "created_at")
+    search_fields = ("customer_name", "customer_phone")
+    inlines = [WalkInSaleLineInline]

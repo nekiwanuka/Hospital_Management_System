@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Close Pharmacy Shift — {{ clinic_name }}{% endblock %}
+{% block header_title %}Close Pharmacy Shift{% endblock %}
+
+{% block content %}
+<div class="cl-page-header d-flex flex-wrap align-items-center justify-content-between mb-4">
+  <h1><i class="bi bi-stop-circle me-2 text-danger"></i>Close Pharmacy Shift</h1>
+  <a href="{% url 'pharmacy:index' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back</a>
+</div>
+
+<div class="cl-card shadow-sm" style="max-width: 600px;">
+  <div class="cl-card-body">
+    <div class="alert alert-info">
+      <strong>Shift #{{ shift.pk }}</strong> opened at {{ shift.opened_at|date:"d M Y H:i" }}<br>
+      <strong>{{ dispense_count }}</strong> dispense(s) recorded during this shift.
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label for="notes" class="form-label fw-semibold">Shift Notes (optional)</label>
+        <textarea name="notes" id="notes" class="form-control" rows="3" placeholder="Any notes about this shift..."></textarea>
+      </div>
+      <button type="submit" class="btn btn-danger"><i class="bi bi-stop-fill me-1"></i>Close Shift & Generate Report</button>
+      <a href="{% url 'pharmacy:index' %}" class="btn btn-outline-secondary ms-2">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

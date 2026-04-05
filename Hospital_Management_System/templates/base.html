@@ -56,6 +56,12 @@
     <h1 class="cl-header-title">{% block header_title %}{{ clinic_name }}{% endblock %}</h1>
     <div class="cl-header-actions">
       {% if user.is_authenticated %}
+      {% if request.branch %}
+      <span class="badge bg-info text-dark me-2" title="Branch: {{ request.branch.branch_name }}"><i class="bi bi-geo-alt"></i> {{ request.branch.branch_code }}</span>
+      {% endif %}
+      {% if active_shift %}
+      <a href="{% url 'accounts:close_shift' %}" class="btn btn-sm btn-outline-warning me-2" title="Close shift"><i class="bi bi-stop-circle"></i> End Shift</a>
+      {% endif %}
       <span class="text-muted me-2"><i class="bi bi-person-circle"></i> {{ user.get_full_name|default:user.username }}</span>
       <a href="{% url 'accounts:logout' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-box-arrow-right"></i> Logout</a>
       {% endif %}

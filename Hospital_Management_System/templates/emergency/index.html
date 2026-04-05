@@ -4,7 +4,10 @@
 
 {% block content %}
 <div class="cl-page-header">
-  <div><h1>Emergency Cases</h1></div>
+  <div>
+    <h1><i class="bi bi-exclamation-triangle-fill me-2" style="color:#dc2626;"></i>Emergency Cases</h1>
+    <p>Urgent and critical patient cases</p>
+  </div>
   <div class="d-flex gap-2">
     <form method="get" class="d-flex gap-2">
       <input type="text" name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="Search cases...">

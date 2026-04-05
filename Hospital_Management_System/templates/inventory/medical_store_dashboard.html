@@ -4,9 +4,13 @@
 
 {% block content %}
 <div class="cl-page-header">
-  <div><h1>{{ selected_store_label|default:"Medical Store" }}</h1></div>
+  <div>
+    <h1><i class="bi bi-box-seam-fill me-2" style="color:#64748b;"></i>{{ selected_store_label|default:"Medical Store" }}</h1>
+    <p>Inventory management and stock tracking</p>
+  </div>
   <div class="d-flex gap-2">
     {% if selected_store_entry_url %}<a href="{{ selected_store_entry_url }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> New Entry</a>{% endif %}
+    <a href="{% url 'inventory:stock_returns' %}" class="btn btn-outline-warning btn-sm"><i class="bi bi-arrow-return-left"></i> Returns</a>
     <a href="{% url 'inventory:stock_transfer_report' %}" class="btn btn-outline-info btn-sm"><i class="bi bi-arrow-left-right"></i> Transfer Report</a>
   </div>
 </div>
@@ -187,24 +191,25 @@
 
 <!-- Current Stock Batches -->
 <div class="cl-card mb-4">
-  <div class="cl-card-header"><h2 class="cl-card-title">Current Stock</h2></div>
+  <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-archive me-2" style="color:#4f46e5;"></i>Current Stock</h2></div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
       <table class="table table-sm">
-        <thead><tr><th>Item</th><th>Batch #</th><th>Qty</th><th>Unit Cost</th><th>Sell Price</th><th>Expiry</th><th>Supplier</th></tr></thead>
+        <thead><tr><th>Item</th><th>Batch #</th><th>Qty</th><th>Unit Cost</th><th>Sell Price</th><th>Expiry</th><th>Supplier</th><th class="text-center">Bin Card</th></tr></thead>
         <tbody>
           {% for b in current_stock_batches %}
           <tr>
-            <td>{{ b.item.item_name }}</td>
+            <td>{{ b.item.item_name }}{% if b.item.is_variant %} <span class="badge bg-secondary">{{ b.item.variant_label }}</span>{% endif %}</td>
             <td>{{ b.batch_number }}</td>
             <td>{{ b.quantity_remaining }}</td>
             <td>{{ b.unit_cost }}</td>
             <td>{{ b.selling_price_per_unit }}</td>
             <td>{{ b.exp_date|date:"d M Y" }}</td>
             <td>{{ b.supplier|default:"—" }}</td>
+            <td class="text-center"><a href="{% url 'inventory:bin_card' b.item.pk %}" class="btn btn-outline-secondary btn-sm" title="View Bin Card"><i class="bi bi-journal-text"></i></a></td>
           </tr>
           {% empty %}
-          <tr><td colspan="7" class="text-center text-muted py-4">No stock records found.</td></tr>
+          <tr><td colspan="8" class="text-center text-muted py-4">No stock records found.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -215,7 +220,7 @@
 <!-- Low Stock -->
 {% if low_stock_items %}
 <div class="cl-card mb-4">
-  <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-exclamation-triangle text-warning"></i> Low Stock Items</h2></div>
+  <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-exclamation-triangle me-2" style="color:#d97706;"></i>Low Stock Items</h2></div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
       <table class="table table-sm">
@@ -230,7 +235,7 @@
 <!-- Expiring Batches -->
 {% if expiring_batches %}
 <div class="cl-card mb-4">
-  <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-clock text-info"></i> Expiring Soon</h2></div>
+  <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-clock-history me-2" style="color:#0891b2;"></i>Expiring Soon</h2></div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
       <table class="table table-sm">
@@ -245,7 +250,7 @@
 <!-- Expired Batches -->
 {% if expired_batches %}
 <div class="cl-card">
-  <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-x-circle text-danger"></i> Expired</h2></div>
+  <div class="cl-card-header"><h2 class="cl-card-title"><i class="bi bi-x-circle me-2" style="color:#dc2626;"></i>Expired</h2></div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
       <table class="table table-sm">

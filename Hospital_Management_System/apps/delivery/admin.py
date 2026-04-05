@@ -1,6 +1,21 @@
 from django.contrib import admin
 
-from apps.delivery.models import DeliveryRecord, DeliveryNote
+from apps.delivery.models import DeliveryRecord, DeliveryNote, BabyRecord
+
+
+class BabyRecordInline(admin.TabularInline):
+    model = BabyRecord
+    extra = 1
+    fields = (
+        "birth_order",
+        "baby_name",
+        "gender",
+        "weight_kg",
+        "apgar_score_1min",
+        "apgar_score_5min",
+        "outcome",
+        "resuscitation_needed",
+    )
 
 
 @admin.register(DeliveryRecord)
@@ -9,19 +24,39 @@ class DeliveryRecordAdmin(admin.ModelAdmin):
         "patient",
         "status",
         "delivery_type",
-        "outcome",
         "delivered_by",
         "admitted_at",
         "delivery_datetime",
         "branch",
     )
-    list_filter = ("branch", "status", "delivery_type", "outcome")
+    list_filter = ("branch", "status", "delivery_type")
     search_fields = (
         "patient__first_name",
         "patient__last_name",
         "patient__patient_id",
     )
     raw_id_fields = ("patient", "visit", "admission", "delivered_by", "midwife")
+    inlines = [BabyRecordInline]
+
+
+@admin.register(BabyRecord)
+class BabyRecordAdmin(admin.ModelAdmin):
+    list_display = (
+        "delivery",
+        "birth_order",
+        "baby_name",
+        "gender",
+        "weight_kg",
+        "outcome",
+        "branch",
+    )
+    list_filter = ("gender", "outcome", "branch")
+    search_fields = (
+        "baby_name",
+        "delivery__patient__first_name",
+        "delivery__patient__last_name",
+    )
+    raw_id_fields = ("delivery",)
 
 
 @admin.register(DeliveryNote)

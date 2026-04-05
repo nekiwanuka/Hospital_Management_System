@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from apps.accounts.models import User
+from apps.accounts.models import User, Shift, ShiftSecretCode
 
 
 @admin.register(User)
@@ -41,3 +41,16 @@ class CustomUserAdmin(UserAdmin):
             },
         ),
     )
+
+
+@admin.register(ShiftSecretCode)
+class ShiftSecretCodeAdmin(admin.ModelAdmin):
+    list_display = ("user", "code", "updated_at")
+    search_fields = ("user__username", "user__first_name", "user__last_name")
+
+
+@admin.register(Shift)
+class ShiftAdmin(admin.ModelAdmin):
+    list_display = ("user", "branch", "status", "opened_at", "closed_at")
+    list_filter = ("status", "branch")
+    search_fields = ("user__username", "user__first_name", "user__last_name")

@@ -204,6 +204,15 @@ class Item(BranchScopedModel):
         ("other", "Other"),
     ]
 
+    parent = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="variants",
+        help_text="Parent item for variant grouping (e.g. Panadol 500mg is a variant of Panadol).",
+    )
+
     item_name = models.CharField(max_length=255)
     sku = models.CharField(
         max_length=60, blank=True, help_text="Stock-keeping unit code."
@@ -252,9 +261,42 @@ class Item(BranchScopedModel):
         default="",
     )
     reorder_level = models.PositiveIntegerField(default=10)
+    min_sale_quantity = models.PositiveIntegerField(
+        default=1,
+        help_text="Minimum quantity that can be sold/dispensed at once.",
+    )
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     default_pack_size_units = models.PositiveIntegerField(default=1)
+
+    # ── Hierarchical packaging: Base Unit → L1 → L2 → L3 ──
+    l1_name = models.CharField(
+        max_length=60,
+        blank=True,
+        help_text="Level-1 packaging name, e.g. 'Strip' or 'Blister'.",
+    )
+    l1_qty = models.PositiveIntegerField(
+        default=0,
+        help_text="How many base units make one L1 package.",
+    )
+    l2_name = models.CharField(
+        max_length=60,
+        blank=True,
+        help_text="Level-2 packaging name, e.g. 'Box' or 'Inner carton'.",
+    )
+    l2_qty = models.PositiveIntegerField(
+        default=0,
+        help_text="How many L1 packages make one L2 package.",
+    )
+    l3_name = models.CharField(
+        max_length=60,
+        blank=True,
+        help_text="Level-3 packaging name, e.g. 'Carton' or 'Outer carton'.",
+    )
+    l3_qty = models.PositiveIntegerField(
+        default=0,
+        help_text="How many L2 packages make one L3 package.",
+    )
 
     class Meta(BranchScopedModel.Meta):
         indexes = [
@@ -294,6 +336,60 @@ class Item(BranchScopedModel):
             "consultation": "consultation",
         }
         return mapping.get(self.service_type, self.store_department or "medical_store")
+
+    @property
+    def is_variant(self):
+        return self.parent_id is not None
+
+    @property
+    def variant_label(self):
+        parts = [self.item_name]
+        if self.strength:
+            parts.append(self.strength)
+        if self.dosage_form:
+            parts.append(f"({self.get_dosage_form_display()})")
+        return " ".join(parts)
+
+    @property
+    def base_units_per_l1(self):
+        return self.l1_qty if self.l1_qty > 0 else 0
+
+    @property
+    def base_units_per_l2(self):
+        if self.l1_qty > 0 and self.l2_qty > 0:
+            return self.l1_qty * self.l2_qty
+        return 0
+
+    @property
+    def base_units_per_l3(self):
+        if self.l1_qty > 0 and self.l2_qty > 0 and self.l3_qty > 0:
+            return self.l1_qty * self.l2_qty * self.l3_qty
+        return 0
+
+    def packaging_breakdown(self, total_base_units):
+        """Given a total in base units, break it down into L3/L2/L1/base."""
+        remaining = total_base_units
+        breakdown = {}
+        per_l3 = self.base_units_per_l3
+        if per_l3 > 0:
+            breakdown["l3"] = remaining // per_l3
+            remaining %= per_l3
+        else:
+            breakdown["l3"] = 0
+        per_l2 = self.base_units_per_l2
+        if per_l2 > 0:
+            breakdown["l2"] = remaining // per_l2
+            remaining %= per_l2
+        else:
+            breakdown["l2"] = 0
+        per_l1 = self.base_units_per_l1
+        if per_l1 > 0:
+            breakdown["l1"] = remaining // per_l1
+            remaining %= per_l1
+        else:
+            breakdown["l1"] = 0
+        breakdown["base"] = remaining
+        return breakdown
 
 
 class InventoryStoreProfile(BranchScopedModel):
@@ -552,6 +648,7 @@ class StockMovement(BranchScopedModel):
         ("EXPIRED", "EXPIRED"),
         ("TRANSFER_OUT", "TRANSFER_OUT"),
         ("TRANSFER_IN", "TRANSFER_IN"),
+        ("RETURN", "RETURN"),
     ]
 
     item = models.ForeignKey(Item, on_delete=models.PROTECT, related_name="movements")
@@ -750,3 +847,58 @@ class StockTransfer(BranchScopedModel):
 
     def __str__(self):
         return f"Transfer {self.source_item.item_name} x{self.quantity} → {self.destination_item.store_department}"
+
+
+class StockReturn(BranchScopedModel):
+    """A return of dispensed/issued stock back to inventory."""
+
+    STATUS_CHOICES = [
+        ("pending", "Pending Verification"),
+        ("accepted", "Accepted"),
+        ("rejected", "Rejected"),
+    ]
+
+    RETURN_SOURCE_CHOICES = [
+        ("pharmacy", "Pharmacy"),
+        ("laboratory", "Laboratory"),
+        ("radiology", "Radiology"),
+        ("ward", "Ward / Admission"),
+    ]
+
+    item = models.ForeignKey(
+        Item, on_delete=models.PROTECT, related_name="stock_returns"
+    )
+    batch = models.ForeignKey(
+        Batch,
+        on_delete=models.PROTECT,
+        related_name="stock_returns",
+        null=True,
+        blank=True,
+    )
+    quantity = models.PositiveIntegerField()
+    return_source = models.CharField(max_length=20, choices=RETURN_SOURCE_CHOICES)
+    reason = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    returned_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.PROTECT,
+        related_name="stock_returns_initiated",
+    )
+    verified_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="stock_returns_verified",
+    )
+    verified_at = models.DateTimeField(null=True, blank=True)
+    verification_notes = models.TextField(blank=True)
+
+    class Meta(BranchScopedModel.Meta):
+        indexes = [
+            models.Index(fields=["branch", "status", "created_at"]),
+            models.Index(fields=["branch", "item", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"Return {self.item.item_name} x{self.quantity} ({self.get_status_display()})"

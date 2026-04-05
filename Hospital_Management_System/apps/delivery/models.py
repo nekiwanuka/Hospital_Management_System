@@ -108,6 +108,72 @@ class DeliveryRecord(BranchScopedModel):
         return f"Delivery #{self.pk} - {self.patient}"
 
 
+class BabyRecord(BranchScopedModel):
+    BABY_GENDER = [
+        ("male", "Male"),
+        ("female", "Female"),
+        ("ambiguous", "Ambiguous"),
+    ]
+    OUTCOMES = [
+        ("live_birth", "Live Birth"),
+        ("still_birth", "Still Birth"),
+        ("neonatal_death", "Neonatal Death"),
+    ]
+
+    delivery = models.ForeignKey(
+        DeliveryRecord,
+        on_delete=models.CASCADE,
+        related_name="babies",
+    )
+    birth_order = models.PositiveSmallIntegerField(
+        default=1, help_text="1 for single/first twin, 2 for second twin, etc."
+    )
+    baby_name = models.CharField(
+        max_length=100, blank=True, help_text="Optional baby name"
+    )
+    gender = models.CharField(max_length=10, choices=BABY_GENDER, blank=True)
+    weight_kg = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Baby weight in kilograms",
+    )
+    apgar_score_1min = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="APGAR at 1 min (0-10)"
+    )
+    apgar_score_5min = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="APGAR at 5 min (0-10)"
+    )
+    outcome = models.CharField(max_length=20, choices=OUTCOMES, blank=True)
+    head_circumference_cm = models.DecimalField(
+        max_digits=4,
+        decimal_places=1,
+        null=True,
+        blank=True,
+        help_text="Head circumference in cm",
+    )
+    length_cm = models.DecimalField(
+        max_digits=4,
+        decimal_places=1,
+        null=True,
+        blank=True,
+        help_text="Baby length in cm",
+    )
+    resuscitation_needed = models.BooleanField(default=False)
+    notes = models.TextField(blank=True)
+
+    class Meta(BranchScopedModel.Meta):
+        ordering = ["birth_order"]
+        indexes = [
+            models.Index(fields=["delivery", "birth_order"]),
+        ]
+
+    def __str__(self):
+        name = self.baby_name or f"Baby {self.birth_order}"
+        return f"{name} — Delivery #{self.delivery_id}"
+
+
 class DeliveryNote(BranchScopedModel):
     NOTE_CATEGORIES = [
         ("labour_progress", "Labour Progress"),

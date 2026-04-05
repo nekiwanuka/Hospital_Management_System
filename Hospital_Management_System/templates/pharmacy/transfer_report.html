@@ -31,8 +31,8 @@
   <div class="col-sm-4">
     <div class="cl-stat">
       <div class="cl-stat-icon warning"><i class="bi bi-cash-coin"></i></div>
-      <div class="cl-stat-label">Total Cost Value</div>
-      <div class="cl-stat-value">{{ summary.total_cost_value }}</div>
+      <div class="cl-stat-label">Total Transfers</div>
+      <div class="cl-stat-value">{{ transfers|length }}</div>
     </div>
   </div>
   <div class="col-sm-4">
@@ -58,7 +58,6 @@
             <th>To</th>
             <th>Batch</th>
             <th class="text-end">Qty</th>
-            <th class="text-end">Unit Cost</th>
             <th class="text-end">Selling Price</th>
             <th>Transferred By</th>
             <th>Notes</th>
@@ -73,13 +72,12 @@
             <td>{{ t.destination_item.get_store_department_display }}</td>
             <td>{{ t.source_batch.batch_number }}</td>
             <td class="text-end">{{ t.quantity }}</td>
-            <td class="text-end">{{ t.unit_cost }}</td>
             <td class="text-end">{{ t.selling_price_per_unit }}</td>
             <td>{{ t.transferred_by.get_full_name }}</td>
             <td>{{ t.notes|default:"—" }}</td>
           </tr>
           {% empty %}
-          <tr><td colspan="10" class="text-center text-muted py-4">No pharmacy transfers found for the selected period.</td></tr>
+          <tr><td colspan="9" class="text-center text-muted py-4">No pharmacy transfers found for the selected period.</td></tr>
           {% endfor %}
         </tbody>
       </table>

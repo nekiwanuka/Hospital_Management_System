@@ -30,4 +30,8 @@
     </form>
   </div>
 </div>
+
+{% if record %}
+{% include "includes/patient_documents.html" with doc_patient=record.patient doc_category="triage" doc_visit=record.visit %}
+{% endif %}
 {% endblock %}

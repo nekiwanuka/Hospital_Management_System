@@ -22,4 +22,16 @@ urlpatterns = [
         name="pharmacy_receipt_detail",
     ),
     path("transfers/", views.pharmacy_transfer_report, name="transfer_report"),
+    # Walk-in status (read-only) & dispensing cleared sales
+    path("walkins/", views.pending_walkins, name="pending_walkins"),
+    path(
+        "walkins/<int:sale_pk>/dispense/",
+        views.dispense_walkin_cleared,
+        name="dispense_walkin_cleared",
+    ),
+    # Shift management
+    path("shifts/open/", views.open_shift, name="open_shift"),
+    path("shifts/<int:shift_pk>/close/", views.close_shift, name="close_shift"),
+    path("shifts/<int:shift_pk>/report/", views.shift_report, name="shift_report"),
+    path("shifts/", views.shift_history, name="shift_history"),
 ]

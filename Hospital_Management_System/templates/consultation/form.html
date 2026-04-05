@@ -257,7 +257,7 @@
                   <div class="position-relative mb-3">
                     <div class="input-group">
                       <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                      <input type="search" id="rxMedicineSearch" class="form-control" placeholder="Type medicine name e.g. Panadol..." autocomplete="off">
+                      <input type="search" id="rxMedicineSearch" class="form-control" placeholder="Search by name, category, or strength..." autocomplete="off">
                     </div>
                     <div id="rxSearchResults" class="list-group position-absolute w-100 shadow" style="z-index:1050;max-height:300px;overflow-y:auto;display:none;"></div>
                   </div>
@@ -541,6 +541,10 @@
       </div>
     </section>
     {% endif %}
+
+    <section class="consult-section mb-3">
+      {% include "includes/patient_documents.html" with doc_patient=patient doc_category="consultation" doc_visit=visit %}
+    </section>
   </div>
 </div>
 {% endblock %}
@@ -599,7 +603,8 @@
         <span class="badge bg-primary rounded-pill rx-num">${lineCount}</span>
         <div class="flex-grow-1">
           <strong>${escapeHtml(med.name)}</strong>
-          <small class="text-muted d-block">${escapeHtml(med.category)}</small>
+          ${(med.strength || med.dosage_form) ? `<span class="text-muted ms-1">${escapeHtml([med.strength, med.dosage_form].filter(Boolean).join(' · '))}</span>` : ''}
+          <small class="text-muted d-block"><i class="bi bi-tag me-1"></i>${escapeHtml(med.category)}</small>
         </div>
         <div class="d-flex align-items-center gap-1" style="width:110px">
           <button type="button" class="btn btn-sm btn-outline-secondary rx-qty-btn" data-delta="-1" title="Decrease">−</button>
@@ -681,12 +686,18 @@
         }
         resultsBox.innerHTML = data.map(m => {
           const added = addedMedicines[m.id];
+          const detail = [m.strength, m.dosage_form].filter(Boolean).join(' · ');
+          const stockBadge = m.stock <= 10
+            ? `<span class="badge bg-danger ms-1">${m.stock} left</span>`
+            : `<span class="badge bg-success bg-opacity-10 text-success ms-1">${m.stock} in stock</span>`;
           return `<button type="button" class="list-group-item list-group-item-action py-2 ${added ? 'list-group-item-success' : ''}" data-med='${JSON.stringify(m).replace(/'/g,"&#39;")}'>
             <div class="d-flex justify-content-between align-items-center">
               <div>
                 <i class="bi bi-capsule text-primary me-1"></i>
                 <strong>${escapeHtml(m.name)}</strong>
-                <small class="text-muted ms-2">${escapeHtml(m.category)}</small>
+                ${detail ? `<span class="text-muted ms-1">${escapeHtml(detail)}</span>` : ''}
+                ${stockBadge}
+                <br><small class="text-muted"><i class="bi bi-tag me-1"></i>${escapeHtml(m.category)}</small>
               </div>
               ${added
                 ? '<span class="badge bg-success"><i class="bi bi-check2"></i> Added</span>'

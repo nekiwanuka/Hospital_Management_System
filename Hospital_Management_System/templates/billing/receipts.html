@@ -90,10 +90,10 @@
                 {{ r.get_receipt_type_display }}
               </span>
             </td>
-            <td class="text-end fw-semibold text-success">{{ r.amount_paid|floatformat:0 }}</td>
-            <td class="text-end">{{ r.total_invoice_amount|floatformat:0 }}</td>
+            <td class="text-end fw-semibold text-success">{{ r.amount_paid|commas }}</td>
+            <td class="text-end">{{ r.total_invoice_amount|commas }}</td>
             <td class="text-end {% if r.balance_due > 0 %}text-danger fw-semibold{% else %}text-muted{% endif %}">
-              {{ r.balance_due|floatformat:0 }}
+              {{ r.balance_due|commas }}
             </td>
             <td>
               <span class="badge bg-light text-dark border">

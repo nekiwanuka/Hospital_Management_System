@@ -30,7 +30,7 @@
       {% if ward.floor %}<small class="text-muted">Floor: {{ ward.floor }}</small>{% endif %}
     </div>
     <div class="d-flex gap-2 align-items-center">
-      <span class="text-muted small me-2">Daily rate: <strong>{{ ward.daily_rate|floatformat:0 }} UGX</strong></span>
+      <span class="text-muted small me-2">Daily rate: <strong>{{ ward.daily_rate|commas }} UGX</strong></span>
       <span class="badge bg-success">{{ ward.available_beds }} available</span>
       <span class="badge bg-secondary">{{ ward.total_beds }} total</span>
       {% if ward.capacity %}<span class="badge bg-outline-dark border text-dark">Capacity: {{ ward.capacity }}</span>{% endif %}

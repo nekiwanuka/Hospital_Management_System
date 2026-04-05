@@ -87,6 +87,7 @@ def _is_imaging_request_payment_cleared(imaging_request):
         source_model="radiology",
         source_id=imaging_request.pk,
         invoice__payment_status__in=["paid", "post_payment"],
+        cashier_authorized=True,
     ).exists()
 
 

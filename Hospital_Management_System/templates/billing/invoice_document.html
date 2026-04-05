@@ -33,7 +33,7 @@
 
   <table style="border:none;margin-bottom:15px">
     <tr style="border:none"><td style="border:none;width:50%;vertical-align:top">
-      <strong>Patient:</strong> {{ invoice.patient.first_name }} {{ invoice.patient.last_name }}<br>
+      <strong>{% if invoice.is_walk_in %}Customer{% else %}Patient{% endif %}:</strong> {{ invoice.customer_display_name }}{% if invoice.walk_in_customer_phone %} ({{ invoice.walk_in_customer_phone }}){% endif %}<br>
       <strong>Invoice #:</strong> {{ invoice.invoice_number }}<br>
       <strong>Date:</strong> {{ invoice.created_at|date:"d M Y" }}<br>
     </td><td style="border:none;width:50%;vertical-align:top;text-align:right">

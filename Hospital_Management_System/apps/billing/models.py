@@ -20,7 +20,11 @@ class Invoice(BranchScopedModel):
     ]
 
     invoice_number = models.CharField(max_length=40, unique=True)
-    patient = models.ForeignKey("patients.Patient", on_delete=models.PROTECT)
+    patient = models.ForeignKey(
+        "patients.Patient", on_delete=models.PROTECT, null=True, blank=True
+    )
+    walk_in_customer_name = models.CharField(max_length=255, blank=True)
+    walk_in_customer_phone = models.CharField(max_length=50, blank=True)
     visit = models.ForeignKey(
         "visits.Visit",
         on_delete=models.PROTECT,
@@ -47,6 +51,16 @@ class Invoice(BranchScopedModel):
 
     def __str__(self):
         return self.invoice_number
+
+    @property
+    def customer_display_name(self):
+        if self.patient:
+            return f"{self.patient.first_name} {self.patient.last_name}"
+        return self.walk_in_customer_name or "Walk-In Customer"
+
+    @property
+    def is_walk_in(self):
+        return not self.patient_id and bool(self.walk_in_customer_name)
 
     @property
     def total_paid_amount(self):
@@ -90,10 +104,26 @@ class InvoiceLineItem(BranchScopedModel):
     source_model = models.CharField(max_length=40)
     source_id = models.PositiveIntegerField()
 
+    # Cashier authorization for post-payment (credit) line items
+    cashier_authorized = models.BooleanField(
+        default=True,
+        help_text="Whether the cashier has authorized this charge. "
+        "False = pending cashier approval before the service can be provided.",
+    )
+    authorized_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="authorized_line_items",
+    )
+    authorized_at = models.DateTimeField(null=True, blank=True)
+
     class Meta(BranchScopedModel.Meta):
         indexes = [
             models.Index(fields=["branch", "service_type"]),
             models.Index(fields=["source_model", "source_id"]),
+            models.Index(fields=["branch", "cashier_authorized"]),
         ]
         constraints = [
             models.UniqueConstraint(
@@ -248,7 +278,9 @@ class Receipt(BranchScopedModel):
     invoice = models.ForeignKey(
         "billing.Invoice", on_delete=models.CASCADE, related_name="receipts"
     )
-    patient = models.ForeignKey("patients.Patient", on_delete=models.PROTECT)
+    patient = models.ForeignKey(
+        "patients.Patient", on_delete=models.PROTECT, null=True, blank=True
+    )
     amount_paid = models.DecimalField(max_digits=12, decimal_places=2)
     total_invoice_amount = models.DecimalField(max_digits=12, decimal_places=2)
     balance_due = models.DecimalField(max_digits=12, decimal_places=2, default=0)

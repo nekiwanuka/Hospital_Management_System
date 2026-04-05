@@ -180,6 +180,13 @@ def _build_financial_statement(user, start, end):
     total_partial = invoices.filter(payment_status="partial").aggregate(
         total=Coalesce(Sum("total_amount"), Decimal("0.00"))
     )["total"]
+    total_post_payment = invoices.filter(payment_status="post_payment").aggregate(
+        total=Coalesce(Sum("total_amount"), Decimal("0.00"))
+    )["total"]
+    post_payment_collected = invoices.filter(payment_status="post_payment").aggregate(
+        total=Coalesce(Sum("amount_paid"), Decimal("0.00"))
+    )["total"]
+    post_payment_outstanding = total_post_payment - post_payment_collected
 
     rows = [
         {
@@ -197,6 +204,18 @@ def _build_financial_statement(user, start, end):
         {
             "metric": "Partial Receivables",
             "amount": total_partial,
+        },
+        {
+            "metric": "Credit (Post-Payment) Total",
+            "amount": total_post_payment,
+        },
+        {
+            "metric": "Credit (Post-Payment) Collected",
+            "amount": post_payment_collected,
+        },
+        {
+            "metric": "Credit (Post-Payment) Outstanding",
+            "amount": post_payment_outstanding,
         },
         {
             "metric": "Pharmacy Sales",

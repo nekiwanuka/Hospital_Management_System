@@ -217,6 +217,25 @@ def detail(request, pk):
 
     context["vital_sign_form"] = VitalSignForm()
 
+    # Invoices for this patient (post-payment & pending) -- nurse visibility
+    from apps.billing.models import Invoice
+
+    admission_invoices = Invoice.objects.filter(
+        branch=admission.branch,
+        patient=admission.patient,
+    )
+    if admission.visit:
+        admission_invoices = admission_invoices.filter(visit=admission.visit)
+    admission_invoices = admission_invoices.order_by("-created_at")
+    context["admission_invoices"] = admission_invoices
+    context["total_invoiced"] = admission_invoices.aggregate(t=Sum("total_amount"))[
+        "t"
+    ] or Decimal("0.00")
+    context["total_paid"] = admission_invoices.aggregate(t=Sum("amount_paid"))[
+        "t"
+    ] or Decimal("0.00")
+    context["total_credit"] = context["total_invoiced"] - context["total_paid"]
+
     return render(request, "admission/detail.html", context)
 
 
@@ -285,6 +304,30 @@ def nurse_station(request):
         else active_admissions
     )
 
+    # Build per-admission invoice summaries for nurse visibility
+    from apps.billing.models import Invoice
+
+    admission_invoice_map = {}
+    for adm in active_admissions:
+        inv_qs = Invoice.objects.filter(
+            branch=adm.branch,
+            patient=adm.patient,
+        )
+        if adm.visit:
+            inv_qs = inv_qs.filter(visit=adm.visit)
+        totals = inv_qs.aggregate(
+            total_invoiced=Sum("total_amount"),
+            total_paid=Sum("amount_paid"),
+        )
+        invoiced = totals["total_invoiced"] or Decimal("0.00")
+        paid = totals["total_paid"] or Decimal("0.00")
+        admission_invoice_map[adm.pk] = {
+            "total_invoiced": invoiced,
+            "total_paid": paid,
+            "outstanding": invoiced - paid,
+            "invoice_count": inv_qs.count(),
+        }
+
     recent_notes = branch_queryset_for_user(
         user,
         NursingNote.objects.select_related("nurse", "admission__patient")
@@ -301,6 +344,7 @@ def nurse_station(request):
             "recent_notes": recent_notes,
             "vital_sign_form": VitalSignForm(),
             "note_form": NursingNoteForm(),
+            "admission_invoice_map": admission_invoice_map,
         },
     )
 
@@ -604,7 +648,7 @@ def generate_daily_invoice(request, pk):
                 services="Ward daily charges",
                 total_amount=Decimal("0.00"),
                 payment_method="cash",
-                payment_status="pending",
+                payment_status="post_payment" if admission.is_active else "pending",
                 cashier=request.user,
             )
 
@@ -614,7 +658,7 @@ def generate_daily_invoice(request, pk):
                 invoice=invoice,
                 branch=admission.branch,
                 service_type="admission",
-                description=f"Ward charge ({charge.get_ward_category_display()}) – {charge.charge_date:%d %b %Y}",
+                description=f"Admission: Ward charge ({charge.get_ward_category_display()}) – {charge.charge_date:%d %b %Y}",
                 amount=charge.amount,
                 paid_amount=Decimal("0.00"),
                 payment_status="pending",

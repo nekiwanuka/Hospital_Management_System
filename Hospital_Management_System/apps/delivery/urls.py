@@ -12,4 +12,7 @@ urlpatterns = [
     path("<int:pk>/status/", views.update_status, name="update_status"),
     path("<int:pk>/discharge/", views.discharge, name="discharge"),
     path("<int:pk>/note/", views.add_note, name="add_note"),
+    path("<int:pk>/baby/add/", views.add_baby, name="add_baby"),
+    path("<int:pk>/baby/<int:baby_pk>/edit/", views.edit_baby, name="edit_baby"),
+    path("<int:pk>/baby/<int:baby_pk>/delete/", views.delete_baby, name="delete_baby"),
 ]

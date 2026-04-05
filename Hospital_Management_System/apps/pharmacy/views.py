@@ -9,7 +9,7 @@ from django.db.models import F, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from apps.billing.models import InvoiceLineItem, Receipt
+from apps.billing.models import Invoice, InvoiceLineItem, Receipt
 from apps.inventory.models import StockTransfer
 from apps.core.permissions import (
     branch_queryset_for_user,
@@ -28,6 +28,9 @@ from apps.pharmacy.models import (
     MedicalStoreRequest,
     Medicine,
     PharmacyRequest,
+    PharmacyShift,
+    WalkInSale,
+    WalkInSaleLine,
 )
 from apps.pharmacy.services import (
     available_medicines_queryset,
@@ -51,6 +54,7 @@ def _is_pharmacy_request_payment_cleared(pharmacy_request):
         source_model="pharmacy_request",
         source_id=pharmacy_request.pk,
         invoice__payment_status__in=["paid", "post_payment"],
+        cashier_authorized=True,
     ).exists()
 
 
@@ -70,6 +74,8 @@ def index(request):
         medicines_qs = medicines_qs.filter(
             Q(name__icontains=query)
             | Q(category__icontains=query)
+            | Q(strength__icontains=query)
+            | Q(dosage_form__icontains=query)
             | Q(manufacturer__icontains=query)
             | Q(inventory_item__generic_name__icontains=query)
         )
@@ -126,6 +132,19 @@ def index(request):
     for pr in pending_rx:
         pr.payment_cleared = _is_pharmacy_request_payment_cleared(pr)
 
+    # Pharmacy shift info
+    current_shift = None
+    if request.user.branch_id:
+        current_shift = _get_open_pharmacy_shift(request.user)
+
+    # Pending walk-in sales
+    pending_walkin_sales = branch_queryset_for_user(
+        request.user,
+        WalkInSale.objects.filter(status__in=["pending_payment", "cleared"])
+        .prefetch_related("lines__medicine")
+        .order_by("-created_at"),
+    )[:10]
+
     return render(
         request,
         "pharmacy/index.html",
@@ -138,6 +157,8 @@ def index(request):
             "query": query,
             "recent_store_requests": recent_store_requests,
             "pending_rx": pending_rx,
+            "current_shift": current_shift,
+            "pending_walkin_sales": pending_walkin_sales,
         },
     )
 
@@ -146,36 +167,98 @@ def index(request):
 @role_required("pharmacist", "system_admin", "director")
 @module_permission_required("pharmacy", "create")
 def create_medicine(request):
+    from apps.inventory.models import Item
+    from apps.pharmacy.services import sellable_quantity_for_item
+
+    # Build the available-items queryset (same logic as the old form)
+    available_qs = (
+        Item.objects.filter(
+            is_active=True,
+            is_department_stock=False,
+            batches__quantity_remaining__gt=0,
+            batches__exp_date__gte=timezone.localdate(),
+        )
+        .select_related("category", "brand")
+        .distinct()
+        .order_by("item_name")
+    )
+    if getattr(request.user, "branch_id", None):
+        available_qs = available_qs.filter(branch_id=request.user.branch_id)
+
+    available_items = list(available_qs[:200])
+    # Annotate sellable qty for template
+    for itm in available_items:
+        itm.sellable_qty = sellable_quantity_for_item(itm)
+
+    errors = []
     if request.method == "POST":
-        form = MedicalStoreRequestForm(request.POST, user=request.user)
-        if form.is_valid():
-            if not request.user.branch_id:
-                form.add_error(None, "Your user account has no branch assigned.")
+        if not request.user.branch_id:
+            errors.append("Your user account has no branch assigned.")
+        else:
+            item_ids = request.POST.getlist("item_ids")
+            quantities = request.POST.getlist("quantities")
+            notes = request.POST.get("notes", "").strip()
+
+            if not item_ids:
+                errors.append("Please add at least one item to the request.")
             else:
-                store_request = form.save(commit=False)
-                store_request.branch = request.user.branch
-                store_request.requested_by = request.user
-                store_request.requested_for = "pharmacy"
-                item = form.cleaned_data["item"]
-                store_request.item = item
-                store_request.medicine_name = item.item_name
-                store_request.category = item.category.name
-                store_request.save()
-                messages.success(
-                    request,
-                    "Request submitted to medical stores under inventory for handling.",
-                )
-                return redirect("pharmacy:index")
-    else:
-        form = MedicalStoreRequestForm(user=request.user)
+                created = 0
+                for raw_id, raw_qty in zip(item_ids, quantities):
+                    try:
+                        item_id = int(raw_id)
+                        qty = int(raw_qty)
+                    except (ValueError, TypeError):
+                        continue
+                    if qty <= 0:
+                        continue
+                    item = (
+                        Item.objects.filter(
+                            pk=item_id,
+                            is_active=True,
+                            is_department_stock=False,
+                        )
+                        .select_related("category")
+                        .first()
+                    )
+                    if not item:
+                        continue
+                    avail = sellable_quantity_for_item(item)
+                    if qty > avail:
+                        errors.append(
+                            f"{item.item_name}: requested {qty} but only {avail} available."
+                        )
+                        continue
+                    MedicalStoreRequest.objects.create(
+                        branch=request.user.branch,
+                        requested_by=request.user,
+                        requested_for="pharmacy",
+                        item=item,
+                        medicine_name=item.item_name,
+                        category=item.category.name if item.category else "",
+                        quantity_requested=qty,
+                        notes=notes,
+                    )
+                    created += 1
+
+                if created and not errors:
+                    messages.success(
+                        request,
+                        f"{created} request(s) submitted to medical stores.",
+                    )
+                    return redirect("pharmacy:index")
+                elif created and errors:
+                    messages.warning(
+                        request,
+                        f"{created} request(s) submitted. Some items had issues.",
+                    )
 
     return render(
         request,
         "pharmacy/medicine_form.html",
         {
-            "form": form,
+            "available_items": available_items,
+            "errors": errors,
             "page_title": "Request Medicine From Medical Stores",
-            "submit_label": "Submit Request",
             "section_label": "Pharmacy",
             "section_index_url": "pharmacy:index",
         },
@@ -268,7 +351,7 @@ def dispense(request):
     )
 
 
-# ── Walk-in multi-item dispensing ──────────────────────────────
+# ── Walk-in multi-item dispensing (creates pending sale for cashier) ─
 @login_required
 @role_required("pharmacist", "system_admin", "director")
 @module_permission_required("pharmacy", "create")
@@ -290,39 +373,78 @@ def dispense_walkin(request):
             else:
                 walk_in_name = customer_form.cleaned_data["walk_in_name"]
                 walk_in_phone = customer_form.cleaned_data["walk_in_phone"]
-                dispensed_count = 0
 
+                sale = WalkInSale.objects.create(
+                    branch=request.user.branch,
+                    customer_name=walk_in_name,
+                    customer_phone=walk_in_phone,
+                    created_by=request.user,
+                    status="pending_payment",
+                )
+                sale_lines = []
                 for line_form in line_formset:
                     medicine = line_form.cleaned_data.get("medicine")
                     quantity = line_form.cleaned_data.get("quantity")
                     if not medicine or not quantity:
                         continue
-
-                    record = DispenseRecord(
+                    sl = WalkInSaleLine.objects.create(
                         branch=request.user.branch,
-                        sale_type=DispenseRecord.SALE_TYPE_WALK_IN,
+                        sale=sale,
                         medicine=medicine,
                         quantity=quantity,
-                        walk_in_name=walk_in_name,
-                        walk_in_phone=walk_in_phone,
-                        dispensed_by=request.user,
                         unit_price=medicine.current_selling_price,
                     )
-                    try:
-                        record.save()
-                        dispensed_count += 1
-                    except Exception as exc:
-                        customer_form.add_error(
-                            None,
-                            f"Error dispensing {medicine.name}: {exc}",
+                    sale_lines.append(sl)
+
+                if sale_lines:
+                    sale.recalculate_total()
+
+                    # ── Create Invoice + line items for billing ──
+                    from apps.billing.views import _generate_invoice_number
+
+                    branch = request.user.branch
+                    invoice = Invoice.objects.create(
+                        branch=branch,
+                        invoice_number=_generate_invoice_number(branch),
+                        patient=None,
+                        walk_in_customer_name=walk_in_name,
+                        walk_in_customer_phone=walk_in_phone,
+                        services="\n".join(
+                            f"{sl.medicine.name} x{sl.quantity} - {sl.line_total}"
+                            for sl in sale_lines
+                        ),
+                        total_amount=sale.total_amount,
+                        payment_method="cash",
+                        payment_status="pending",
+                        cashier=request.user,
+                    )
+                    for sl in sale_lines:
+                        InvoiceLineItem.objects.create(
+                            invoice=invoice,
+                            branch=branch,
+                            service_type="pharmacy",
+                            description=f"{sl.medicine.name} x{sl.quantity} (Walk-In)",
+                            amount=sl.line_total,
+                            paid_amount=Decimal("0.00"),
+                            payment_status="pending",
+                            unit_cost=Decimal("0.00"),
+                            total_cost=Decimal("0.00"),
+                            profit_amount=sl.line_total,
+                            source_model="walkin_sale_line",
+                            source_id=sl.pk,
                         )
 
-                if dispensed_count and not customer_form.errors:
+                    sale.invoice = invoice
+                    sale.save(update_fields=["total_amount", "invoice", "updated_at"])
                     messages.success(
                         request,
-                        f"{dispensed_count} medicine(s) dispensed to {walk_in_name}.",
+                        f"Walk-in sale created for {walk_in_name} ({len(sale_lines)} item(s)). "
+                        f"Invoice {invoice.invoice_number} sent to billing for payment.",
                     )
-                    return redirect("pharmacy:prescriptions")
+                    return redirect("pharmacy:pending_walkins")
+                else:
+                    sale.delete()
+                    customer_form.add_error(None, "Add at least one medicine line.")
     else:
         customer_form = WalkInCustomerForm()
         line_formset = walkin_line_formset_factory(user=request.user, extra=1)
@@ -333,7 +455,7 @@ def dispense_walkin(request):
         {
             "customer_form": customer_form,
             "line_formset": line_formset,
-            "page_title": "Walk-In Dispensing",
+            "page_title": "Walk-In Sale — Send to Cashier",
         },
     )
 
@@ -671,5 +793,265 @@ def pharmacy_transfer_report(request):
                 "total_cost_value": summary["total_cost_value"] or Decimal("0.00"),
                 "total_retail_value": summary["total_retail_value"] or Decimal("0.00"),
             },
+        },
+    )
+
+
+# ── Pending walk-in sales (pharmacy view — dispense only) ─────
+@login_required
+@role_required("pharmacist", "system_admin", "director")
+@module_permission_required("pharmacy", "view")
+def pending_walkins(request):
+    queryset = branch_queryset_for_user(
+        request.user,
+        WalkInSale.objects.select_related("invoice")
+        .prefetch_related("lines__medicine")
+        .filter(status__in=["pending_payment", "cleared"])
+        .order_by("-created_at"),
+    )
+    return render(request, "pharmacy/pending_walkins.html", {"sales": queryset})
+
+
+@login_required
+@role_required("pharmacist", "system_admin", "director")
+@module_permission_required("pharmacy", "create")
+def dispense_walkin_cleared(request, sale_pk):
+    """Dispense medicines for a walk-in sale whose invoice has been paid."""
+    sale = get_object_or_404(WalkInSale, pk=sale_pk)
+    scoped = branch_queryset_for_user(
+        request.user, WalkInSale.objects.filter(pk=sale_pk)
+    )
+    if not scoped.exists():
+        from django.http import Http404
+
+        raise Http404("Walk-in sale not found")
+
+    # Check that the invoice is paid
+    if not sale.invoice or sale.invoice.payment_status not in ("paid", "post_payment"):
+        messages.error(
+            request,
+            "Payment has not been completed for this sale. The invoice must be paid before dispensing.",
+        )
+        return redirect("pharmacy:pending_walkins")
+
+    if sale.status == "dispensed":
+        messages.info(request, "This sale has already been dispensed.")
+        return redirect("pharmacy:pending_walkins")
+
+    if request.method == "POST":
+        if request.user.branch_id:
+            sync_branch_medicine_catalog(request.user.branch)
+
+        dispensed_count = 0
+        errors = []
+        for line in sale.lines.select_related("medicine"):
+            record = DispenseRecord(
+                branch=sale.branch,
+                sale_type=DispenseRecord.SALE_TYPE_WALK_IN,
+                medicine=line.medicine,
+                quantity=line.quantity,
+                walk_in_name=sale.customer_name,
+                walk_in_phone=sale.customer_phone,
+                dispensed_by=request.user,
+                unit_price=line.unit_price,
+            )
+            try:
+                record.save()
+                dispensed_count += 1
+
+                # Update the matching invoice line item with actual cost/profit
+                for inv_line in InvoiceLineItem.objects.filter(
+                    source_model="walkin_sale_line",
+                    source_id=line.pk,
+                ):
+                    inv_line.unit_cost = record.unit_cost_snapshot
+                    inv_line.total_cost = record.total_cost_snapshot
+                    inv_line.profit_amount = (
+                        inv_line.amount - record.total_cost_snapshot
+                    )
+                    inv_line.stock_deducted_at = timezone.now()
+                    inv_line.save(
+                        update_fields=[
+                            "unit_cost",
+                            "total_cost",
+                            "profit_amount",
+                            "stock_deducted_at",
+                            "updated_at",
+                        ]
+                    )
+            except Exception as exc:
+                errors.append(f"{line.medicine.name}: {exc}")
+
+        if dispensed_count:
+            sale.status = "dispensed"
+            sale.dispensed_at = timezone.now()
+            sale.cleared_by = sale.invoice.cashier if sale.invoice else None
+            sale.cleared_at = sale.cleared_at or timezone.now()
+            sale.save(
+                update_fields=[
+                    "status",
+                    "dispensed_at",
+                    "cleared_by",
+                    "cleared_at",
+                    "updated_at",
+                ]
+            )
+            messages.success(
+                request,
+                f"{dispensed_count} medicine(s) dispensed to {sale.customer_name}.",
+            )
+        for err in errors:
+            messages.error(request, err)
+        return redirect("pharmacy:pending_walkins")
+
+    return redirect("pharmacy:pending_walkins")
+
+
+# ── Pharmacy Shift Management ─────────────────────────────────
+def _get_open_pharmacy_shift(user):
+    return PharmacyShift.objects.filter(
+        branch=user.branch,
+        opened_by=user,
+        status="open",
+    ).first()
+
+
+@login_required
+@role_required("pharmacist", "system_admin", "director")
+@module_permission_required("pharmacy", "create")
+def open_shift(request):
+    existing = _get_open_pharmacy_shift(request.user)
+    if existing:
+        messages.info(request, "You already have an open pharmacy shift.")
+        return redirect("pharmacy:index")
+
+    if request.method == "POST":
+        if not request.user.branch_id:
+            messages.error(request, "Your account has no branch assigned.")
+            return redirect("pharmacy:index")
+        PharmacyShift.objects.create(
+            branch=request.user.branch,
+            opened_by=request.user,
+            status="open",
+        )
+        messages.success(request, "Pharmacy shift opened.")
+        return redirect("pharmacy:index")
+
+    return render(request, "pharmacy/open_shift.html")
+
+
+@login_required
+@role_required("pharmacist", "system_admin", "director")
+@module_permission_required("pharmacy", "update")
+def close_shift(request, shift_pk):
+    shift = get_object_or_404(PharmacyShift, pk=shift_pk)
+    scoped = branch_queryset_for_user(
+        request.user, PharmacyShift.objects.filter(pk=shift_pk)
+    )
+    if not scoped.exists():
+        from django.http import Http404
+
+        raise Http404("Shift not found")
+
+    if shift.status != "open":
+        messages.info(request, "This shift is already closed.")
+        return redirect("pharmacy:shift_report", shift_pk=shift.pk)
+
+    if request.method == "POST":
+        notes = (request.POST.get("notes") or "").strip()
+        shift.status = "closed"
+        shift.closed_at = timezone.now()
+        shift.closed_by = request.user
+        shift.notes = notes
+        shift.save(
+            update_fields=[
+                "status",
+                "closed_at",
+                "closed_by",
+                "notes",
+                "updated_at",
+            ]
+        )
+        messages.success(request, "Pharmacy shift closed. View the shift report below.")
+        return redirect("pharmacy:shift_report", shift_pk=shift.pk)
+
+    # Show confirmation with summary
+    dispenses = shift.get_dispenses()
+    return render(
+        request,
+        "pharmacy/close_shift.html",
+        {
+            "shift": shift,
+            "dispense_count": dispenses.count(),
+        },
+    )
+
+
+@login_required
+@role_required("pharmacist", "system_admin", "director")
+@module_permission_required("pharmacy", "view")
+def shift_report(request, shift_pk):
+    shift = get_object_or_404(PharmacyShift, pk=shift_pk)
+    scoped = branch_queryset_for_user(
+        request.user, PharmacyShift.objects.filter(pk=shift_pk)
+    )
+    if not scoped.exists():
+        from django.http import Http404
+
+        raise Http404("Shift not found")
+
+    dispenses = shift.get_dispenses().order_by("dispensed_at")
+
+    # Summary stats
+    total_dispenses = dispenses.count()
+    walkin_count = dispenses.filter(sale_type=DispenseRecord.SALE_TYPE_WALK_IN).count()
+    prescription_count = dispenses.filter(
+        sale_type=DispenseRecord.SALE_TYPE_PRESCRIPTION
+    ).count()
+
+    agg = dispenses.aggregate(
+        total_revenue=Sum(
+            F("unit_price") * F("quantity"), output_field=models.DecimalField()
+        ),
+        total_cost=Sum("total_cost_snapshot"),
+        total_profit=Sum("profit_amount"),
+        total_items=Sum("quantity"),
+    )
+
+    return render(
+        request,
+        "pharmacy/shift_report.html",
+        {
+            "shift": shift,
+            "dispenses": dispenses,
+            "total_dispenses": total_dispenses,
+            "walkin_count": walkin_count,
+            "prescription_count": prescription_count,
+            "total_revenue": agg["total_revenue"] or Decimal("0.00"),
+            "total_cost": agg["total_cost"] or Decimal("0.00"),
+            "total_profit": agg["total_profit"] or Decimal("0.00"),
+            "total_items": agg["total_items"] or 0,
+        },
+    )
+
+
+@login_required
+@role_required("pharmacist", "system_admin", "director")
+@module_permission_required("pharmacy", "view")
+def shift_history(request):
+    queryset = branch_queryset_for_user(
+        request.user,
+        PharmacyShift.objects.select_related("opened_by", "closed_by").order_by(
+            "-opened_at"
+        ),
+    )
+    paginator = Paginator(queryset, 20)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    return render(
+        request,
+        "pharmacy/shift_history.html",
+        {
+            "shifts": page_obj.object_list,
+            "page_obj": page_obj,
         },
     )

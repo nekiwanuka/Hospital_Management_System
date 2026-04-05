@@ -25,6 +25,7 @@ def system_context(request):
     user_modules = {}
     can_view_revenue = False
     pending_access_requests_count = 0
+    active_shift = None
 
     user = getattr(request, "user", None)
     if user and user.is_authenticated:
@@ -39,6 +40,14 @@ def system_context(request):
             or getattr(user, "role", "") in ("system_admin", "director")
             or getattr(user, "can_view_revenue", False)
         )
+
+        # Active shift
+        try:
+            from apps.accounts.models import Shift
+
+            active_shift = Shift.objects.filter(user=user, status="open").first()
+        except Exception:
+            pass
 
         # Pending permission access requests (admin/director only)
         if getattr(user, "role", "") in ("system_admin", "director") or getattr(
@@ -65,4 +74,5 @@ def system_context(request):
         "user_modules": user_modules,
         "can_view_revenue": can_view_revenue,
         "pending_access_requests_count": pending_access_requests_count,
+        "active_shift": active_shift,
     }

@@ -54,7 +54,7 @@
   <!-- Baby & Outcome Info -->
   <div class="col-md-6">
     <div class="cl-card shadow-sm h-100">
-      <div class="cl-card-header bg-light"><h2 class="cl-card-title mb-0"><i class="bi bi-emoji-smile text-success me-2"></i>Delivery Outcome</h2></div>
+      <div class="cl-card-header bg-light"><h2 class="cl-card-title mb-0"><i class="bi bi-clipboard2-check text-info me-2"></i>Delivery Outcome (Mother)</h2></div>
       <div class="cl-card-body">
         {% if record.status in 'delivered,post_delivery,discharged' %}
         <dl class="row mb-0">
@@ -63,22 +63,6 @@
 
           <dt class="col-sm-5 text-muted">Delivery Time</dt>
           <dd class="col-sm-7">{{ record.delivery_datetime|date:"d M Y H:i"|default:"—" }}</dd>
-
-          <dt class="col-sm-5 text-muted">Baby Gender</dt>
-          <dd class="col-sm-7">{{ record.get_baby_gender_display|default:"—" }}</dd>
-
-          <dt class="col-sm-5 text-muted">Baby Weight</dt>
-          <dd class="col-sm-7">{{ record.baby_weight_kg|default:"—" }} kg</dd>
-
-          <dt class="col-sm-5 text-muted">APGAR (1/5 min)</dt>
-          <dd class="col-sm-7">{{ record.apgar_score_1min|default:"—" }} / {{ record.apgar_score_5min|default:"—" }}</dd>
-
-          <dt class="col-sm-5 text-muted">Outcome</dt>
-          <dd class="col-sm-7">
-            <span class="badge bg-{% if record.outcome == 'live_birth' %}success{% elif record.outcome == 'still_birth' %}danger{% else %}dark{% endif %}">
-              {{ record.get_outcome_display|default:"—" }}
-            </span>
-          </dd>
 
           {% if record.complications %}
           <dt class="col-sm-5 text-muted">Complications</dt>
@@ -90,6 +74,106 @@
         {% endif %}
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Baby Records Section -->
+<div class="cl-card shadow-sm mb-4">
+  <div class="cl-card-header bg-light d-flex justify-content-between align-items-center">
+    <h2 class="cl-card-title mb-0"><i class="bi bi-emoji-smile text-success me-2"></i>Baby Records</h2>
+    <span class="badge bg-primary">{{ babies|length }} {% if babies|length == 1 %}baby{% else %}babies{% endif %}</span>
+  </div>
+  <div class="cl-card-body">
+    {% if babies %}
+    <div class="row g-3 mb-3">
+      {% for baby in babies %}
+      <div class="col-md-6">
+        <div class="card border h-100">
+          <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <strong><i class="bi bi-person-heart me-1 text-danger"></i>{{ baby.baby_name|default:"Baby" }} #{{ baby.birth_order }}</strong>
+            {% if record.status != 'discharged' %}
+            <div>
+              <a href="{% url 'delivery:edit_baby' record.pk baby.pk %}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+              <form method="post" action="{% url 'delivery:delete_baby' record.pk baby.pk %}" class="d-inline" onsubmit="return confirm('Remove this baby record?')">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-outline-danger" title="Remove"><i class="bi bi-trash"></i></button>
+              </form>
+            </div>
+            {% endif %}
+          </div>
+          <div class="card-body py-2">
+            <dl class="row mb-0 small">
+              <dt class="col-5 text-muted">Gender</dt>
+              <dd class="col-7">{{ baby.get_gender_display|default:"—" }}</dd>
+
+              <dt class="col-5 text-muted">Weight</dt>
+              <dd class="col-7">{% if baby.weight_kg %}{{ baby.weight_kg }} kg{% else %}—{% endif %}</dd>
+
+              <dt class="col-5 text-muted">APGAR (1/5 min)</dt>
+              <dd class="col-7">{{ baby.apgar_score_1min|default:"—" }} / {{ baby.apgar_score_5min|default:"—" }}</dd>
+
+              <dt class="col-5 text-muted">Outcome</dt>
+              <dd class="col-7">
+                <span class="badge bg-{% if baby.outcome == 'live_birth' %}success{% elif baby.outcome == 'still_birth' %}danger{% else %}dark{% endif %}">
+                  {{ baby.get_outcome_display|default:"—" }}
+                </span>
+              </dd>
+
+              {% if baby.head_circumference_cm %}
+              <dt class="col-5 text-muted">Head Circ.</dt>
+              <dd class="col-7">{{ baby.head_circumference_cm }} cm</dd>
+              {% endif %}
+
+              {% if baby.length_cm %}
+              <dt class="col-5 text-muted">Length</dt>
+              <dd class="col-7">{{ baby.length_cm }} cm</dd>
+              {% endif %}
+
+              {% if baby.resuscitation_needed %}
+              <dt class="col-5 text-muted">Resuscitation</dt>
+              <dd class="col-7"><span class="badge bg-warning text-dark">Yes</span></dd>
+              {% endif %}
+
+              {% if baby.notes %}
+              <dt class="col-5 text-muted">Notes</dt>
+              <dd class="col-7">{{ baby.notes }}</dd>
+              {% endif %}
+            </dl>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">No baby records yet.</p>
+    {% endif %}
+
+    <!-- Add Baby Form -->
+    {% if record.status != 'discharged' %}
+    <hr>
+    <h6 class="fw-semibold mb-3"><i class="bi bi-plus-circle me-1 text-primary"></i>Add Baby Record</h6>
+    <form method="post" action="{% url 'delivery:add_baby' record.pk %}">
+      {% csrf_token %}
+      <div class="row g-3">
+        {% for field in baby_form %}
+        <div class="col-md-4 {% if field.name == 'notes' %}col-md-12{% endif %}">
+          {% if field.field.widget.input_type == 'checkbox' %}
+          <div class="form-check mt-4">
+            {{ field }}
+            <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          </div>
+          {% else %}
+          <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+          {% endif %}
+          {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors.0 }}</div>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      <button type="submit" class="btn btn-success mt-3"><i class="bi bi-plus-lg me-1"></i>Add Baby</button>
+    </form>
+    {% endif %}
   </div>
 </div>
 
@@ -164,6 +248,59 @@
 
   {% endif %}
 </div>
+
+<!-- Billing / Invoice Summary -->
+{% if delivery_invoices %}
+<div class="cl-card shadow-sm mb-4">
+  <div class="cl-card-header bg-light d-flex justify-content-between align-items-center">
+    <h2 class="cl-card-title mb-0"><i class="bi bi-receipt text-info me-2"></i>Invoices &amp; Billing</h2>
+    <div>
+      {% if total_credit > 0 %}
+      <span class="badge bg-warning text-dark">Credit: {{ total_credit|commas }} UGX</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="cl-card-body">
+    <div class="row g-3 mb-3">
+      <div class="col-md-4 text-center">
+        <h5 class="mb-0 text-primary">{{ total_invoiced|commas }}</h5>
+        <small class="text-muted">Total Invoiced (UGX)</small>
+      </div>
+      <div class="col-md-4 text-center">
+        <h5 class="mb-0 text-success">{{ total_paid|commas }}</h5>
+        <small class="text-muted">Paid (UGX)</small>
+      </div>
+      <div class="col-md-4 text-center">
+        <h5 class="mb-0 {% if total_credit > 0 %}text-danger{% else %}text-success{% endif %}">{{ total_credit|commas }}</h5>
+        <small class="text-muted">Outstanding Credit (UGX)</small>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light">
+          <tr><th>Invoice #</th><th>Date</th><th class="text-end">Total</th><th class="text-end">Paid</th><th>Status</th><th class="text-end">Action</th></tr>
+        </thead>
+        <tbody>
+          {% for inv in delivery_invoices %}
+          <tr>
+            <td>{{ inv.invoice_number }}</td>
+            <td>{{ inv.created_at|date:"d M Y H:i" }}</td>
+            <td class="text-end">{{ inv.total_amount|commas }}</td>
+            <td class="text-end">{{ inv.amount_paid|commas }}</td>
+            <td>
+              <span class="badge bg-{% if inv.payment_status == 'paid' %}success{% elif inv.payment_status == 'post_payment' %}info{% elif inv.payment_status == 'partial' %}warning text-dark{% else %}secondary{% endif %}">
+                {{ inv.get_payment_status_display }}
+              </span>
+            </td>
+            <td class="text-end"><a href="{% url 'billing:detail' inv.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 <!-- Progress Notes -->
 <div class="cl-card shadow-sm mb-4">

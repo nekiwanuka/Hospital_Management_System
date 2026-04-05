@@ -17,3 +17,17 @@ def ugx(value):
         return f"UGX {value}"
 
     return f"UGX {amount:,.2f}"
+
+
+@register.filter(name="commas")
+def commas(value):
+    """Add thousand separators: 20000 → 20,000."""
+    if value in (None, ""):
+        return "0"
+    try:
+        amount = Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return str(value)
+    if amount == amount.to_integral_value():
+        return f"{int(amount):,}"
+    return f"{amount:,.2f}"

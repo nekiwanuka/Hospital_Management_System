@@ -4,7 +4,10 @@
 
 {% block content %}
 <div class="cl-page-header">
-  <div><h1>Director Dashboard</h1><p>System-wide overview and analytics</p></div>
+  <div>
+    <h1><i class="bi bi-speedometer2 me-2" style="color:#4f46e5;"></i>Director Dashboard</h1>
+    <p>System-wide overview and analytics</p>
+  </div>
   <div class="d-flex gap-2">
     {% if available_branches %}
     <form method="get" class="d-flex gap-2">
@@ -24,7 +27,9 @@
   {% for key, val in metrics.items %}
   <div class="col-6 col-md-3">
     <div class="cl-stat">
-      <div class="cl-stat-icon primary"><i class="bi bi-graph-up"></i></div>
+      <div class="cl-stat-icon {% cycle 'primary' 'success' 'info' 'danger' %}">
+        <i class="bi {% cycle 'bi-people-fill' 'bi-clipboard2-pulse' 'bi-cash-stack' 'bi-graph-up-arrow' %}"></i>
+      </div>
       <div><div class="cl-stat-label">{{ key }}</div><div class="cl-stat-value">{{ val }}</div></div>
     </div>
   </div>
@@ -33,15 +38,17 @@
 {% endif %}
 
 {% if branch_rows %}
-<div class="cl-card">
-  <div class="cl-card-header"><h2 class="cl-card-title">Branch Performance</h2></div>
+<div class="cl-card mb-4">
+  <div class="cl-card-header">
+    <h2 class="cl-card-title"><i class="bi bi-building me-2" style="color:#4f46e5;"></i>Branch Performance</h2>
+  </div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
-      <table class="table">
-        <thead><tr><th>Branch</th><th>Patients</th><th>Visits</th><th>Revenue</th></tr></thead>
+      <table class="table table-hover mb-0">
+        <thead class="table-light"><tr><th>Branch</th><th>Patients</th><th>Visits</th><th class="text-end">Revenue</th></tr></thead>
         <tbody>
           {% for row in branch_rows %}
-          <tr><td>{{ row.branch }}</td><td>{{ row.patients }}</td><td>{{ row.visits }}</td><td>{{ row.revenue }}</td></tr>
+          <tr><td><strong>{{ row.branch }}</strong></td><td>{{ row.patients }}</td><td>{{ row.visits }}</td><td class="text-end fw-semibold">{{ row.revenue }}</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -52,14 +59,16 @@
 
 {% if recent_audits %}
 <div class="cl-card">
-  <div class="cl-card-header"><h2 class="cl-card-title">Recent Activity</h2></div>
+  <div class="cl-card-header">
+    <h2 class="cl-card-title"><i class="bi bi-clock-history me-2" style="color:#0891b2;"></i>Recent Activity</h2>
+  </div>
   <div class="cl-card-body p-0">
     <div class="table-responsive">
-      <table class="table">
-        <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
+      <table class="table table-hover mb-0">
+        <thead class="table-light"><tr><th>Time</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
         <tbody>
           {% for a in recent_audits %}
-          <tr><td>{{ a.created_at|timesince }} ago</td><td>{{ a.user|default:"System" }}</td><td>{{ a.action }}</td><td class="text-muted">{{ a.details|truncatechars:80 }}</td></tr>
+          <tr><td><small class="text-muted">{{ a.created_at|timesince }} ago</small></td><td>{{ a.user|default:"System" }}</td><td><span class="badge bg-primary bg-opacity-10 text-primary">{{ a.action }}</span></td><td class="text-muted">{{ a.details|truncatechars:80 }}</td></tr>
           {% endfor %}
         </tbody>
       </table>

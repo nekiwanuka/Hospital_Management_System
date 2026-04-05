@@ -8,6 +8,7 @@ from apps.core.permissions import (
     module_permission_required,
     role_required,
 )
+from apps.patients.models import PatientDocument
 from apps.triage.forms import TriageEditForm, TriageRecordForm
 from apps.triage.models import TriageRecord
 from apps.triage.services import get_triage_eligible_visits
@@ -161,5 +162,8 @@ def edit(request, pk):
             "record": record,
             "page_title": f"Edit Triage — {record.patient}",
             "submit_label": "Save Changes",
+            "patient_documents": PatientDocument.objects.filter(
+                patient=record.patient
+            ).order_by("-created_at"),
         },
     )

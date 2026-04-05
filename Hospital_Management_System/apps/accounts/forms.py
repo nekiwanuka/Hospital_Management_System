@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 
-from apps.accounts.models import User
+from apps.accounts.models import User, ShiftSecretCode
 from apps.permissions.models import UserModulePermission
 
 
@@ -159,3 +159,71 @@ class UserCreateForm(UserCreationForm):
             instance.save()
             _sync_module_permissions(instance, instance.allowed_modules)
         return instance
+
+
+class OpenShiftForm(forms.Form):
+    """Form that staff fill out to open a shift."""
+
+    full_name = forms.CharField(
+        max_length=150,
+        widget=forms.TextInput(
+            attrs={"class": "form-control", "placeholder": "Your full name"}
+        ),
+        label="Full Name",
+    )
+    title = forms.CharField(
+        max_length=100,
+        widget=forms.TextInput(
+            attrs={"class": "form-control", "placeholder": "e.g. Pharmacist, Cashier"}
+        ),
+        label="Title / Role",
+    )
+    secret_code = forms.CharField(
+        max_length=8,
+        widget=forms.PasswordInput(
+            attrs={"class": "form-control", "placeholder": "Enter your secret code"}
+        ),
+        label="Secret Code",
+    )
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+    def clean_secret_code(self):
+        code = self.cleaned_data["secret_code"].strip().upper()
+        try:
+            secret = ShiftSecretCode.objects.get(user=self.user)
+        except ShiftSecretCode.DoesNotExist:
+            raise forms.ValidationError(
+                "No secret code has been assigned to your account. Contact your system administrator."
+            )
+        if secret.code != code:
+            raise forms.ValidationError("Invalid secret code.")
+        return code
+
+
+class CloseShiftForm(forms.Form):
+    """Optional notes when closing a shift."""
+
+    notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 3,
+                "placeholder": "Shift handover notes (optional)",
+            }
+        ),
+        label="Handover Notes",
+    )
+
+
+class AssignSecretCodeForm(forms.Form):
+    """Admin form to assign or regenerate a secret code for a user."""
+
+    user = forms.ModelChoiceField(
+        queryset=User.objects.filter(is_active=True).order_by("username"),
+        widget=forms.Select(attrs={"class": "form-select"}),
+        label="Staff Member",
+    )

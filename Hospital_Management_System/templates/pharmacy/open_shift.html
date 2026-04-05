@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Open Pharmacy Shift — {{ clinic_name }}{% endblock %}
+{% block header_title %}Open Pharmacy Shift{% endblock %}
+
+{% block content %}
+<div class="cl-page-header d-flex flex-wrap align-items-center justify-content-between mb-4">
+  <h1><i class="bi bi-play-circle me-2 text-success"></i>Open Pharmacy Shift</h1>
+  <a href="{% url 'pharmacy:index' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back</a>
+</div>
+
+<div class="cl-card shadow-sm" style="max-width: 500px;">
+  <div class="cl-card-body">
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+    <p>Opening a shift will track all your dispensing activity until you close it.</p>
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-success"><i class="bi bi-play-fill me-1"></i>Open Shift</button>
+      <a href="{% url 'pharmacy:index' %}" class="btn btn-outline-secondary ms-2">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

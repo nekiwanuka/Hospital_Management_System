@@ -1,8 +1,11 @@
+import secrets
+
 from django.contrib.auth.models import Group
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.utils import OperationalError, ProgrammingError
+from django.utils import timezone
 
 
 class User(AbstractUser):
@@ -219,3 +222,80 @@ class User(AbstractUser):
             self._sync_role_group()
         except (OperationalError, ProgrammingError):
             pass
+
+
+class ShiftSecretCode(models.Model):
+    """
+    A secret code assigned by the system admin to each user.
+    The user must enter this code when opening a shift.
+    """
+
+    user = models.OneToOneField(
+        "accounts.User",
+        on_delete=models.CASCADE,
+        related_name="shift_secret",
+    )
+    code = models.CharField(max_length=8)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Shift Secret Code"
+        verbose_name_plural = "Shift Secret Codes"
+
+    def __str__(self):
+        return f"Secret code for {self.user.get_full_name() or self.user.username}"
+
+    @staticmethod
+    def generate_code():
+        """Generate a random 6-character alphanumeric code."""
+        return secrets.token_hex(3).upper()  # 6 hex chars
+
+
+class Shift(models.Model):
+    """
+    Tracks when a user opens and closes their work shift.
+    A user must have an open shift to access the system.
+    """
+
+    STATUS_CHOICES = [
+        ("open", "Open"),
+        ("closed", "Closed"),
+    ]
+
+    user = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.CASCADE,
+        related_name="shifts",
+    )
+    branch = models.ForeignKey(
+        "branches.Branch",
+        on_delete=models.PROTECT,
+    )
+    opened_at = models.DateTimeField(default=timezone.now)
+    closed_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="open")
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-opened_at"]
+        indexes = [
+            models.Index(fields=["user", "status"]),
+            models.Index(fields=["branch", "opened_at"]),
+        ]
+
+    def __str__(self):
+        return f"Shift #{self.pk} — {self.user.username} ({self.status})"
+
+    @property
+    def duration(self):
+        end = self.closed_at or timezone.now()
+        return end - self.opened_at
+
+    @property
+    def duration_display(self):
+        d = self.duration
+        total_seconds = int(d.total_seconds())
+        hours, remainder = divmod(total_seconds, 3600)
+        minutes, _ = divmod(remainder, 60)
+        return f"{hours}h {minutes}m"

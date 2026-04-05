@@ -31,9 +31,9 @@
   {% if user_modules.patients %}
   <div class="col-6 col-md-4 col-lg-3 col-xl-2">
     <a href="{% url 'patients:index' %}" class="text-decoration-none">
-      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #0d6efd !important;">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card">
         <div class="card-body py-4">
-          <div class="mb-2"><i class="bi bi-people-fill fs-1 text-primary"></i></div>
+          <div class="dash-icon" style="--dash-clr:#4f46e5;"><i class="bi bi-people-fill"></i></div>
           <h6 class="card-title fw-bold mb-1">Patients</h6>
           <small class="text-muted">Register &amp; manage</small>
         </div>
@@ -45,9 +45,9 @@
   {% if user_modules.visits %}
   <div class="col-6 col-md-4 col-lg-3 col-xl-2">
     <a href="{% url 'visits:index' %}" class="text-decoration-none">
-      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #0dcaf0 !important;">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card">
         <div class="card-body py-4">
-          <div class="mb-2"><i class="bi bi-clipboard2-pulse-fill fs-1 text-info"></i></div>
+          <div class="dash-icon" style="--dash-clr:#0891b2;"><i class="bi bi-clipboard2-pulse-fill"></i></div>
           <h6 class="card-title fw-bold mb-1">Visits</h6>
           <small class="text-muted">Patient queue</small>
         </div>
@@ -59,9 +59,9 @@
   {% if user_modules.triage %}
   <div class="col-6 col-md-4 col-lg-3 col-xl-2">
     <a href="{% url 'triage:index' %}" class="text-decoration-none">
-      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #6f42c1 !important;">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card">
         <div class="card-body py-4">
-          <div class="mb-2"><i class="bi bi-heart-pulse-fill fs-1" style="color:#6f42c1;"></i></div>
+          <div class="dash-icon" style="--dash-clr:#7c3aed;"><i class="bi bi-heart-pulse-fill"></i></div>
           <h6 class="card-title fw-bold mb-1">Triage</h6>
           <small class="text-muted">Vitals &amp; screening</small>
         </div>
@@ -73,9 +73,9 @@
   {% if user_modules.consultation %}
   <div class="col-6 col-md-4 col-lg-3 col-xl-2">
     <a href="{% url 'consultation:index' %}" class="text-decoration-none">
-      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #20c997 !important;">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card">
         <div class="card-body py-4">
-          <div class="mb-2"><i class="bi bi-stethoscope fs-1" style="color:#20c997;"></i></div>
+          <div class="dash-icon" style="--dash-clr:#059669;"><i class="bi bi-stethoscope"></i></div>
           <h6 class="card-title fw-bold mb-1">Consultation</h6>
           <small class="text-muted">Doctor visits</small>
         </div>
@@ -87,9 +87,9 @@
   {% if user_modules.billing %}
   <div class="col-6 col-md-4 col-lg-3 col-xl-2">
     <a href="{% url 'billing:index' %}" class="text-decoration-none">
-      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #198754 !important;">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card">
         <div class="card-body py-4">
-          <div class="mb-2"><i class="bi bi-cash-stack fs-1 text-success"></i></div>
+          <div class="dash-icon" style="--dash-clr:#16a34a;"><i class="bi bi-cash-stack"></i></div>
           <h6 class="card-title fw-bold mb-1">Billing</h6>
           <small class="text-muted">Payments &amp; invoices</small>
         </div>
@@ -101,9 +101,9 @@
   {% if user_modules.laboratory %}
   <div class="col-6 col-md-4 col-lg-3 col-xl-2">
     <a href="{% url 'laboratory:index' %}" class="text-decoration-none">
-      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #ffc107 !important;">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card">
         <div class="card-body py-4">
-          <div class="mb-2"><i class="bi bi-droplet-fill fs-1 text-warning"></i></div>
+          <div class="dash-icon" style="--dash-clr:#d97706;"><i class="bi bi-droplet-fill"></i></div>
           <h6 class="card-title fw-bold mb-1">Laboratory</h6>
           <small class="text-muted">Tests &amp; results</small>
         </div>
@@ -115,9 +115,9 @@
   {% if user_modules.radiology %}
   <div class="col-6 col-md-4 col-lg-3 col-xl-2">
     <a href="{% url 'radiology:index' %}" class="text-decoration-none">
-      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #fd7e14 !important;">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card">
         <div class="card-body py-4">
-          <div class="mb-2"><i class="bi bi-radioactive fs-1" style="color:#fd7e14;"></i></div>
+          <div class="dash-icon" style="--dash-clr:#ea580c;"><i class="bi bi-radioactive"></i></div>
           <h6 class="card-title fw-bold mb-1">Radiology</h6>
           <small class="text-muted">Imaging &amp; scans</small>
         </div>
@@ -129,9 +129,9 @@
   {% if user_modules.pharmacy %}
   <div class="col-6 col-md-4 col-lg-3 col-xl-2">
     <a href="{% url 'pharmacy:index' %}" class="text-decoration-none">
-      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #d63384 !important;">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card">
         <div class="card-body py-4">
-          <div class="mb-2"><i class="bi bi-capsule fs-1" style="color:#d63384;"></i></div>
+          <div class="dash-icon" style="--dash-clr:#db2777;"><i class="bi bi-capsule"></i></div>
           <h6 class="card-title fw-bold mb-1">Pharmacy</h6>
           <small class="text-muted">Dispense medicines</small>
         </div>
@@ -143,9 +143,9 @@
   {% if user_modules.inventory %}
   <div class="col-6 col-md-4 col-lg-3 col-xl-2">
     <a href="{% url 'inventory:index' %}" class="text-decoration-none">
-      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #6c757d !important;">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card">
         <div class="card-body py-4">
-          <div class="mb-2"><i class="bi bi-box-seam-fill fs-1 text-secondary"></i></div>
+          <div class="dash-icon" style="--dash-clr:#64748b;"><i class="bi bi-box-seam-fill"></i></div>
           <h6 class="card-title fw-bold mb-1">Inventory</h6>
           <small class="text-muted">Stock &amp; supplies</small>
         </div>
@@ -157,9 +157,9 @@
   {% if user_modules.emergency %}
   <div class="col-6 col-md-4 col-lg-3 col-xl-2">
     <a href="{% url 'emergency:index' %}" class="text-decoration-none">
-      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #dc3545 !important;">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card">
         <div class="card-body py-4">
-          <div class="mb-2"><i class="bi bi-exclamation-triangle-fill fs-1 text-danger"></i></div>
+          <div class="dash-icon" style="--dash-clr:#dc2626;"><i class="bi bi-exclamation-triangle-fill"></i></div>
           <h6 class="card-title fw-bold mb-1">Emergency</h6>
           <small class="text-muted">Urgent cases</small>
         </div>
@@ -171,9 +171,9 @@
   {% if user_modules.admission %}
   <div class="col-6 col-md-4 col-lg-3 col-xl-2">
     <a href="{% url 'admission:index' %}" class="text-decoration-none">
-      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #0d6efd !important;">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card">
         <div class="card-body py-4">
-          <div class="mb-2"><i class="bi bi-building-fill fs-1 text-primary"></i></div>
+          <div class="dash-icon" style="--dash-clr:#2563eb;"><i class="bi bi-building-fill"></i></div>
           <h6 class="card-title fw-bold mb-1">Admission</h6>
           <small class="text-muted">Inpatient wards</small>
         </div>
@@ -185,9 +185,9 @@
   {% if user_modules.referrals %}
   <div class="col-6 col-md-4 col-lg-3 col-xl-2">
     <a href="{% url 'referrals:index' %}" class="text-decoration-none">
-      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #0dcaf0 !important;">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card">
         <div class="card-body py-4">
-          <div class="mb-2"><i class="bi bi-send-fill fs-1 text-info"></i></div>
+          <div class="dash-icon" style="--dash-clr:#0284c7;"><i class="bi bi-send-fill"></i></div>
           <h6 class="card-title fw-bold mb-1">Referrals</h6>
           <small class="text-muted">Transfer patients</small>
         </div>
@@ -199,9 +199,9 @@
   {% if user_modules.reports %}
   <div class="col-6 col-md-4 col-lg-3 col-xl-2">
     <a href="{% url 'reports:index' %}" class="text-decoration-none">
-      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #6610f2 !important;">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card">
         <div class="card-body py-4">
-          <div class="mb-2"><i class="bi bi-graph-up-arrow fs-1" style="color:#6610f2;"></i></div>
+          <div class="dash-icon" style="--dash-clr:#7c3aed;"><i class="bi bi-graph-up-arrow"></i></div>
           <h6 class="card-title fw-bold mb-1">Reports</h6>
           <small class="text-muted">Analytics &amp; stats</small>
         </div>
@@ -218,9 +218,9 @@
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-4 col-lg-3 col-xl-2">
     <a href="{% url 'billing:invoices' %}" class="text-decoration-none">
-      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #198754 !important;">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card">
         <div class="card-body py-3">
-          <div class="mb-2"><i class="bi bi-file-earmark-text-fill fs-2 text-success"></i></div>
+          <div class="dash-icon dash-icon-sm" style="--dash-clr:#16a34a;"><i class="bi bi-file-earmark-text-fill"></i></div>
           <h6 class="card-title fw-bold mb-0">Invoices</h6>
         </div>
       </div>
@@ -228,9 +228,9 @@
   </div>
   <div class="col-6 col-md-4 col-lg-3 col-xl-2">
     <a href="{% url 'billing:receipts' %}" class="text-decoration-none">
-      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #198754 !important;">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card">
         <div class="card-body py-3">
-          <div class="mb-2"><i class="bi bi-receipt-cutoff fs-2 text-success"></i></div>
+          <div class="dash-icon dash-icon-sm" style="--dash-clr:#0d9488;"><i class="bi bi-receipt-cutoff"></i></div>
           <h6 class="card-title fw-bold mb-0">Receipts</h6>
         </div>
       </div>
@@ -238,9 +238,9 @@
   </div>
   <div class="col-6 col-md-4 col-lg-3 col-xl-2">
     <a href="{% url 'billing:payments_register' %}" class="text-decoration-none">
-      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #198754 !important;">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card">
         <div class="card-body py-3">
-          <div class="mb-2"><i class="bi bi-journal-check fs-2 text-success"></i></div>
+          <div class="dash-icon dash-icon-sm" style="--dash-clr:#2563eb;"><i class="bi bi-journal-check"></i></div>
           <h6 class="card-title fw-bold mb-0">Payments</h6>
         </div>
       </div>
@@ -248,9 +248,9 @@
   </div>
   <div class="col-6 col-md-4 col-lg-3 col-xl-2">
     <a href="{% url 'billing:shift_sessions_report' %}" class="text-decoration-none">
-      <div class="card border-0 shadow-sm h-100 text-center dash-card" style="border-left: 4px solid #198754 !important;">
+      <div class="card border-0 shadow-sm h-100 text-center dash-card">
         <div class="card-body py-3">
-          <div class="mb-2"><i class="bi bi-clock-history fs-2 text-success"></i></div>
+          <div class="dash-icon dash-icon-sm" style="--dash-clr:#7c3aed;"><i class="bi bi-clock-history"></i></div>
           <h6 class="card-title fw-bold mb-0">Shifts</h6>
         </div>
       </div>
@@ -266,11 +266,11 @@
   {% for label, count in exception_counts.items %}
   {% if count %}
   <div class="col-6 col-md-4 col-lg-3">
-    <div class="card border-0 shadow-sm text-center" style="border-left: 4px solid #ffc107 !important;">
+    <div class="card border-0 shadow-sm text-center dash-card">
       <div class="card-body py-3">
-        <div class="mb-1"><i class="bi bi-exclamation-circle-fill fs-2 text-warning"></i></div>
+        <div class="dash-icon dash-icon-sm" style="--dash-clr:#d97706;"><i class="bi bi-exclamation-circle-fill"></i></div>
         <h6 class="card-title fw-bold mb-1">{{ label }}</h6>
-        <span class="badge bg-warning text-dark fs-6">{{ count }}</span>
+        <span class="badge rounded-pill" style="background:#d97706;font-size:0.85rem;">{{ count }}</span>
       </div>
     </div>
   </div>
@@ -281,13 +281,33 @@
 
 <style>
   .dash-card {
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
     cursor: pointer;
     border-radius: 0.75rem;
+    overflow: hidden;
   }
   .dash-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 .5rem 1.5rem rgba(0,0,0,.12) !important;
+    transform: translateY(-5px);
+    box-shadow: 0 .75rem 1.5rem rgba(0,0,0,.1) !important;
+  }
+  .dash-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 0.6rem;
+    color: var(--dash-clr);
+    background: color-mix(in srgb, var(--dash-clr) 12%, white);
+  }
+  .dash-icon-sm {
+    width: 44px;
+    height: 44px;
+    border-radius: 11px;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
   }
 </style>
 {% endblock %}
