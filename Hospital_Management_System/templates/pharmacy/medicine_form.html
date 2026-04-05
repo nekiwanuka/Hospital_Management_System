@@ -16,6 +16,21 @@
 </div>
 {% endif %}
 
+{% if store_choices %}
+<div class="cl-card mb-3">
+  <div class="cl-card-body d-flex align-items-center gap-3">
+    <label for="store_selector" class="form-label mb-0 fw-semibold text-nowrap"><i class="bi bi-shop me-1"></i>Store:</label>
+    <select id="store_selector" class="form-select form-select-sm" style="max-width:260px"
+            onchange="window.location.href='?store=' + this.value;">
+      <option value="" {% if not selected_store %}selected{% endif %}>All Stores</option>
+      {% for val, label in store_choices %}
+        <option value="{{ val }}" {% if val == selected_store %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</div>
+{% endif %}
+
 {% if available_items %}
 {# ── Available Stock Table (select items to add) ── #}
 <div class="cl-card">
@@ -61,6 +76,7 @@
   <div class="cl-card-body">
     <form method="post" id="requestForm" novalidate>
       {% csrf_token %}
+      {% if selected_store %}<input type="hidden" name="store_department" value="{{ selected_store }}">{% endif %}
       <div class="table-responsive">
         <table class="table table-sm mb-0" id="cartTable">
           <thead class="table-light">

@@ -370,6 +370,9 @@ def _render_dashboard(request, imaging_type=None, title="Radiology Dashboard"):
 
 
 def _render_stock_request_page(request, requested_unit=""):
+    from apps.inventory.models import Item
+    from apps.pharmacy.services import sellable_quantity_for_item
+
     unit_label_map = {
         "xray": "X-Ray",
         "ultrasound": "Ultrasound",
@@ -378,8 +381,11 @@ def _render_stock_request_page(request, requested_unit=""):
     section_index_url = "radiology:index"
     section_label = "Radiology"
     page_title = "Request Radiology Stock From Medical Stores"
-    submit_label = "Submit Radiology Request"
     success_message = "Radiology stock request submitted to medical stores."
+
+    default_store = {"xray": "xray", "ultrasound": "ultrasound"}.get(
+        requested_unit, "radiology"
+    )
 
     if requested_unit in unit_label_map:
         section_index_url = f"radiology:{requested_unit}"
@@ -387,46 +393,102 @@ def _render_stock_request_page(request, requested_unit=""):
         page_title = (
             f"Request {unit_label_map[requested_unit]} Stock From Medical Stores"
         )
-        submit_label = f"Submit {unit_label_map[requested_unit]} Request"
         success_message = f"{unit_label_map[requested_unit]} stock request submitted to medical stores."
 
+    store_choices = Item.STORE_DEPARTMENT_CHOICES
+    selected_store = (
+        request.POST.get("store_department") or request.GET.get("store") or ""
+    )
+
+    available_qs = (
+        Item.objects.filter(
+            is_active=True,
+            is_department_stock=False,
+            batches__quantity_remaining__gt=0,
+            batches__exp_date__gte=timezone.localdate(),
+        )
+        .select_related("category", "brand")
+        .distinct()
+        .order_by("item_name")
+    )
+    if selected_store:
+        available_qs = available_qs.filter(store_department=selected_store)
+    if getattr(request.user, "branch_id", None):
+        available_qs = available_qs.filter(branch_id=request.user.branch_id)
+
+    available_items = list(available_qs[:200])
+    for itm in available_items:
+        itm.sellable_qty = sellable_quantity_for_item(itm)
+
+    errors = []
     if request.method == "POST":
-        form = MedicalStoreRequestForm(
-            request.POST,
-            user=request.user,
-            requested_for="radiology",
-            requested_unit=requested_unit,
-        )
-        if form.is_valid():
-            if not request.user.branch_id:
-                form.add_error(None, "Your user account has no branch assigned.")
+        if not request.user.branch_id:
+            errors.append("Your user account has no branch assigned.")
+        else:
+            item_ids = request.POST.getlist("item_ids")
+            quantities = request.POST.getlist("quantities")
+            notes = request.POST.get("notes", "").strip()
+
+            if not item_ids:
+                errors.append("Please add at least one item to the request.")
             else:
-                store_request = form.save(commit=False)
-                store_request.branch = request.user.branch
-                store_request.requested_by = request.user
-                store_request.requested_for = "radiology"
-                store_request.requested_unit = requested_unit
-                item = form.cleaned_data["item"]
-                store_request.item = item
-                store_request.medicine_name = item.item_name
-                store_request.category = item.category.name
-                store_request.save()
-                messages.success(request, success_message)
-                return redirect(section_index_url)
-    else:
-        form = MedicalStoreRequestForm(
-            user=request.user,
-            requested_for="radiology",
-            requested_unit=requested_unit,
-        )
+                created = 0
+                for raw_id, raw_qty in zip(item_ids, quantities):
+                    try:
+                        item_id = int(raw_id)
+                        qty = int(raw_qty)
+                    except (ValueError, TypeError):
+                        continue
+                    if qty <= 0:
+                        continue
+                    item = (
+                        Item.objects.filter(
+                            pk=item_id,
+                            is_active=True,
+                            is_department_stock=False,
+                        )
+                        .select_related("category")
+                        .first()
+                    )
+                    if not item:
+                        continue
+                    avail = sellable_quantity_for_item(item)
+                    if qty > avail:
+                        errors.append(
+                            f"{item.item_name}: requested {qty} but only {avail} available."
+                        )
+                        continue
+                    MedicalStoreRequest.objects.create(
+                        branch=request.user.branch,
+                        requested_by=request.user,
+                        requested_for="radiology",
+                        requested_unit=requested_unit,
+                        item=item,
+                        medicine_name=item.item_name,
+                        category=item.category.name if item.category else "",
+                        quantity_requested=qty,
+                        notes=notes,
+                    )
+                    created += 1
+
+                if created and not errors:
+                    messages.success(request, success_message)
+                    return redirect(section_index_url)
+                elif created and errors:
+                    messages.warning(
+                        request,
+                        f"{created} request(s) submitted. Some items had issues.",
+                    )
 
     return render(
         request,
         "pharmacy/medicine_form.html",
         {
-            "form": form,
+            "available_items": available_items,
+            "errors": errors,
+            "store_choices": store_choices,
+            "selected_store": selected_store,
             "page_title": page_title,
-            "submit_label": submit_label,
             "section_label": section_label,
             "section_index_url": section_index_url,
         },

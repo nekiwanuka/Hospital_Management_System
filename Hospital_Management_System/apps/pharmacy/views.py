@@ -170,7 +170,11 @@ def create_medicine(request):
     from apps.inventory.models import Item
     from apps.pharmacy.services import sellable_quantity_for_item
 
-    # Build the available-items queryset (same logic as the old form)
+    store_choices = Item.STORE_DEPARTMENT_CHOICES
+    selected_store = (
+        request.POST.get("store_department") or request.GET.get("store") or ""
+    )
+
     available_qs = (
         Item.objects.filter(
             is_active=True,
@@ -182,11 +186,12 @@ def create_medicine(request):
         .distinct()
         .order_by("item_name")
     )
+    if selected_store:
+        available_qs = available_qs.filter(store_department=selected_store)
     if getattr(request.user, "branch_id", None):
         available_qs = available_qs.filter(branch_id=request.user.branch_id)
 
     available_items = list(available_qs[:200])
-    # Annotate sellable qty for template
     for itm in available_items:
         itm.sellable_qty = sellable_quantity_for_item(itm)
 
@@ -258,6 +263,8 @@ def create_medicine(request):
         {
             "available_items": available_items,
             "errors": errors,
+            "store_choices": store_choices,
+            "selected_store": selected_store,
             "page_title": "Request Medicine From Medical Stores",
             "section_label": "Pharmacy",
             "section_index_url": "pharmacy:index",
