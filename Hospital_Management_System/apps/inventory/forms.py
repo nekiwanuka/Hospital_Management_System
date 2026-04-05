@@ -151,15 +151,6 @@ class MedicalStoreEntryForm(forms.Form):
         required=False,
         help_text="Active ingredient strength, e.g. '500mg', '250mg/5ml'.",
     )
-    unit_of_measure = forms.CharField(
-        max_length=60,
-        help_text="Smallest dispensable unit, e.g. 'tablet', 'ml', 'vial'.",
-    )
-    pack_size = forms.CharField(
-        max_length=60,
-        required=False,
-        help_text="Label on the pack, e.g. '10x10', '100ml bottle'.",
-    )
     barcode = forms.CharField(
         max_length=120,
         required=False,
@@ -188,69 +179,48 @@ class MedicalStoreEntryForm(forms.Form):
         initial=True,
         help_text="Track this item by batch/lot number for recalls and FEFO.",
     )
-    service_type = forms.ChoiceField(
-        choices=SERVICE_TYPE_CHOICES,
-        required=False,
-        help_text="Leave blank for pharmacy items. Set for lab/radiology billing.",
-    )
-    service_code = forms.CharField(
-        max_length=120,
-        required=False,
-        help_text="Internal billing code for services (auto-generated if left blank).",
-    )
-    reorder_level = forms.IntegerField(
-        min_value=0,
-        initial=10,
-        help_text="Minimum stock level before a low-stock alert triggers.",
-    )
-    min_sale_quantity = forms.IntegerField(
-        min_value=1,
-        initial=1,
-        help_text="Minimum dispensable quantity (e.g. 1 for tablets, 10 for a strip).",
-    )
     description = forms.CharField(
         widget=forms.Textarea(attrs={"rows": 2}),
         required=False,
         help_text="Any additional notes about this item.",
     )
-    parent_item = forms.ModelChoiceField(
-        queryset=Item.objects.none(),
-        required=False,
-        help_text="Optional: group this item as a variant of a parent item.",
+
+    # ── Packaging hierarchy (top-down: biggest → smallest → base unit) ──
+    base_unit_name = forms.CharField(
+        max_length=60,
+        initial="Tablet",
+        help_text="Name of the smallest sellable unit (e.g. Tablet, Capsule, Vial, mL).",
     )
-    # Hierarchical packaging
     l1_name = forms.CharField(
         max_length=60,
-        required=False,
-        help_text="Level 1 package name (e.g. 'Strip', 'Blister').",
+        help_text="Name of the biggest pack you purchase (e.g. Box, Carton, Bottle).",
     )
     l1_qty = forms.IntegerField(
-        min_value=0,
-        initial=0,
-        required=False,
-        help_text="Base units per L1 package.",
+        min_value=1,
+        initial=1,
+        help_text="How many items are inside each purchase pack.",
     )
     l2_name = forms.CharField(
         max_length=60,
         required=False,
-        help_text="Level 2 package name (e.g. 'Box', 'Inner carton').",
+        help_text="Inner pack name, if the purchase pack contains smaller packs (e.g. Packet, Sachet).",
     )
     l2_qty = forms.IntegerField(
         min_value=0,
         initial=0,
         required=False,
-        help_text="L1 packages per L2 package.",
+        help_text="How many items are inside each inner pack.",
     )
     l3_name = forms.CharField(
         max_length=60,
         required=False,
-        help_text="Level 3 package name (e.g. 'Carton', 'Outer carton').",
+        help_text="Smallest multi-unit pack name (e.g. Strip, Blister).",
     )
     l3_qty = forms.IntegerField(
         min_value=0,
         initial=0,
         required=False,
-        help_text="L2 packages per L3 package.",
+        help_text="How many single units are inside each smallest pack.",
     )
 
     batch_number = forms.CharField(
@@ -271,38 +241,54 @@ class MedicalStoreEntryForm(forms.Form):
         required=False,
         help_text="Batch-specific barcode if different from product barcode.",
     )
-    weight = forms.CharField(
-        max_length=60,
+    weight_value = forms.DecimalField(
+        max_digits=10,
+        decimal_places=2,
         required=False,
-        help_text="Net weight per pack, e.g. '500g'.",
+        help_text="Net weight per unit.",
     )
-    volume = forms.CharField(
-        max_length=60,
+    weight_unit = forms.ChoiceField(
+        choices=[("mg", "mg"), ("g", "g"), ("kg", "kg")],
         required=False,
-        help_text="Volume per pack, e.g. '100ml'.",
+        initial="g",
+        help_text="Weight unit.",
+    )
+    volume_value = forms.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        help_text="Volume per unit.",
+    )
+    volume_unit = forms.ChoiceField(
+        choices=[("mL", "mL"), ("L", "L")],
+        required=False,
+        initial="mL",
+        help_text="Volume unit.",
     )
 
     pack_size_units = forms.IntegerField(
         min_value=1,
-        initial=100,
-        help_text="How many sellable units in one pack, e.g. 100 tablets per pack.",
+        initial=1,
+        widget=forms.HiddenInput(),
+        help_text="Auto-computed from packaging hierarchy.",
     )
     packs_received = forms.IntegerField(
         min_value=1,
         initial=1,
-        help_text="Number of packs received in this delivery.",
+        help_text="How many purchase packs did you receive from the supplier.",
     )
     purchase_price_per_pack = forms.DecimalField(
         max_digits=14,
         decimal_places=2,
         min_value=0.01,
-        help_text="How much you paid for ONE pack (before markup).",
+        help_text="Price you paid for ONE purchase pack.",
     )
     target_profit_margin = forms.DecimalField(
         max_digits=7,
         decimal_places=2,
         min_value=Decimal("1.00"),
         initial=Decimal("1.25"),
+        required=False,
         label="Price Factor (×)",
         help_text="Multiplication factor on unit cost (e.g. 1.25 = 25% markup).",
     )
@@ -366,8 +352,10 @@ class MedicalStoreEntryForm(forms.Form):
         if self.store_department:
             self.fields["store_department"].initial = self.store_department
             self.fields["store_department"].widget = forms.HiddenInput()
-            self.fields["service_type"].widget = forms.HiddenInput()
-            self.fields["service_code"].widget = forms.HiddenInput()
+
+        # General store items are not for resale — default margin to 1.00
+        if self.store_department == "general":
+            self.fields["target_profit_margin"].initial = Decimal("1.00")
 
         if user is not None and getattr(user, "branch_id", None):
             self.fields["category"].queryset = Category.objects.filter(
@@ -379,12 +367,6 @@ class MedicalStoreEntryForm(forms.Form):
             self.fields["supplier"].queryset = Supplier.objects.filter(
                 branch_id=user.branch_id
             ).order_by("name")
-            self.fields["parent_item"].queryset = Item.objects.filter(
-                branch_id=user.branch_id,
-                is_active=True,
-                parent__isnull=True,
-                is_department_stock=False,
-            ).order_by("item_name")
 
     def clean(self):
         cleaned = super().clean()
@@ -417,9 +399,28 @@ class MedicalStoreEntryForm(forms.Form):
             "radiology": "radiology",
         }
         cleaned["service_type"] = store_to_service.get(store_department, "")
-        cleaned["service_code"] = (
-            (cleaned.get("service_code") or "").strip().lower().replace(" ", "_")
-        )
+        cleaned["service_code"] = ""
+
+        # Compute pack_size_units from packaging hierarchy (top-down)
+        # L1 = outer pack, L2 = middle pack, L3 = smallest multi-unit pack
+        # pack_size_units = total base units in one L1
+        l1 = cleaned.get("l1_qty") or 1
+        l2 = cleaned.get("l2_qty") or 0
+        l3 = cleaned.get("l3_qty") or 0
+        units_per_pack = l1
+        if l2 > 0:
+            units_per_pack *= l2
+        if l3 > 0:
+            units_per_pack *= l3
+        cleaned["pack_size_units"] = units_per_pack
+
+        # Combine weight and volume from value + unit pairs
+        wv = cleaned.get("weight_value")
+        wu = cleaned.get("weight_unit")
+        cleaned["weight"] = f"{wv} {wu}" if wv and wu else ""
+        vv = cleaned.get("volume_value")
+        vu = cleaned.get("volume_unit")
+        cleaned["volume"] = f"{vv} {vu}" if vv and vu else ""
 
         exp_date = cleaned.get("exp_date")
         if exp_date and exp_date <= timezone.localdate():
@@ -439,6 +440,11 @@ class MedicalStoreEntryForm(forms.Form):
                 "purchase_price_per_pack",
                 "Purchase price per pack must be positive.",
             )
+
+        # General store items default margin to 1.00 (no markup)
+        if store_department == "general":
+            if not cleaned.get("target_profit_margin"):
+                cleaned["target_profit_margin"] = Decimal("1.00")
 
         # Selling price override validation
         selling_price_override = cleaned.get("selling_price_override", False)

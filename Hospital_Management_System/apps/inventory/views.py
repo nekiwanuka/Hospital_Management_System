@@ -525,16 +525,13 @@ def medical_store_entry(request, store=None):
                             brand=brand,
                             dosage_form=form.cleaned_data["dosage_form"],
                             strength=form.cleaned_data.get("strength", ""),
-                            unit_of_measure=form.cleaned_data["unit_of_measure"],
-                            pack_size=form.cleaned_data.get("pack_size", ""),
+                            unit_of_measure=form.cleaned_data.get(
+                                "base_unit_name", "unit"
+                            ),
                             barcode=form.cleaned_data.get("barcode", ""),
                             store_department=store,
                             service_type=form.cleaned_data.get("service_type", ""),
                             service_code=form.cleaned_data.get("service_code", ""),
-                            reorder_level=form.cleaned_data["reorder_level"],
-                            min_sale_quantity=form.cleaned_data.get(
-                                "min_sale_quantity", 1
-                            ),
                             description=form.cleaned_data.get("description", ""),
                             control_status=form.cleaned_data.get(
                                 "control_status", "none"
@@ -549,7 +546,6 @@ def medical_store_entry(request, store=None):
                             default_pack_size_units=form.cleaned_data[
                                 "pack_size_units"
                             ],
-                            parent=form.cleaned_data.get("parent_item"),
                             l1_name=form.cleaned_data.get("l1_name", ""),
                             l1_qty=form.cleaned_data.get("l1_qty") or 0,
                             l2_name=form.cleaned_data.get("l2_name", ""),
@@ -565,15 +561,12 @@ def medical_store_entry(request, store=None):
                                 "item_type", item.item_type
                             ),
                             "dosage_form": form.cleaned_data["dosage_form"],
-                            "unit_of_measure": form.cleaned_data["unit_of_measure"],
-                            "pack_size": form.cleaned_data.get("pack_size", ""),
+                            "unit_of_measure": form.cleaned_data.get(
+                                "base_unit_name", item.unit_of_measure
+                            ),
                             "barcode": form.cleaned_data.get("barcode", ""),
                             "service_type": form.cleaned_data.get("service_type", ""),
                             "service_code": form.cleaned_data.get("service_code", ""),
-                            "reorder_level": form.cleaned_data["reorder_level"],
-                            "min_sale_quantity": form.cleaned_data.get(
-                                "min_sale_quantity", 1
-                            ),
                             "description": form.cleaned_data.get("description", ""),
                             "control_status": form.cleaned_data.get(
                                 "control_status", item.control_status
@@ -598,8 +591,6 @@ def medical_store_entry(request, store=None):
                             updates["category"] = category
                         if form.cleaned_data.get("sku"):
                             updates["sku"] = form.cleaned_data["sku"]
-                        if form.cleaned_data.get("parent_item") is not None:
-                            updates["parent"] = form.cleaned_data["parent_item"]
 
                         for field_name, field_value in updates.items():
                             if getattr(item, field_name) != field_value:
