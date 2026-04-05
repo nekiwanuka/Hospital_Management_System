@@ -469,8 +469,8 @@ class Batch(BranchScopedModel):
     target_margin = models.DecimalField(
         max_digits=7,
         decimal_places=2,
-        default=Decimal("25.00"),
-        help_text="Target profit margin percentage used to auto-calculate selling price.",
+        default=Decimal("1.25"),
+        help_text="Multiplication factor applied to unit cost to get selling price (e.g. 1.25 = 25% markup).",
     )
     location = models.CharField(
         max_length=120,
@@ -579,9 +579,11 @@ class Batch(BranchScopedModel):
             raise ValidationError(
                 {"purchase_price_per_pack": "Purchase price per pack must be positive."}
             )
-        if self.target_margin < 0 or self.target_margin >= 100:
+        if self.target_margin < Decimal("1.00"):
             raise ValidationError(
-                {"target_margin": "Margin must be between 0% and 99.99%."}
+                {
+                    "target_margin": "Multiplication factor must be at least 1.00 (no markup)."
+                }
             )
 
         if self.quantity_received <= 0:
@@ -604,13 +606,12 @@ class Batch(BranchScopedModel):
             self.purchase_price_per_pack / Decimal(self.pack_size_units)
         ).quantize(Decimal("0.0001"))
 
-        # Auto-calculate selling price from target margin (unless manually overridden)
+        # Auto-calculate selling price from multiplication factor (unless manually overridden)
         if not self.selling_price_override:
-            if self.target_margin > 0 and self.unit_cost > 0:
-                divisor = Decimal("1.00") - self.target_margin / Decimal("100")
-                self.selling_price_per_unit = (self.unit_cost / divisor).quantize(
-                    Decimal("0.01")
-                )
+            if self.target_margin >= Decimal("1.00") and self.unit_cost > 0:
+                self.selling_price_per_unit = (
+                    self.unit_cost * self.target_margin
+                ).quantize(Decimal("0.01"))
             elif self.unit_cost > 0 and self.selling_price_per_unit <= 0:
                 self.selling_price_per_unit = self.unit_cost
 

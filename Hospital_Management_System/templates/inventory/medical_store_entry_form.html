@@ -431,7 +431,7 @@
       <!-- ═══ STEP 3 — Pricing & Quantities ═══ -->
       <div class="step-panel" data-step="3" id="panel-3" role="tabpanel">
         <h5 class="mb-3 text-primary"><i class="bi bi-calculator"></i> Pricing &amp; Quantities</h5>
-        <p class="text-muted mb-3" style="font-size:.82rem">Enter pack sizes, quantities, and purchase price. The system auto-calculates unit cost and selling price from your target margin. Press <kbd>M</kbd> to focus margin input.</p>
+        <p class="text-muted mb-3" style="font-size:.82rem">Enter pack sizes, quantities, and purchase price. The system auto-calculates unit cost and selling price from your price factor (e.g. 1.25 = 25% markup). Press <kbd>M</kbd> to focus factor input.</p>
 
         <!-- Live price preview -->
         <div class="price-preview" id="pricePreview" aria-live="polite">
@@ -496,7 +496,7 @@
             <label for="{{ fld.id_for_label }}" class="form-label">{{ fld.label }}{% if fld.field.required %} <span class="text-danger">*</span>{% endif %}<span class="field-tip" tabindex="0" role="button" aria-label="Help: {{ fld.help_text }}" title="{{ fld.help_text }}">?</span></label>
             <div class="input-group">
               {{ fld }}
-              <span class="input-group-text">%</span>
+              <span class="input-group-text">&times;</span>
             </div>
             {% for err in fld.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
           </div>
@@ -946,7 +946,7 @@
       if(isOverride && manualPrice>0){
         sp = manualPrice;
       } else {
-        sp = (mg>0&&mg<100) ? uc/(1-mg/100) : uc;
+        sp = (mg>=1) ? uc*mg : uc;
       }
       const pf = sp-uc;
       const tu = ps*pk;

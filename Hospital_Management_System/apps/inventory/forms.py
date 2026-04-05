@@ -301,10 +301,10 @@ class MedicalStoreEntryForm(forms.Form):
     target_profit_margin = forms.DecimalField(
         max_digits=7,
         decimal_places=2,
-        min_value=0,
-        max_value=Decimal("99.99"),
-        initial=25,
-        help_text="Desired profit margin %. Selling price is auto-calculated.",
+        min_value=Decimal("1.00"),
+        initial=Decimal("1.25"),
+        label="Price Factor (×)",
+        help_text="Multiplication factor on unit cost (e.g. 1.25 = 25% markup).",
     )
     selling_price_override = forms.BooleanField(
         required=False,
@@ -497,8 +497,8 @@ class MedicalStoreEntryForm(forms.Form):
             margin = float(self.data.get("target_profit_margin", "0") or "0")
             if pack_size > 0 and purchase_per_pack > 0:
                 unit_cost = purchase_per_pack / pack_size
-                if 0 < margin < 100:
-                    return round(unit_cost / (1 - margin / 100), 2)
+                if margin >= 1.0:
+                    return round(unit_cost * margin, 2)
                 return round(unit_cost, 2)
         except (TypeError, ValueError, ZeroDivisionError):
             return None
@@ -514,9 +514,9 @@ class MedicalStoreEntryForm(forms.Form):
                 self.data.get("purchase_price_per_pack", "0") or "0"
             )
             margin = float(self.data.get("target_profit_margin", "0") or "0")
-            if pack_size > 0 and purchase_per_pack > 0 and 0 < margin < 100:
+            if pack_size > 0 and purchase_per_pack > 0 and margin >= 1.0:
                 unit_cost = purchase_per_pack / pack_size
-                selling = unit_cost / (1 - margin / 100)
+                selling = unit_cost * margin
                 return round(selling - unit_cost, 4)
         except (TypeError, ValueError, ZeroDivisionError):
             return None
