@@ -35,11 +35,15 @@ class ShiftRequiredMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
+    EXEMPT_ROLES = ("system_admin", "director")
+
     def __call__(self, request):
         if (
             hasattr(request, "user")
             and request.user.is_authenticated
             and not request.path.startswith(self.EXEMPT_PREFIXES)
+            and not request.user.is_superuser
+            and getattr(request.user, "role", None) not in self.EXEMPT_ROLES
         ):
             from apps.accounts.models import Shift
 
