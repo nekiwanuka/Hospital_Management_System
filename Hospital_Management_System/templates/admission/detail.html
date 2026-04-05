@@ -126,6 +126,155 @@
 </div>
 {% endif %}
 
+<!-- Medication Administration Record -->
+<div class="cl-card mb-3 shadow-sm">
+  <div class="cl-card-header d-flex justify-content-between align-items-center">
+    <h2 class="cl-card-title"><i class="bi bi-capsule me-2 text-info"></i>Medication Chart</h2>
+    <div>
+      <a href="{% url 'admission:medication_chart' admission.pk %}" class="btn btn-sm btn-outline-info me-1">View All</a>
+      {% if not admission.discharge_date %}
+      <a href="{% url 'admission:administer_medication' admission.pk %}" class="btn btn-sm btn-primary">+ Record</a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="cl-card-body p-0">
+    {% if medication_records %}
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light"><tr><th>Medicine</th><th>Dosage</th><th>Route</th><th>Scheduled</th><th>Status</th><th>By</th></tr></thead>
+        <tbody>
+          {% for r in medication_records %}
+          <tr>
+            <td>{{ r.medicine_name }}</td><td>{{ r.dosage }}</td><td>{{ r.get_route_display }}</td>
+            <td>{{ r.scheduled_time|date:"d M H:i" }}</td>
+            <td><span class="badge {% if r.status == 'given' %}bg-success{% elif r.status == 'held' %}bg-warning text-dark{% elif r.status == 'refused' %}bg-danger{% else %}bg-secondary{% endif %}">{{ r.get_status_display }}</span></td>
+            <td>{{ r.administered_by.get_full_name|default:r.administered_by.username }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<p class="p-3 text-muted mb-0">No medication records yet.</p>{% endif %}
+  </div>
+</div>
+
+<!-- Ward Rounds -->
+<div class="cl-card mb-3 shadow-sm">
+  <div class="cl-card-header d-flex justify-content-between align-items-center">
+    <h2 class="cl-card-title"><i class="bi bi-clipboard2-check me-2 text-success"></i>Ward Rounds</h2>
+    <div>
+      <a href="{% url 'admission:ward_rounds' admission.pk %}" class="btn btn-sm btn-outline-success me-1">View All</a>
+      {% if not admission.discharge_date %}
+      <a href="{% url 'admission:add_ward_round' admission.pk %}" class="btn btn-sm btn-success">+ New Round</a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="cl-card-body">
+    {% if ward_rounds %}
+    {% for r in ward_rounds %}
+    <div class="border-bottom pb-2 mb-2">
+      <div class="d-flex justify-content-between">
+        <strong>Dr. {{ r.doctor.get_full_name|default:r.doctor.username }}</strong>
+        <small class="text-muted">{{ r.round_time|date:"d M Y H:i" }}</small>
+      </div>
+      <p class="mb-0">{{ r.findings|truncatechars:200 }}</p>
+    </div>
+    {% endfor %}
+    {% else %}<p class="text-muted mb-0">No ward rounds recorded yet.</p>{% endif %}
+  </div>
+</div>
+
+<!-- Doctor Orders -->
+<div class="cl-card mb-3 shadow-sm">
+  <div class="cl-card-header d-flex justify-content-between align-items-center">
+    <h2 class="cl-card-title"><i class="bi bi-clipboard-plus me-2 text-warning"></i>Doctor Orders</h2>
+    <div>
+      <a href="{% url 'admission:doctor_orders' admission.pk %}" class="btn btn-sm btn-outline-warning me-1">View All</a>
+      {% if not admission.discharge_date %}
+      <a href="{% url 'admission:add_doctor_order' admission.pk %}" class="btn btn-sm btn-warning">+ New Order</a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="cl-card-body">
+    {% if active_orders %}
+    {% for o in active_orders %}
+    <div class="border-bottom pb-2 mb-2 d-flex justify-content-between align-items-start">
+      <div>
+        <span class="badge {% if o.priority == 'stat' %}bg-danger{% elif o.priority == 'urgent' %}bg-warning text-dark{% else %}bg-light text-dark border{% endif %} me-1">{{ o.get_priority_display }}</span>
+        <span class="badge bg-info me-2">{{ o.get_order_type_display }}</span>
+        {{ o.instruction|truncatechars:120 }}
+        <br><small class="text-muted">By Dr. {{ o.ordered_by.get_full_name|default:o.ordered_by.username }} — {{ o.created_at|date:"d M H:i" }}</small>
+      </div>
+      {% if not admission.discharge_date %}
+      <a href="{% url 'admission:carry_out_order' admission.pk o.pk %}" class="btn btn-sm btn-success ms-2"><i class="bi bi-check-lg"></i></a>
+      {% endif %}
+    </div>
+    {% endfor %}
+    {% else %}<p class="text-muted mb-0">No active orders.</p>{% endif %}
+  </div>
+</div>
+
+<!-- Daily Reports -->
+<div class="cl-card mb-3 shadow-sm">
+  <div class="cl-card-header d-flex justify-content-between align-items-center">
+    <h2 class="cl-card-title"><i class="bi bi-journal-text me-2 text-primary"></i>Daily Reports</h2>
+    <div>
+      <a href="{% url 'admission:daily_reports' admission.pk %}" class="btn btn-sm btn-outline-primary me-1">View All</a>
+      {% if not admission.discharge_date %}
+      <a href="{% url 'admission:add_daily_report' admission.pk %}" class="btn btn-sm btn-primary">+ New Report</a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="cl-card-body">
+    {% if daily_reports %}
+    {% for rpt in daily_reports %}
+    <div class="border-bottom pb-2 mb-2">
+      <div class="d-flex justify-content-between">
+        <div>
+          <strong>{{ rpt.report_date|date:"d M Y" }}</strong>
+          <span class="badge bg-info ms-1">{{ rpt.get_shift_display }}</span>
+        </div>
+        <small class="text-muted">{{ rpt.nurse.get_full_name|default:rpt.nurse.username }}</small>
+      </div>
+      <p class="mb-0">{{ rpt.general_condition|truncatechars:150 }}</p>
+    </div>
+    {% endfor %}
+    {% else %}<p class="text-muted mb-0">No daily reports filed yet.</p>{% endif %}
+  </div>
+</div>
+
+<!-- Intake / Output Chart -->
+<div class="cl-card mb-3 shadow-sm">
+  <div class="cl-card-header d-flex justify-content-between align-items-center">
+    <h2 class="cl-card-title"><i class="bi bi-droplet me-2 text-primary"></i>Intake / Output</h2>
+    <div>
+      <a href="{% url 'admission:intake_output' admission.pk %}" class="btn btn-sm btn-outline-primary me-1">Full Chart</a>
+      {% if not admission.discharge_date %}
+      <a href="{% url 'admission:add_intake_output' admission.pk %}" class="btn btn-sm btn-primary">+ Record</a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="cl-card-body">
+    {% if io_entries %}
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light"><tr><th>Time</th><th>Type</th><th>Amount (ml)</th><th>By</th></tr></thead>
+        <tbody>
+          {% for e in io_entries %}
+          <tr>
+            <td>{{ e.recorded_at|date:"d M H:i" }}</td>
+            <td><span class="badge {% if 'intake' in e.entry_type %}bg-success{% else %}bg-danger{% endif %}">{{ e.get_entry_type_display }}</span></td>
+            <td>{{ e.amount_ml }}</td>
+            <td>{{ e.recorded_by.get_full_name|default:e.recorded_by.username }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<p class="text-muted mb-0">No I/O entries yet.</p>{% endif %}
+  </div>
+</div>
+
 <!-- Invoices & Billing (Post-Payment / Credit) -->
 {% if admission_invoices %}
 <div class="cl-card mb-3 shadow-sm">

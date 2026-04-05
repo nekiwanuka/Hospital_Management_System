@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Doctor Orders — {{ admission.patient }} — {{ clinic_name }}{% endblock %}
+{% block header_title %}Doctor Orders{% endblock %}
+
+{% block content %}
+<div class="cl-page-header d-flex flex-wrap align-items-center justify-content-between mb-4">
+  <div>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-1">
+        <li class="breadcrumb-item"><a href="{% url 'admission:nurse_station' %}">Nurse Station</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'admission:detail' admission.pk %}">{{ admission.patient }}</a></li>
+        <li class="breadcrumb-item active">Doctor Orders</li>
+      </ol>
+    </nav>
+    <h1 class="mb-0"><i class="bi bi-clipboard-plus me-2 text-warning"></i>Doctor Orders</h1>
+  </div>
+  <div class="d-flex gap-2 align-items-center">
+    <div class="btn-group btn-group-sm">
+      <a href="?status=active" class="btn {% if status_filter == 'active' %}btn-warning{% else %}btn-outline-warning{% endif %}">Active</a>
+      <a href="?status=carried_out" class="btn {% if status_filter == 'carried_out' %}btn-success{% else %}btn-outline-success{% endif %}">Carried Out</a>
+      <a href="?status=cancelled" class="btn {% if status_filter == 'cancelled' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">Cancelled</a>
+    </div>
+    {% if request.user.role == "doctor" or request.user.role == "system_admin" or request.user.role == "director" %}
+    <a href="{% url 'admission:add_doctor_order' admission.pk %}" class="btn btn-warning"><i class="bi bi-plus-lg me-1"></i>New Order</a>
+    {% endif %}
+  </div>
+</div>
+
+{% for order in orders %}
+<div class="cl-card shadow-sm mb-3">
+  <div class="cl-card-header bg-light d-flex justify-content-between align-items-center">
+    <div>
+      <span class="badge {% if order.priority == 'stat' %}bg-danger{% elif order.priority == 'urgent' %}bg-warning text-dark{% else %}bg-light text-dark border{% endif %} me-2">{{ order.get_priority_display }}</span>
+      <span class="badge bg-info me-2">{{ order.get_order_type_display }}</span>
+      <strong>By Dr. {{ order.ordered_by.get_full_name|default:order.ordered_by.username }}</strong>
+    </div>
+    <div>
+      <span class="badge {% if order.status == 'active' %}bg-warning text-dark{% elif order.status == 'carried_out' %}bg-success{% else %}bg-secondary{% endif %}">{{ order.get_status_display }}</span>
+      <small class="text-muted ms-2">{{ order.created_at|date:"d M Y H:i" }}</small>
+    </div>
+  </div>
+  <div class="cl-card-body">
+    <p class="mb-1">{{ order.instruction|linebreaksbr }}</p>
+    {% if order.status == "carried_out" and order.carried_out_by %}
+    <hr>
+    <small class="text-success"><i class="bi bi-check-circle me-1"></i>Carried out by {{ order.carried_out_by.get_full_name|default:order.carried_out_by.username }} at {{ order.carried_out_at|date:"d M H:i" }}</small>
+    {% if order.carried_out_notes %}<p class="text-muted mt-1 mb-0">{{ order.carried_out_notes }}</p>{% endif %}
+    {% endif %}
+    {% if order.status == "active" and request.user.role == "nurse" or request.user.role == "system_admin" or request.user.role == "director" %}
+    <div class="mt-2">
+      <a href="{% url 'admission:carry_out_order' admission.pk order.pk %}" class="btn btn-sm btn-success"><i class="bi bi-check-lg me-1"></i>Mark Carried Out</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% empty %}
+<div class="alert alert-info"><i class="bi bi-info-circle me-2"></i>No {{ status_filter }} orders found.</div>
+{% endfor %}
+{% endblock %}

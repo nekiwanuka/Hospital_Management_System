@@ -1,6 +1,16 @@
 from django import forms
 
-from apps.admission.models import Admission, Bed, NursingNote, VitalSign, Ward
+from apps.admission.models import (
+    Admission,
+    Bed,
+    DailyReport,
+    DoctorOrder,
+    IntakeOutput,
+    MedicationAdministration,
+    NursingNote,
+    VitalSign,
+    Ward,
+)
 from apps.core.permissions import branch_queryset_for_user
 from apps.patients.models import Patient
 from apps.visits.models import Visit
@@ -247,6 +257,142 @@ class BedForm(forms.ModelForm):
             self.fields["ward"].queryset = branch_queryset_for_user(
                 user, Ward.objects.filter(is_active=True).order_by("name")
             )
+        for field in self.fields.values():
+            if isinstance(field.widget, forms.Select):
+                field.widget.attrs["class"] = "form-select"
+            else:
+                field.widget.attrs["class"] = "form-control"
+
+
+class MedicationAdministrationForm(forms.ModelForm):
+    class Meta:
+        model = MedicationAdministration
+        fields = [
+            "medicine_name",
+            "dosage",
+            "route",
+            "scheduled_time",
+            "administered_at",
+            "status",
+            "notes",
+        ]
+        widgets = {
+            "scheduled_time": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+            "administered_at": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+            "notes": forms.Textarea(attrs={"rows": 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if isinstance(field.widget, forms.Select):
+                field.widget.attrs["class"] = "form-select"
+            else:
+                field.widget.attrs["class"] = "form-control"
+
+
+class WardRoundForm(forms.Form):
+    findings = forms.CharField(
+        widget=forms.Textarea(
+            attrs={
+                "rows": 3,
+                "class": "form-control",
+                "placeholder": "Clinical findings...",
+            }
+        )
+    )
+    plan = forms.CharField(
+        required=False,
+        widget=forms.Textarea(
+            attrs={
+                "rows": 3,
+                "class": "form-control",
+                "placeholder": "Management plan...",
+            }
+        ),
+    )
+
+
+class DoctorOrderForm(forms.ModelForm):
+    class Meta:
+        model = DoctorOrder
+        fields = ["order_type", "priority", "instruction"]
+        widgets = {
+            "instruction": forms.Textarea(
+                attrs={
+                    "rows": 3,
+                    "placeholder": "Enter instruction for nursing team...",
+                }
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if isinstance(field.widget, forms.Select):
+                field.widget.attrs["class"] = "form-select"
+            else:
+                field.widget.attrs["class"] = "form-control"
+
+
+class CarryOutOrderForm(forms.Form):
+    notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea(
+            attrs={
+                "rows": 2,
+                "class": "form-control",
+                "placeholder": "Notes on how order was carried out...",
+            }
+        ),
+        label="Carry-out Notes",
+    )
+
+
+class DailyReportForm(forms.ModelForm):
+    class Meta:
+        model = DailyReport
+        fields = [
+            "report_date",
+            "shift",
+            "general_condition",
+            "diet_intake",
+            "fluid_intake",
+            "fluid_output",
+            "mobility",
+            "pain_level",
+            "wound_status",
+            "concerns",
+            "handover_notes",
+        ]
+        widgets = {
+            "report_date": forms.DateInput(attrs={"type": "date"}),
+            "general_condition": forms.Textarea(attrs={"rows": 3}),
+            "wound_status": forms.Textarea(attrs={"rows": 2}),
+            "concerns": forms.Textarea(attrs={"rows": 2}),
+            "handover_notes": forms.Textarea(attrs={"rows": 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if isinstance(field.widget, forms.Select):
+                field.widget.attrs["class"] = "form-select"
+            else:
+                field.widget.attrs["class"] = "form-control"
+
+
+class IntakeOutputForm(forms.ModelForm):
+    class Meta:
+        model = IntakeOutput
+        fields = ["entry_type", "amount_ml", "recorded_at", "notes"]
+        widgets = {
+            "recorded_at": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+            "notes": forms.TextInput(attrs={"placeholder": "Optional notes"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         for field in self.fields.values():
             if isinstance(field.widget, forms.Select):
                 field.widget.attrs["class"] = "form-select"

@@ -18,6 +18,10 @@ class Invoice(BranchScopedModel):
         ("partial", "Partial"),
         ("post_payment", "Post Payment"),
     ]
+    INVOICE_CATEGORY = [
+        ("opd", "OPD"),
+        ("inpatient", "Inpatient"),
+    ]
 
     invoice_number = models.CharField(max_length=40, unique=True)
     patient = models.ForeignKey(
@@ -31,6 +35,12 @@ class Invoice(BranchScopedModel):
         null=True,
         blank=True,
         related_name="invoices",
+    )
+    invoice_category = models.CharField(
+        max_length=10,
+        choices=INVOICE_CATEGORY,
+        default="opd",
+        help_text="Separates OPD from inpatient billing.",
     )
     services = models.TextField()
     total_amount = models.DecimalField(max_digits=12, decimal_places=2)

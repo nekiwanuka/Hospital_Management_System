@@ -797,6 +797,7 @@ def index(request):
     status = (request.GET.get("status") or "all").strip().lower()
     request_type = (request.GET.get("request_type") or "all").strip().lower()
     payment_method_filter = (request.GET.get("payment_method") or "all").strip().lower()
+    category_filter = (request.GET.get("category") or "all").strip().lower()
 
     queryset = branch_queryset_for_user(
         request.user,
@@ -811,6 +812,11 @@ def index(request):
         queryset = queryset.filter(payment_method=payment_method_filter)
     else:
         payment_method_filter = "all"
+
+    if category_filter in ("opd", "inpatient"):
+        queryset = queryset.filter(invoice_category=category_filter)
+    else:
+        category_filter = "all"
 
     if query:
         queryset = queryset.filter(
@@ -1027,6 +1033,7 @@ def index(request):
             "selected_status": status,
             "selected_request_type": request_type,
             "selected_payment_method": payment_method_filter,
+            "selected_category": category_filter,
             "pending_request_counts": pending_request_counts,
             "pending_requests": pending_requests,
             "visit_pending_invoices": visit_pending_invoices,

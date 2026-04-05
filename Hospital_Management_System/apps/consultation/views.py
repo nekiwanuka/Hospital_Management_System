@@ -5,10 +5,19 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.db.models import Exists, OuterRef, Q
 from django.urls import reverse
+from django.utils import timezone
 
 from decimal import Decimal
 
-from apps.admission.models import Admission
+from apps.admission.models import (
+    Admission,
+    DoctorOrder,
+    MedicationAdministration,
+    NursingNote,
+    VitalSign,
+    WardRound,
+    DailyReport,
+)
 from apps.billing.models import Invoice, InvoiceLineItem
 from apps.billing.services import add_post_payment_line_for_admitted
 from apps.consultation.models import Consultation
@@ -611,6 +620,19 @@ def discharge_patient(request, visit_id):
         messages.info(request, "This patient has already been discharged.")
         return _redirect_consultation_index(selected_panel)
 
+    # Close any active admissions (nurse station) for this visit
+    active_admissions = Admission.objects.filter(
+        visit=visit, discharge_date__isnull=True
+    )
+    for adm in active_admissions:
+        adm.discharge_date = timezone.now()
+        adm.save(update_fields=["discharge_date"])
+        # Release assigned bed
+        if adm.bed_assigned_id:
+            from apps.admission.models import Bed
+
+            Bed.objects.filter(pk=adm.bed_assigned_id).update(status="available")
+
     transition_visit(
         visit,
         "completed",
@@ -977,6 +999,32 @@ def start(request, visit_id):
             patient=visit.patient
         ).order_by("-created_at"),
     }
+
+    # ── Inpatient nursing data (visible to doctors for admitted patients) ──
+    active_admission = Admission.objects.filter(
+        visit=visit, discharge_date__isnull=True
+    ).first()
+    if active_admission:
+        context["active_admission"] = active_admission
+        context["nursing_notes"] = NursingNote.objects.filter(
+            admission=active_admission
+        ).order_by("-created_at")[:20]
+        context["vital_signs"] = VitalSign.objects.filter(
+            admission=active_admission
+        ).order_by("-created_at")[:20]
+        context["ward_rounds"] = WardRound.objects.filter(
+            admission=active_admission
+        ).order_by("-round_time")[:10]
+        context["doctor_orders"] = DoctorOrder.objects.filter(
+            admission=active_admission
+        ).order_by("-created_at")[:20]
+        context["medication_records"] = MedicationAdministration.objects.filter(
+            admission=active_admission
+        ).order_by("-scheduled_time")[:20]
+        context["daily_reports"] = DailyReport.objects.filter(
+            admission=active_admission
+        ).order_by("-report_date", "-id")[:10]
+
     return render(request, "consultation/form.html", context)
 
 

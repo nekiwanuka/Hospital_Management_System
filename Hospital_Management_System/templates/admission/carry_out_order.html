@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Carry Out Order — {{ clinic_name }}{% endblock %}
+{% block header_title %}Carry Out Order{% endblock %}
+
+{% block content %}
+<div class="cl-page-header mb-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'admission:nurse_station' %}">Nurse Station</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'admission:detail' admission.pk %}">{{ admission.patient }}</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'admission:doctor_orders' admission.pk %}">Orders</a></li>
+      <li class="breadcrumb-item active">Carry Out</li>
+    </ol>
+  </nav>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="cl-card shadow-sm mb-3">
+      <div class="cl-card-header bg-warning bg-opacity-10">
+        <h5 class="mb-0">
+          <span class="badge {% if order.priority == 'stat' %}bg-danger{% elif order.priority == 'urgent' %}bg-warning text-dark{% else %}bg-light text-dark border{% endif %} me-2">{{ order.get_priority_display }}</span>
+          {{ order.get_order_type_display }} Order
+        </h5>
+      </div>
+      <div class="cl-card-body">
+        <p><strong>Ordered by:</strong> Dr. {{ order.ordered_by.get_full_name|default:order.ordered_by.username }}</p>
+        <p><strong>Instruction:</strong></p>
+        <div class="border rounded p-3 bg-light">{{ order.instruction|linebreaksbr }}</div>
+        <small class="text-muted">{{ order.created_at|date:"d M Y H:i" }}</small>
+      </div>
+    </div>
+
+    <div class="cl-card shadow-sm">
+      <div class="cl-card-header bg-light">
+        <h5 class="mb-0"><i class="bi bi-check-circle me-2 text-success"></i>Mark as Carried Out</h5>
+      </div>
+      <div class="cl-card-body">
+        <form method="post">
+          {% csrf_token %}
+          {% for field in form %}
+          <div class="mb-3">
+            <label for="id_{{ field.name }}" class="form-label">{{ field.label }}</label>
+            {{ field }}
+            {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+          </div>
+          {% endfor %}
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success"><i class="bi bi-check-lg me-1"></i>Confirm Carried Out</button>
+            <a href="{% url 'admission:doctor_orders' admission.pk %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

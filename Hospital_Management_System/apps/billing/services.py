@@ -43,6 +43,7 @@ def _find_or_create_post_payment_invoice(branch, patient, visit, user):
         total_amount=Decimal("0.00"),
         payment_method="cash",
         payment_status="post_payment",
+        invoice_category="inpatient",
         cashier=user,
     )
 

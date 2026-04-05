@@ -13,18 +13,29 @@ from django.utils import timezone
 from apps.admission.forms import (
     AdmissionForm,
     BedForm,
+    CarryOutOrderForm,
+    DailyReportForm,
     DischargeForm,
+    DoctorOrderForm,
+    IntakeOutputForm,
+    MedicationAdministrationForm,
     NursingNoteForm,
     VitalSignForm,
     WardForm,
+    WardRoundForm,
 )
 from apps.admission.models import (
     Admission,
     AdmissionDailyCharge,
     Bed,
+    DailyReport,
+    DoctorOrder,
+    IntakeOutput,
+    MedicationAdministration,
     NursingNote,
     VitalSign,
     Ward,
+    WardRound,
 )
 from apps.consultation.models import Consultation
 from apps.core.permissions import (
@@ -217,6 +228,33 @@ def detail(request, pk):
 
     context["vital_sign_form"] = VitalSignForm()
 
+    # New nursing activities
+    context["medication_records"] = (
+        MedicationAdministration.objects.filter(admission=admission)
+        .select_related("administered_by")
+        .order_by("-scheduled_time")[:10]
+    )
+    context["ward_rounds"] = (
+        WardRound.objects.filter(admission=admission)
+        .select_related("doctor", "nurse")
+        .order_by("-round_time")[:10]
+    )
+    context["active_orders"] = (
+        DoctorOrder.objects.filter(admission=admission, status="active")
+        .select_related("ordered_by")
+        .order_by("-created_at")
+    )
+    context["daily_reports"] = (
+        DailyReport.objects.filter(admission=admission)
+        .select_related("nurse")
+        .order_by("-report_date", "-created_at")[:5]
+    )
+    context["io_entries"] = (
+        IntakeOutput.objects.filter(admission=admission)
+        .select_related("recorded_by")
+        .order_by("-recorded_at")[:10]
+    )
+
     # Invoices for this patient (post-payment & pending) -- nurse visibility
     from apps.billing.models import Invoice
 
@@ -335,6 +373,28 @@ def nurse_station(request):
         .order_by("-created_at"),
     )[:20]
 
+    # Pending doctor orders for nurse action
+    pending_orders = branch_queryset_for_user(
+        user,
+        DoctorOrder.objects.select_related("ordered_by", "admission__patient")
+        .filter(admission__discharge_date__isnull=True, status="active")
+        .order_by("-created_at"),
+    )[:20]
+
+    # Upcoming medication administrations
+    upcoming_meds = branch_queryset_for_user(
+        user,
+        MedicationAdministration.objects.select_related(
+            "administered_by", "admission__patient"
+        )
+        .filter(
+            admission__discharge_date__isnull=True,
+            status="given",
+            administered_at__isnull=True,
+        )
+        .order_by("scheduled_time"),
+    )[:20]
+
     return render(
         request,
         "admission/nurse_station.html",
@@ -345,6 +405,8 @@ def nurse_station(request):
             "vital_sign_form": VitalSignForm(),
             "note_form": NursingNoteForm(),
             "admission_invoice_map": admission_invoice_map,
+            "pending_orders": pending_orders,
+            "upcoming_meds": upcoming_meds,
         },
     )
 
@@ -711,5 +773,289 @@ def print_daily_invoice(request, pk):
             "total": total,
             "date_filter": date_filter,
             "settings_obj": settings_obj,
+        },
+    )
+
+
+# ── Medication Administration ────────────────────────────────
+
+
+@login_required
+@role_required("nurse", "doctor", "system_admin", "director")
+@module_permission_required("admission", "create")
+def administer_medication(request, admission_pk):
+    admission = _get_admission_for_user_or_404(request.user, admission_pk)
+    if request.method == "POST":
+        form = MedicationAdministrationForm(request.POST)
+        if form.is_valid():
+            med = form.save(commit=False)
+            med.admission = admission
+            med.administered_by = request.user
+            med.branch = admission.branch
+            if med.status == "given" and not med.administered_at:
+                med.administered_at = timezone.now()
+            med.save()
+            messages.success(request, f"Medication '{med.medicine_name}' recorded.")
+            return redirect("admission:detail", pk=admission.pk)
+    else:
+        form = MedicationAdministrationForm(
+            initial={"scheduled_time": timezone.now().strftime("%Y-%m-%dT%H:%M")}
+        )
+    return render(
+        request,
+        "admission/medication_form.html",
+        {"form": form, "admission": admission, "page_title": "Administer Medication"},
+    )
+
+
+@login_required
+@role_required("nurse", "doctor", "system_admin", "director")
+@module_permission_required("admission", "view")
+def medication_chart(request, admission_pk):
+    admission = _get_admission_for_user_or_404(request.user, admission_pk)
+    records = admission.medication_administrations.select_related(
+        "administered_by"
+    ).order_by("-scheduled_time")
+    return render(
+        request,
+        "admission/medication_chart.html",
+        {"admission": admission, "records": records},
+    )
+
+
+# ── Ward Rounds ──────────────────────────────────────────────
+
+
+@login_required
+@role_required("doctor", "system_admin", "director")
+@module_permission_required("admission", "create")
+def add_ward_round(request, admission_pk):
+    admission = _get_admission_for_user_or_404(request.user, admission_pk)
+    if request.method == "POST":
+        form = WardRoundForm(request.POST)
+        if form.is_valid():
+            WardRound.objects.create(
+                admission=admission,
+                doctor=request.user,
+                nurse=admission.nurse,
+                branch=admission.branch,
+                findings=form.cleaned_data["findings"],
+                plan=form.cleaned_data["plan"],
+            )
+            messages.success(request, "Ward round recorded.")
+            return redirect("admission:detail", pk=admission.pk)
+    else:
+        form = WardRoundForm()
+    return render(
+        request,
+        "admission/ward_round_form.html",
+        {"form": form, "admission": admission, "page_title": "Record Ward Round"},
+    )
+
+
+@login_required
+@role_required("nurse", "doctor", "system_admin", "director")
+@module_permission_required("admission", "view")
+def ward_rounds_list(request, admission_pk):
+    admission = _get_admission_for_user_or_404(request.user, admission_pk)
+    rounds = admission.ward_rounds.select_related("doctor", "nurse").order_by(
+        "-round_time"
+    )
+    return render(
+        request,
+        "admission/ward_rounds.html",
+        {"admission": admission, "rounds": rounds},
+    )
+
+
+# ── Doctor Orders ────────────────────────────────────────────
+
+
+@login_required
+@role_required("doctor", "system_admin", "director")
+@module_permission_required("admission", "create")
+def add_doctor_order(request, admission_pk):
+    admission = _get_admission_for_user_or_404(request.user, admission_pk)
+    if request.method == "POST":
+        form = DoctorOrderForm(request.POST)
+        if form.is_valid():
+            order = form.save(commit=False)
+            order.admission = admission
+            order.ordered_by = request.user
+            order.branch = admission.branch
+            order.save()
+            messages.success(request, "Doctor order added.")
+            return redirect("admission:detail", pk=admission.pk)
+    else:
+        form = DoctorOrderForm()
+    return render(
+        request,
+        "admission/doctor_order_form.html",
+        {"form": form, "admission": admission, "page_title": "New Doctor Order"},
+    )
+
+
+@login_required
+@role_required("nurse", "doctor", "system_admin", "director")
+@module_permission_required("admission", "view")
+def doctor_orders_list(request, admission_pk):
+    admission = _get_admission_for_user_or_404(request.user, admission_pk)
+    status_filter = request.GET.get("status", "active")
+    orders = admission.doctor_orders.select_related("ordered_by", "carried_out_by")
+    if status_filter in ("active", "carried_out", "cancelled"):
+        orders = orders.filter(status=status_filter)
+    return render(
+        request,
+        "admission/doctor_orders.html",
+        {
+            "admission": admission,
+            "orders": orders,
+            "status_filter": status_filter,
+        },
+    )
+
+
+@login_required
+@role_required("nurse", "system_admin", "director")
+@module_permission_required("admission", "update")
+def carry_out_order(request, admission_pk, order_pk):
+    admission = _get_admission_for_user_or_404(request.user, admission_pk)
+    order = get_object_or_404(DoctorOrder, pk=order_pk, admission=admission)
+    if order.status != "active":
+        messages.warning(request, "This order is no longer active.")
+        return redirect("admission:doctor_orders", admission_pk=admission.pk)
+
+    if request.method == "POST":
+        form = CarryOutOrderForm(request.POST)
+        if form.is_valid():
+            order.status = "carried_out"
+            order.carried_out_by = request.user
+            order.carried_out_at = timezone.now()
+            order.carried_out_notes = form.cleaned_data["notes"]
+            order.save(
+                update_fields=[
+                    "status",
+                    "carried_out_by",
+                    "carried_out_at",
+                    "carried_out_notes",
+                    "updated_at",
+                ]
+            )
+            messages.success(request, "Order marked as carried out.")
+            return redirect("admission:doctor_orders", admission_pk=admission.pk)
+    else:
+        form = CarryOutOrderForm()
+    return render(
+        request,
+        "admission/carry_out_order.html",
+        {"form": form, "admission": admission, "order": order},
+    )
+
+
+# ── Daily Reports ────────────────────────────────────────────
+
+
+@login_required
+@role_required("nurse", "system_admin", "director")
+@module_permission_required("admission", "create")
+def add_daily_report(request, admission_pk):
+    admission = _get_admission_for_user_or_404(request.user, admission_pk)
+    if request.method == "POST":
+        form = DailyReportForm(request.POST)
+        if form.is_valid():
+            report = form.save(commit=False)
+            report.admission = admission
+            report.nurse = request.user
+            report.branch = admission.branch
+            report.save()
+            messages.success(request, "Daily report filed.")
+            return redirect("admission:detail", pk=admission.pk)
+    else:
+        form = DailyReportForm(
+            initial={"report_date": timezone.localdate().isoformat()}
+        )
+    return render(
+        request,
+        "admission/daily_report_form.html",
+        {"form": form, "admission": admission, "page_title": "File Daily Report"},
+    )
+
+
+@login_required
+@role_required("nurse", "doctor", "system_admin", "director")
+@module_permission_required("admission", "view")
+def daily_reports_list(request, admission_pk):
+    admission = _get_admission_for_user_or_404(request.user, admission_pk)
+    reports = admission.daily_reports.select_related("nurse").order_by(
+        "-report_date", "-created_at"
+    )
+    return render(
+        request,
+        "admission/daily_reports.html",
+        {"admission": admission, "reports": reports},
+    )
+
+
+# ── Intake/Output Chart ─────────────────────────────────────
+
+
+@login_required
+@role_required("nurse", "doctor", "system_admin", "director")
+@module_permission_required("admission", "create")
+def add_intake_output(request, admission_pk):
+    admission = _get_admission_for_user_or_404(request.user, admission_pk)
+    if request.method == "POST":
+        form = IntakeOutputForm(request.POST)
+        if form.is_valid():
+            entry = form.save(commit=False)
+            entry.admission = admission
+            entry.recorded_by = request.user
+            entry.branch = admission.branch
+            entry.save()
+            messages.success(request, "I/O entry recorded.")
+            return redirect("admission:intake_output", admission_pk=admission.pk)
+    else:
+        form = IntakeOutputForm(
+            initial={"recorded_at": timezone.now().strftime("%Y-%m-%dT%H:%M")}
+        )
+    return render(
+        request,
+        "admission/intake_output_form.html",
+        {"form": form, "admission": admission},
+    )
+
+
+@login_required
+@role_required("nurse", "doctor", "system_admin", "director")
+@module_permission_required("admission", "view")
+def intake_output_chart(request, admission_pk):
+    admission = _get_admission_for_user_or_404(request.user, admission_pk)
+    entries = admission.intake_outputs.select_related("recorded_by").order_by(
+        "-recorded_at"
+    )
+    total_intake = (
+        entries.filter(entry_type__startswith="intake_").aggregate(t=Sum("amount_ml"))[
+            "t"
+        ]
+        or 0
+    )
+    total_output = (
+        entries.filter(entry_type__startswith="output_").aggregate(t=Sum("amount_ml"))[
+            "t"
+        ]
+        or 0
+    )
+    return render(
+        request,
+        "admission/intake_output_chart.html",
+        {
+            "admission": admission,
+            "entries": entries,
+            "total_intake": total_intake,
+            "total_output": total_output,
+            "balance": total_intake - total_output,
+            "io_form": IntakeOutputForm(
+                initial={"recorded_at": timezone.now().strftime("%Y-%m-%dT%H:%M")}
+            ),
         },
     )

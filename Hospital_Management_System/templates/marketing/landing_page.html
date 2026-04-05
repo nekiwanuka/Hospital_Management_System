@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DEVTOWN TECHNOLOGIES v2 — Hospital Management System</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+  :root {
+    --primary: #0d6efd;
+    --primary-dark: #0a58ca;
+    --secondary: #0891b2;
+    --accent: #6366f1;
+    --dark: #0f172a;
+    --slate: #1e293b;
+    --text: #334155;
+    --light-bg: #f1f5f9;
+    --white: #ffffff;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Inter', sans-serif; color: var(--text); overflow-x: hidden; }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    background: linear-gradient(135deg, var(--dark) 0%, var(--slate) 40%, var(--primary-dark) 100%);
+    display: flex; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(circle at 20% 80%, rgba(99,102,241,.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(8,145,178,.12) 0%, transparent 50%);
+  }
+  .hero-grid {
+    position: absolute; inset: 0; opacity: .04;
+    background-image: linear-gradient(rgba(255,255,255,.3) 1px, transparent 1px),
+                       linear-gradient(90deg, rgba(255,255,255,.3) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+  .hero-content { position: relative; z-index: 2; text-align: center; max-width: 900px; padding: 2rem; }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: .5rem;
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15);
+    border-radius: 50px; padding: .5rem 1.25rem; margin-bottom: 2rem;
+    font-size: .85rem; color: rgba(255,255,255,.8); backdrop-filter: blur(10px);
+  }
+  .hero-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); animation: pulse-dot 2s infinite; }
+  @keyframes pulse-dot { 0%,100%{ opacity:1; } 50%{ opacity:.3; } }
+  .hero h1 { font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 900; color: var(--white); line-height: 1.1; margin-bottom: 1.5rem; }
+  .hero h1 span { background: linear-gradient(135deg, var(--secondary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero p { font-size: 1.2rem; color: rgba(255,255,255,.65); max-width: 650px; margin: 0 auto 2.5rem; line-height: 1.7; }
+  .hero-stats { display: flex; gap: 3rem; justify-content: center; margin-top: 3rem; }
+  .hero-stat { text-align: center; }
+  .hero-stat .num { font-size: 2.5rem; font-weight: 800; color: var(--white); }
+  .hero-stat .label { font-size: .8rem; color: rgba(255,255,255,.5); text-transform: uppercase; letter-spacing: 1px; margin-top: .25rem; }
+  .btn-primary-glow {
+    display: inline-flex; align-items: center; gap: .5rem;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: var(--white); padding: .9rem 2.5rem; border-radius: 12px;
+    text-decoration: none; font-weight: 600; font-size: 1.05rem;
+    transition: all .3s; box-shadow: 0 4px 25px rgba(13,110,253,.35);
+  }
+  .btn-primary-glow:hover { transform: translateY(-2px); box-shadow: 0 8px 35px rgba(13,110,253,.5); }
+  .btn-outline-hero {
+    display: inline-flex; align-items: center; gap: .5rem;
+    border: 2px solid rgba(255,255,255,.2); color: var(--white);
+    padding: .85rem 2.5rem; border-radius: 12px; text-decoration: none;
+    font-weight: 600; font-size: 1.05rem; transition: all .3s;
+    margin-left: 1rem;
+  }
+  .btn-outline-hero:hover { border-color: rgba(255,255,255,.5); background: rgba(255,255,255,.05); }
+
+  /* ── FLOATING SHAPES ── */
+  .float-shape {
+    position: absolute; border-radius: 50%; opacity: .06; animation: float 8s ease-in-out infinite;
+  }
+  .float-shape:nth-child(1) { width: 300px; height: 300px; background: var(--primary); top: 10%; left: -5%; animation-delay: 0s; }
+  .float-shape:nth-child(2) { width: 200px; height: 200px; background: var(--secondary); bottom: 15%; right: -3%; animation-delay: 2s; }
+  .float-shape:nth-child(3) { width: 150px; height: 150px; background: var(--accent); top: 40%; right: 10%; animation-delay: 4s; }
+  @keyframes float { 0%,100%{ transform: translateY(0) rotate(0); } 50%{ transform: translateY(-30px) rotate(5deg); } }
+
+  /* ── SECTIONS ── */
+  section { padding: 6rem 2rem; }
+  .section-title { text-align: center; margin-bottom: 4rem; }
+  .section-title h2 { font-size: 2.5rem; font-weight: 800; color: var(--dark); margin-bottom: .75rem; }
+  .section-title p { color: #64748b; font-size: 1.1rem; max-width: 600px; margin: 0 auto; }
+  .section-title .overline {
+    display: inline-block; font-size: .75rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 2px; color: var(--primary);
+    margin-bottom: .75rem;
+  }
+
+  /* ── FEATURE GRID ── */
+  .features { background: var(--light-bg); }
+  .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px,1fr)); gap: 1.5rem; max-width: 1200px; margin: 0 auto; }
+  .feature-card {
+    background: var(--white); border-radius: 16px; padding: 2rem;
+    border: 1px solid #e2e8f0; transition: all .3s;
+    position: relative; overflow: hidden;
+  }
+  .feature-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,.08); border-color: transparent; }
+  .feature-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    opacity: 0; transition: opacity .3s;
+  }
+  .feature-card:hover::before { opacity: 1; }
+  .feature-icon {
+    width: 52px; height: 52px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; margin-bottom: 1.25rem;
+  }
+  .feature-card h3 { font-size: 1.15rem; font-weight: 700; color: var(--dark); margin-bottom: .5rem; }
+  .feature-card p { font-size: .9rem; color: #64748b; line-height: 1.6; }
+
+  .icon-blue { background: rgba(13,110,253,.1); color: var(--primary); }
+  .icon-cyan { background: rgba(8,145,178,.1); color: var(--secondary); }
+  .icon-purple { background: rgba(99,102,241,.1); color: var(--accent); }
+  .icon-green { background: rgba(16,185,129,.1); color: var(--success); }
+  .icon-amber { background: rgba(245,158,11,.1); color: var(--warning); }
+  .icon-red { background: rgba(239,68,68,.1); color: var(--danger); }
+
+  /* ── WORKFLOW ── */
+  .workflow { background: var(--white); }
+  .workflow-steps { max-width: 900px; margin: 0 auto; position: relative; }
+  .workflow-steps::before {
+    content: ''; position: absolute; left: 30px; top: 0; bottom: 0;
+    width: 2px; background: linear-gradient(to bottom, var(--primary), var(--secondary), var(--accent));
+  }
+  .workflow-step {
+    display: flex; gap: 2rem; align-items: flex-start; margin-bottom: 3rem;
+    position: relative; padding-left: 0;
+  }
+  .step-num {
+    width: 60px; height: 60px; min-width: 60px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: var(--white); display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; font-weight: 800; z-index: 2;
+    box-shadow: 0 4px 15px rgba(13,110,253,.3);
+  }
+  .step-content h3 { font-size: 1.3rem; font-weight: 700; color: var(--dark); margin-bottom: .5rem; }
+  .step-content p { color: #64748b; line-height: 1.7; }
+
+  /* ── DEPARTMENTS SHOWCASE ── */
+  .departments { background: var(--dark); color: var(--white); }
+  .departments .section-title h2 { color: var(--white); }
+  .departments .section-title p { color: rgba(255,255,255,.5); }
+  .departments .section-title .overline { color: var(--secondary); }
+  .dept-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.25rem; max-width: 1100px; margin: 0 auto; }
+  .dept-card {
+    background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+    border-radius: 14px; padding: 1.75rem 1.25rem; text-align: center;
+    transition: all .3s; cursor: default;
+  }
+  .dept-card:hover { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.15); transform: translateY(-3px); }
+  .dept-card i { font-size: 2rem; margin-bottom: .75rem; display: block; }
+  .dept-card h4 { font-size: .95rem; font-weight: 600; margin-bottom: .25rem; }
+  .dept-card p { font-size: .75rem; color: rgba(255,255,255,.4); }
+
+  /* ── SECURITY ── */
+  .security { background: linear-gradient(135deg, #f0f9ff 0%, #ede9fe 50%, #fce7f3 100%); }
+  .security-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px,1fr)); gap: 1.5rem; max-width: 1000px; margin: 0 auto; }
+  .sec-card { display: flex; gap: 1rem; align-items: flex-start; }
+  .sec-icon {
+    width: 44px; height: 44px; min-width: 44px; border-radius: 10px;
+    background: var(--white); display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; color: var(--primary); box-shadow: 0 2px 10px rgba(0,0,0,.06);
+  }
+  .sec-card h4 { font-size: 1rem; font-weight: 700; color: var(--dark); margin-bottom: .25rem; }
+  .sec-card p { font-size: .85rem; color: #64748b; line-height: 1.5; }
+
+  /* ── TECH STACK ── */
+  .tech { background: var(--white); }
+  .tech-pills { display: flex; flex-wrap: wrap; gap: .75rem; justify-content: center; max-width: 800px; margin: 0 auto; }
+  .tech-pill {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .6rem 1.25rem; border-radius: 50px;
+    background: var(--light-bg); border: 1px solid #e2e8f0;
+    font-size: .9rem; font-weight: 500; color: var(--dark);
+    transition: all .3s;
+  }
+  .tech-pill:hover { border-color: var(--primary); color: var(--primary); background: rgba(13,110,253,.04); }
+
+  /* ── CTA ── */
+  .cta {
+    background: linear-gradient(135deg, var(--dark) 0%, var(--primary-dark) 100%);
+    text-align: center; padding: 6rem 2rem;
+  }
+  .cta h2 { font-size: 2.5rem; font-weight: 800; color: var(--white); margin-bottom: 1rem; }
+  .cta p { color: rgba(255,255,255,.6); font-size: 1.1rem; max-width: 550px; margin: 0 auto 2.5rem; }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--dark); color: rgba(255,255,255,.4);
+    text-align: center; padding: 2rem;
+    font-size: .85rem; border-top: 1px solid rgba(255,255,255,.06);
+  }
+  footer strong { color: rgba(255,255,255,.7); }
+
+  /* ── NAV ── */
+  .top-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between;
+    transition: all .3s;
+  }
+  .top-nav.scrolled { background: rgba(15,23,42,.95); backdrop-filter: blur(15px); box-shadow: 0 2px 20px rgba(0,0,0,.3); }
+  .nav-brand { display: flex; align-items: center; gap: .75rem; text-decoration: none; }
+  .nav-logo {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    display: flex; align-items: center; justify-content: center;
+    color: var(--white); font-size: 1.1rem;
+  }
+  .nav-brand span { color: var(--white); font-weight: 700; font-size: 1.1rem; }
+  .nav-links { display: flex; gap: 2rem; list-style: none; }
+  .nav-links a { color: rgba(255,255,255,.65); text-decoration: none; font-size: .9rem; font-weight: 500; transition: color .3s; }
+  .nav-links a:hover { color: var(--white); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 768px) {
+    .hero-stats { gap: 1.5rem; flex-wrap: wrap; }
+    .hero-stat .num { font-size: 1.8rem; }
+    .btn-outline-hero { margin-left: 0; margin-top: .75rem; }
+    .hero .btn-wrap { display: flex; flex-direction: column; align-items: center; }
+    .nav-links { display: none; }
+    .workflow-steps::before { left: 20px; }
+    .step-num { width: 40px; height: 40px; min-width: 40px; font-size: 1rem; }
+  }
+
+  /* ── SCROLL ANIMATIONS ── */
+  .reveal { opacity: 0; transform: translateY(30px); transition: all .7s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav class="top-nav" id="topNav">
+  <a href="#" class="nav-brand">
+    <div class="nav-logo"><i class="bi bi-hospital"></i></div>
+    <span>DEVTOWN TECHNOLOGIES v2</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#workflow">Workflow</a></li>
+    <li><a href="#departments">Departments</a></li>
+    <li><a href="#security">Security</a></li>
+    <li><a href="#tech">Technology</a></li>
+  </ul>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="float-shape"></div>
+  <div class="float-shape"></div>
+  <div class="float-shape"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="hero-badge"><span class="dot"></span> Enterprise-Grade Healthcare Software</div>
+    <h1>The Complete<br><span>Hospital Management</span><br>System</h1>
+    <p>Streamline patient care, automate billing, manage inventory, and run multi-branch operations — all from one powerful platform built for African healthcare.</p>
+    <div class="btn-wrap">
+      <a href="#features" class="btn-primary-glow"><i class="bi bi-rocket-takeoff"></i> Explore Features</a>
+      <a href="#workflow" class="btn-outline-hero"><i class="bi bi-play-circle"></i> See How It Works</a>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="num">17+</div><div class="label">Modules</div></div>
+      <div class="hero-stat"><div class="num">72</div><div class="label">Data Models</div></div>
+      <div class="hero-stat"><div class="num">133</div><div class="label">Screens</div></div>
+      <div class="hero-stat"><div class="num">10+</div><div class="label">User Roles</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="features" id="features">
+  <div class="section-title reveal">
+    <div class="overline">Core Capabilities</div>
+    <h2>Everything Your Hospital Needs</h2>
+    <p>From patient registration to final billing — a complete digital ecosystem for modern healthcare facilities.</p>
+  </div>
+  <div class="features-grid">
+    <div class="feature-card reveal">
+      <div class="feature-icon icon-blue"><i class="bi bi-people"></i></div>
+      <h3>Patient Management</h3>
+      <p>Comprehensive registry with demographics, medical history, allergies, chronic conditions, blood group, and next-of-kin tracking.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon icon-cyan"><i class="bi bi-heart-pulse"></i></div>
+      <h3>Triage & Vitals</h3>
+      <p>5-level priority scoring with temperature, blood pressure, pulse, oxygen saturation, respiratory rate, weight and height capture.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon icon-purple"><i class="bi bi-clipboard2-pulse"></i></div>
+      <h3>Doctor Consultations</h3>
+      <p>Diagnosis, treatment plans, prescriptions, lab requests, follow-up scheduling, and integrated prescription dispensing.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon icon-green"><i class="bi bi-capsule"></i></div>
+      <h3>Pharmacy & Dispensing</h3>
+      <p>Prescription fulfillment, walk-in sales, batch tracking, expiry management, shift sessions, and stock reconciliation.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon icon-amber"><i class="bi bi-droplet"></i></div>
+      <h3>Laboratory</h3>
+      <p>Test ordering, sample collection, results entry, profit tracking with cost-revenue snapshots per test.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon icon-red"><i class="bi bi-broadcast"></i></div>
+      <h3>Radiology</h3>
+      <p>20+ pre-defined X-ray and ultrasound exams, image storage, result documentation, and radiologist review workflow.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon icon-blue"><i class="bi bi-building"></i></div>
+      <h3>Ward & Bed Management</h3>
+      <p>7 ward types, 3 categories (Ordinary/VIP/VVIP), real-time bed capacity tracking and automated allocation.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon icon-cyan"><i class="bi bi-receipt-cutoff"></i></div>
+      <h3>Billing & Invoicing</h3>
+      <p>OPD and inpatient invoicing, multiple payment methods, cashier shifts, receipt generation, and quotation documents.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon icon-purple"><i class="bi bi-box-seam"></i></div>
+      <h3>Inventory Control</h3>
+      <p>Multi-department stock management with batch tracking, supplier management, transfers, returns, and consumption billing.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon icon-green"><i class="bi bi-emoji-smile"></i></div>
+      <h3>Maternity & Delivery</h3>
+      <p>4 delivery types, outcome tracking, baby birth records with gender and vitals, delivery notes and post-delivery monitoring.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon icon-amber"><i class="bi bi-exclamation-triangle"></i></div>
+      <h3>Emergency Department</h3>
+      <p>4-level severity triage (Critical to Low), acute care documentation, and rapid-response workflow integration.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon icon-red"><i class="bi bi-graph-up-arrow"></i></div>
+      <h3>Reports & Analytics</h3>
+      <p>Financial reporting, profit analysis, department profitability, pharmacy tracking, and branch-level performance insights.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Workflow -->
+<section class="workflow" id="workflow">
+  <div class="section-title reveal">
+    <div class="overline">Patient Journey</div>
+    <h2>Seamless End-to-End Workflow</h2>
+    <p>Every step of the patient journey — digitised, tracked, and billed automatically.</p>
+  </div>
+  <div class="workflow-steps">
+    <div class="workflow-step reveal">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3>Patient Registration</h3>
+        <p>Quick registration with demographics, medical history, allergies, and insurance details. Returning patients are found instantly.</p>
+      </div>
+    </div>
+    <div class="workflow-step reveal">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3>Triage Assessment</h3>
+        <p>Nurse captures vitals, symptoms, and assigns a 5-level priority score. Critical cases are flagged immediately.</p>
+      </div>
+    </div>
+    <div class="workflow-step reveal">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3>Doctor Consultation</h3>
+        <p>Doctor reviews triage data, examines patient, records diagnosis and treatment plan. Orders labs, radiology, or prescriptions in one click.</p>
+      </div>
+    </div>
+    <div class="workflow-step reveal">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3>Investigations & Treatment</h3>
+        <p>Lab collects samples and enters results. Radiology performs scans. Pharmacy dispenses medications. All results flow back to the doctor.</p>
+      </div>
+    </div>
+    <div class="workflow-step reveal">
+      <div class="step-num">5</div>
+      <div class="step-content">
+        <h3>Billing & Payment</h3>
+        <p>Every service generates a line item automatically. Cashier processes payment via cash, mobile money, card, bank transfer, or insurance.</p>
+      </div>
+    </div>
+    <div class="workflow-step reveal">
+      <div class="step-num">6</div>
+      <div class="step-content">
+        <h3>Discharge & Follow-up</h3>
+        <p>Patient receives printed receipt, discharge summary. Follow-up visits are scheduled. All data is archived for future reference.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Departments -->
+<section class="departments" id="departments">
+  <div class="section-title reveal">
+    <div class="overline">Full Coverage</div>
+    <h2>17+ Integrated Departments</h2>
+    <p>Every department connected, every transaction tracked, every report at your fingertips.</p>
+  </div>
+  <div class="dept-grid">
+    <div class="dept-card reveal"><i class="bi bi-person-badge" style="color:#60a5fa"></i><h4>Reception</h4><p>Patient Registration</p></div>
+    <div class="dept-card reveal"><i class="bi bi-thermometer-half" style="color:#34d399"></i><h4>Triage</h4><p>Vital Signs</p></div>
+    <div class="dept-card reveal"><i class="bi bi-stethoscope" style="color:#a78bfa"></i><h4>Consultation</h4><p>Doctor Visits</p></div>
+    <div class="dept-card reveal"><i class="bi bi-droplet-fill" style="color:#f87171"></i><h4>Laboratory</h4><p>Test & Results</p></div>
+    <div class="dept-card reveal"><i class="bi bi-broadcast" style="color:#fbbf24"></i><h4>Radiology</h4><p>Imaging</p></div>
+    <div class="dept-card reveal"><i class="bi bi-capsule" style="color:#2dd4bf"></i><h4>Pharmacy</h4><p>Dispensing</p></div>
+    <div class="dept-card reveal"><i class="bi bi-building" style="color:#818cf8"></i><h4>Wards</h4><p>Inpatient Care</p></div>
+    <div class="dept-card reveal"><i class="bi bi-heart-pulse" style="color:#fb923c"></i><h4>Nursing</h4><p>Patient Monitoring</p></div>
+    <div class="dept-card reveal"><i class="bi bi-exclamation-octagon" style="color:#ef4444"></i><h4>Emergency</h4><p>Acute Care</p></div>
+    <div class="dept-card reveal"><i class="bi bi-gender-female" style="color:#f472b6"></i><h4>Maternity</h4><p>Delivery Suite</p></div>
+    <div class="dept-card reveal"><i class="bi bi-receipt" style="color:#4ade80"></i><h4>Billing</h4><p>Revenue Capture</p></div>
+    <div class="dept-card reveal"><i class="bi bi-box-seam" style="color:#facc15"></i><h4>Inventory</h4><p>Stock Control</p></div>
+    <div class="dept-card reveal"><i class="bi bi-arrow-left-right" style="color:#38bdf8"></i><h4>Referrals</h4><p>Patient Transfer</p></div>
+    <div class="dept-card reveal"><i class="bi bi-bar-chart-line" style="color:#c084fc"></i><h4>Reports</h4><p>Analytics</p></div>
+    <div class="dept-card reveal"><i class="bi bi-shield-lock" style="color:#94a3b8"></i><h4>Permissions</h4><p>Access Control</p></div>
+    <div class="dept-card reveal"><i class="bi bi-diagram-3" style="color:#5eead4"></i><h4>Branches</h4><p>Multi-Site</p></div>
+    <div class="dept-card reveal"><i class="bi bi-gear" style="color:#a3a3a3"></i><h4>Settings</h4><p>Configuration</p></div>
+  </div>
+</section>
+
+<!-- Security -->
+<section class="security" id="security">
+  <div class="section-title reveal">
+    <div class="overline">Trust & Compliance</div>
+    <h2>Enterprise-Grade Security</h2>
+    <p>Built-in anti-fraud controls, audit trails, and role-based access to protect your data and revenue.</p>
+  </div>
+  <div class="security-grid">
+    <div class="sec-card reveal">
+      <div class="sec-icon"><i class="bi bi-shield-check"></i></div>
+      <div><h4>Role-Based Access</h4><p>10+ predefined roles with granular module permissions. Staff see only what they need.</p></div>
+    </div>
+    <div class="sec-card reveal">
+      <div class="sec-icon"><i class="bi bi-journal-text"></i></div>
+      <div><h4>Full Audit Trails</h4><p>Every action logged with user, timestamp, IP address, and before/after snapshots.</p></div>
+    </div>
+    <div class="sec-card reveal">
+      <div class="sec-icon"><i class="bi bi-lock"></i></div>
+      <div><h4>Anti-Fraud Controls</h4><p>Paid invoice rollback restrictions, mandatory reason capture, director-level overrides.</p></div>
+    </div>
+    <div class="sec-card reveal">
+      <div class="sec-icon"><i class="bi bi-cash-stack"></i></div>
+      <div><h4>Cashier Reconciliation</h4><p>Shift-based sessions with cash drawer management and variance detection.</p></div>
+    </div>
+    <div class="sec-card reveal">
+      <div class="sec-icon"><i class="bi bi-trash3"></i></div>
+      <div><h4>Delete Approval Workflow</h4><p>Multi-level approval: user &rarr; director &rarr; system admin for data integrity.</p></div>
+    </div>
+    <div class="sec-card reveal">
+      <div class="sec-icon"><i class="bi bi-diagram-2"></i></div>
+      <div><h4>Branch Isolation</h4><p>Complete data scoping per branch. Each facility sees only its own records.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- Tech Stack -->
+<section class="tech" id="tech">
+  <div class="section-title reveal">
+    <div class="overline">Built With</div>
+    <h2>Modern Technology Stack</h2>
+    <p>Production-ready architecture designed for reliability, scalability, and performance.</p>
+  </div>
+  <div class="tech-pills reveal">
+    <div class="tech-pill"><i class="bi bi-filetype-py"></i> Python</div>
+    <div class="tech-pill"><i class="bi bi-box"></i> Django 4.2</div>
+    <div class="tech-pill"><i class="bi bi-database"></i> PostgreSQL</div>
+    <div class="tech-pill"><i class="bi bi-lightning"></i> Redis & Celery</div>
+    <div class="tech-pill"><i class="bi bi-bootstrap"></i> Bootstrap 5</div>
+    <div class="tech-pill"><i class="bi bi-cloud"></i> AWS S3 Ready</div>
+    <div class="tech-pill"><i class="bi bi-file-earmark-pdf"></i> ReportLab PDF</div>
+    <div class="tech-pill"><i class="bi bi-code-slash"></i> REST API</div>
+    <div class="tech-pill"><i class="bi bi-phone"></i> Responsive Design</div>
+    <div class="tech-pill"><i class="bi bi-printer"></i> Print-Ready Docs</div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <div class="reveal">
+    <h2>Ready to Modernise Your Hospital?</h2>
+    <p>Join healthcare facilities already using DEVTOWN TECHNOLOGIES v2 to deliver better patient care and smarter financial control.</p>
+    <a href="#" class="btn-primary-glow"><i class="bi bi-telephone"></i> Get in Touch</a>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <p>&copy; 2026 <strong>DEVTOWN TECHNOLOGIES v2</strong> &mdash; Hospital Management System. All rights reserved.</p>
+</footer>
+
+<script>
+// Navbar scroll effect
+const nav = document.getElementById('topNav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 50);
+});
+
+// Scroll reveal
+const reveals = document.querySelectorAll('.reveal');
+const revealOnScroll = () => {
+  reveals.forEach(el => {
+    const top = el.getBoundingClientRect().top;
+    if (top < window.innerHeight - 80) el.classList.add('visible');
+  });
+};
+window.addEventListener('scroll', revealOnScroll);
+revealOnScroll();
+</script>
+</body>
+</html>

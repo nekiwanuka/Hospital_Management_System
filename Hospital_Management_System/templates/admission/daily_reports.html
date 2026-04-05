@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Daily Reports — {{ admission.patient }} — {{ clinic_name }}{% endblock %}
+{% block header_title %}Daily Reports{% endblock %}
+
+{% block content %}
+<div class="cl-page-header d-flex flex-wrap align-items-center justify-content-between mb-4">
+  <div>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-1">
+        <li class="breadcrumb-item"><a href="{% url 'admission:nurse_station' %}">Nurse Station</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'admission:detail' admission.pk %}">{{ admission.patient }}</a></li>
+        <li class="breadcrumb-item active">Daily Reports</li>
+      </ol>
+    </nav>
+    <h1 class="mb-0"><i class="bi bi-journal-text me-2 text-primary"></i>Daily Reports</h1>
+  </div>
+  <a href="{% url 'admission:add_daily_report' admission.pk %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New Report</a>
+</div>
+
+{% for report in reports %}
+<div class="cl-card shadow-sm mb-3">
+  <div class="cl-card-header bg-light d-flex justify-content-between align-items-center">
+    <div>
+      <strong>{{ report.report_date|date:"d M Y" }}</strong>
+      <span class="badge bg-info ms-2">{{ report.get_shift_display }} Shift</span>
+    </div>
+    <small class="text-muted">By {{ report.nurse.get_full_name|default:report.nurse.username }}</small>
+  </div>
+  <div class="cl-card-body">
+    <div class="row">
+      <div class="col-md-6">
+        <p><strong>General Condition:</strong> {{ report.general_condition|linebreaksbr }}</p>
+        {% if report.diet_intake %}<p><strong>Diet Intake:</strong> {{ report.diet_intake }}</p>{% endif %}
+        {% if report.fluid_intake %}<p><strong>Fluid Intake:</strong> {{ report.fluid_intake }}</p>{% endif %}
+        {% if report.fluid_output %}<p><strong>Fluid Output:</strong> {{ report.fluid_output }}</p>{% endif %}
+      </div>
+      <div class="col-md-6">
+        {% if report.mobility %}<p><strong>Mobility:</strong> {{ report.mobility }}</p>{% endif %}
+        {% if report.pain_level is not None %}<p><strong>Pain Level:</strong> {{ report.pain_level }}/10</p>{% endif %}
+        {% if report.wound_status %}<p><strong>Wound Status:</strong> {{ report.wound_status }}</p>{% endif %}
+      </div>
+    </div>
+    {% if report.concerns %}<p class="text-danger"><strong>Concerns:</strong> {{ report.concerns|linebreaksbr }}</p>{% endif %}
+    {% if report.handover_notes %}<p class="text-info"><strong>Handover Notes:</strong> {{ report.handover_notes|linebreaksbr }}</p>{% endif %}
+  </div>
+</div>
+{% empty %}
+<div class="alert alert-info"><i class="bi bi-info-circle me-2"></i>No daily reports filed yet.</div>
+{% endfor %}
+{% endblock %}

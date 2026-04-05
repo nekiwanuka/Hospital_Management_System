@@ -276,10 +276,18 @@
           <option value="insurance" {% if selected_payment_method == 'insurance' %}selected{% endif %}>Insurance</option>
         </select>
       </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small text-muted mb-1">Category</label>
+        <select name="category" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="all" {% if selected_category == 'all' %}selected{% endif %}>All (OPD + Inpatient)</option>
+          <option value="opd" {% if selected_category == 'opd' %}selected{% endif %}>OPD</option>
+          <option value="inpatient" {% if selected_category == 'inpatient' %}selected{% endif %}>Inpatient</option>
+        </select>
+      </div>
       <div class="col-auto">
         <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel me-1"></i>Filter</button>
       </div>
-      {% if query or selected_status != 'all' or selected_payment_method != 'all' %}
+      {% if query or selected_status != 'all' or selected_payment_method != 'all' or selected_category != 'all' %}
       <div class="col-auto">
         <a href="{% url 'billing:index' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg me-1"></i>Clear</a>
       </div>

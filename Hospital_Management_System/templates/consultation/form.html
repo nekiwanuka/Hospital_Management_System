@@ -545,6 +545,135 @@
     <section class="consult-section mb-3">
       {% include "includes/patient_documents.html" with doc_patient=patient doc_category="consultation" doc_visit=visit %}
     </section>
+
+    {% if active_admission %}
+    <!-- ── Inpatient Nursing Dashboard ── -->
+    <section class="consult-section mt-3">
+      <div class="cl-card shadow-sm border-start border-4 border-info mb-3">
+        <div class="cl-card-header bg-info bg-opacity-10 d-flex justify-content-between align-items-center">
+          <h4 class="mb-0"><i class="bi bi-clipboard2-pulse me-2 text-info"></i>Inpatient Nursing Updates</h4>
+          <div>
+            <a href="{% url 'admission:detail' active_admission.pk %}" class="btn btn-sm btn-outline-info">Full Admission Record</a>
+            <a href="{% url 'admission:add_doctor_order' active_admission.pk %}" class="btn btn-sm btn-warning ms-1"><i class="bi bi-clipboard-plus me-1"></i>New Order</a>
+            <a href="{% url 'admission:add_ward_round' active_admission.pk %}" class="btn btn-sm btn-success ms-1"><i class="bi bi-clipboard2-check me-1"></i>Ward Round</a>
+          </div>
+        </div>
+        <div class="cl-card-body">
+          <div class="row g-3 mb-3">
+            <div class="col-md-3 text-center"><strong>Ward:</strong> {{ active_admission.ward|default:"—" }}</div>
+            <div class="col-md-3 text-center"><strong>Bed:</strong> {{ active_admission.bed|default:"—" }}</div>
+            <div class="col-md-3 text-center"><strong>Nurse:</strong> {{ active_admission.nurse.get_full_name|default:"—" }}</div>
+            <div class="col-md-3 text-center"><strong>Days:</strong> {{ active_admission.days_admitted }}</div>
+          </div>
+
+          <!-- Latest Vitals -->
+          {% if vital_signs %}
+          <h6 class="text-danger mb-2"><i class="bi bi-heart-pulse me-1"></i>Latest Vitals</h6>
+          <div class="table-responsive mb-3">
+            <table class="table table-sm table-hover mb-0">
+              <thead class="table-light"><tr><th>Time</th><th>Temp</th><th>BP</th><th>Pulse</th><th>Resp</th><th>SpO2</th></tr></thead>
+              <tbody>
+                {% for v in vital_signs|slice:":5" %}
+                <tr>
+                  <td>{{ v.recorded_at|date:"d M H:i" }}</td>
+                  <td>{{ v.temperature|default:"—" }}</td>
+                  <td>{% if v.systolic_bp and v.diastolic_bp %}{{ v.systolic_bp }}/{{ v.diastolic_bp }}{% else %}—{% endif %}</td>
+                  <td>{{ v.pulse_rate|default:"—" }}</td>
+                  <td>{{ v.respiratory_rate|default:"—" }}</td>
+                  <td>{{ v.oxygen_saturation|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% endif %}
+
+          <!-- Nursing Notes -->
+          {% if nursing_notes %}
+          <h6 class="text-secondary mb-2"><i class="bi bi-journal-text me-1"></i>Recent Nursing Notes</h6>
+          {% for note in nursing_notes|slice:":5" %}
+          <div class="border-start border-3 ps-3 mb-2 {% if note.category == 'vitals' %}border-danger{% elif note.category == 'medication' %}border-info{% else %}border-secondary{% endif %}">
+            <div class="d-flex justify-content-between">
+              <strong>{{ note.nurse.get_full_name|default:note.nurse.username }}</strong>
+              <small class="text-muted">{{ note.created_at|date:"d M H:i" }} <span class="badge bg-light text-dark border">{{ note.get_category_display }}</span></small>
+            </div>
+            <p class="mb-0">{{ note.note|truncatechars:200 }}</p>
+          </div>
+          {% endfor %}
+          {% endif %}
+
+          <!-- Daily Reports -->
+          {% if daily_reports %}
+          <h6 class="text-primary mb-2 mt-3"><i class="bi bi-journal-text me-1"></i>Daily Reports</h6>
+          {% for rpt in daily_reports|slice:":3" %}
+          <div class="border rounded p-2 mb-2 bg-light">
+            <div class="d-flex justify-content-between">
+              <strong>{{ rpt.report_date|date:"d M Y" }} — {{ rpt.get_shift_display }} Shift</strong>
+              <small class="text-muted">{{ rpt.nurse.get_full_name|default:rpt.nurse.username }}</small>
+            </div>
+            <p class="mb-0">{{ rpt.general_condition|truncatechars:200 }}</p>
+            {% if rpt.concerns %}<p class="text-danger mb-0 mt-1"><strong>Concerns:</strong> {{ rpt.concerns|truncatechars:150 }}</p>{% endif %}
+          </div>
+          {% endfor %}
+          {% endif %}
+
+          <!-- Doctor Orders -->
+          {% if doctor_orders %}
+          <h6 class="text-warning mb-2 mt-3"><i class="bi bi-clipboard-plus me-1"></i>Doctor Orders</h6>
+          <div class="table-responsive mb-3">
+            <table class="table table-sm table-hover mb-0">
+              <thead class="table-light"><tr><th>Type</th><th>Priority</th><th>Instruction</th><th>Status</th><th>Time</th></tr></thead>
+              <tbody>
+                {% for o in doctor_orders|slice:":10" %}
+                <tr>
+                  <td><span class="badge bg-info">{{ o.get_order_type_display }}</span></td>
+                  <td><span class="badge {% if o.priority == 'stat' %}bg-danger{% elif o.priority == 'urgent' %}bg-warning text-dark{% else %}bg-light text-dark border{% endif %}">{{ o.get_priority_display }}</span></td>
+                  <td>{{ o.instruction|truncatechars:80 }}</td>
+                  <td><span class="badge {% if o.status == 'active' %}bg-warning text-dark{% elif o.status == 'carried_out' %}bg-success{% else %}bg-secondary{% endif %}">{{ o.get_status_display }}</span></td>
+                  <td class="text-muted">{{ o.created_at|date:"d M H:i" }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% endif %}
+
+          <!-- Medication Records -->
+          {% if medication_records %}
+          <h6 class="text-info mb-2 mt-3"><i class="bi bi-capsule me-1"></i>Medication Administration</h6>
+          <div class="table-responsive mb-3">
+            <table class="table table-sm table-hover mb-0">
+              <thead class="table-light"><tr><th>Medicine</th><th>Dosage</th><th>Route</th><th>Scheduled</th><th>Status</th></tr></thead>
+              <tbody>
+                {% for r in medication_records|slice:":10" %}
+                <tr>
+                  <td>{{ r.medicine_name }}</td><td>{{ r.dosage }}</td><td>{{ r.get_route_display }}</td>
+                  <td>{{ r.scheduled_time|date:"d M H:i" }}</td>
+                  <td><span class="badge {% if r.status == 'given' %}bg-success{% elif r.status == 'held' %}bg-warning text-dark{% elif r.status == 'refused' %}bg-danger{% else %}bg-secondary{% endif %}">{{ r.get_status_display }}</span></td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% endif %}
+
+          <!-- Ward Rounds -->
+          {% if ward_rounds %}
+          <h6 class="text-success mb-2 mt-3"><i class="bi bi-clipboard2-check me-1"></i>Ward Rounds</h6>
+          {% for r in ward_rounds|slice:":5" %}
+          <div class="border-start border-3 border-success ps-3 mb-2">
+            <div class="d-flex justify-content-between">
+              <strong>Dr. {{ r.doctor.get_full_name|default:r.doctor.username }}</strong>
+              <small class="text-muted">{{ r.round_time|date:"d M H:i" }}</small>
+            </div>
+            <p class="mb-0">{{ r.findings|truncatechars:200 }}</p>
+          </div>
+          {% endfor %}
+          {% endif %}
+        </div>
+      </div>
+    </section>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

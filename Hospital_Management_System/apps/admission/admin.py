@@ -4,9 +4,14 @@ from apps.admission.models import (
     Admission,
     AdmissionDailyCharge,
     Bed,
+    DailyReport,
+    DoctorOrder,
+    IntakeOutput,
+    MedicationAdministration,
     NursingNote,
     VitalSign,
     Ward,
+    WardRound,
 )
 
 
@@ -88,4 +93,70 @@ class VitalSignAdmin(admin.ModelAdmin):
         "branch",
     )
     list_filter = ("branch", "created_at")
+    raw_id_fields = ("admission", "recorded_by")
+
+
+@admin.register(MedicationAdministration)
+class MedicationAdministrationAdmin(admin.ModelAdmin):
+    list_display = (
+        "admission",
+        "medicine_name",
+        "dosage",
+        "route",
+        "status",
+        "scheduled_time",
+        "administered_by",
+        "branch",
+    )
+    list_filter = ("status", "route", "branch")
+    raw_id_fields = ("admission", "administered_by")
+
+
+@admin.register(WardRound)
+class WardRoundAdmin(admin.ModelAdmin):
+    list_display = ("admission", "doctor", "nurse", "round_time", "branch")
+    list_filter = ("branch", "round_time")
+    raw_id_fields = ("admission", "doctor", "nurse")
+
+
+@admin.register(DoctorOrder)
+class DoctorOrderAdmin(admin.ModelAdmin):
+    list_display = (
+        "admission",
+        "ordered_by",
+        "order_type",
+        "priority",
+        "status",
+        "created_at",
+        "branch",
+    )
+    list_filter = ("status", "priority", "order_type", "branch")
+    raw_id_fields = ("admission", "ordered_by", "carried_out_by")
+
+
+@admin.register(DailyReport)
+class DailyReportAdmin(admin.ModelAdmin):
+    list_display = (
+        "admission",
+        "nurse",
+        "report_date",
+        "shift",
+        "pain_level",
+        "branch",
+    )
+    list_filter = ("shift", "branch", "report_date")
+    raw_id_fields = ("admission", "nurse")
+
+
+@admin.register(IntakeOutput)
+class IntakeOutputAdmin(admin.ModelAdmin):
+    list_display = (
+        "admission",
+        "entry_type",
+        "amount_ml",
+        "recorded_by",
+        "recorded_at",
+        "branch",
+    )
+    list_filter = ("entry_type", "branch")
     raw_id_fields = ("admission", "recorded_by")

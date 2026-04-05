@@ -234,6 +234,235 @@ class VitalSign(BranchScopedModel):
         return "—"
 
 
+class MedicationAdministration(BranchScopedModel):
+    """Records each time a nurse administers medication to an admitted patient."""
+
+    ROUTE_CHOICES = [
+        ("oral", "Oral"),
+        ("iv", "Intravenous (IV)"),
+        ("im", "Intramuscular (IM)"),
+        ("sc", "Subcutaneous (SC)"),
+        ("topical", "Topical"),
+        ("inhaled", "Inhaled"),
+        ("rectal", "Rectal"),
+        ("sublingual", "Sublingual"),
+        ("other", "Other"),
+    ]
+    STATUS_CHOICES = [
+        ("given", "Given"),
+        ("refused", "Patient Refused"),
+        ("held", "Held"),
+        ("not_available", "Not Available"),
+    ]
+
+    admission = models.ForeignKey(
+        Admission,
+        on_delete=models.CASCADE,
+        related_name="medication_administrations",
+    )
+    medicine_name = models.CharField(max_length=200)
+    dosage = models.CharField(max_length=100, help_text="e.g. 500mg, 10ml")
+    route = models.CharField(max_length=20, choices=ROUTE_CHOICES, default="oral")
+    scheduled_time = models.DateTimeField()
+    administered_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="given")
+    administered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="medication_administrations",
+    )
+    notes = models.TextField(blank=True)
+
+    class Meta(BranchScopedModel.Meta):
+        ordering = ["-scheduled_time"]
+        indexes = [models.Index(fields=["admission", "-scheduled_time"])]
+
+    def __str__(self):
+        return f"{self.medicine_name} {self.dosage} → {self.admission.patient} at {self.scheduled_time:%H:%M}"
+
+
+class WardRound(BranchScopedModel):
+    """Records a ward round conducted by a doctor, optionally with nurse."""
+
+    admission = models.ForeignKey(
+        Admission,
+        on_delete=models.CASCADE,
+        related_name="ward_rounds",
+    )
+    doctor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="ward_rounds_conducted",
+    )
+    nurse = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="ward_rounds_assisted",
+    )
+    findings = models.TextField(help_text="Clinical findings during the round")
+    plan = models.TextField(blank=True, help_text="Management plan going forward")
+    round_time = models.DateTimeField(default=timezone.now)
+
+    class Meta(BranchScopedModel.Meta):
+        ordering = ["-round_time"]
+        indexes = [models.Index(fields=["admission", "-round_time"])]
+
+    def __str__(self):
+        return f"Round by Dr. {self.doctor.get_full_name()} – {self.round_time:%d %b %H:%M}"
+
+
+class DoctorOrder(BranchScopedModel):
+    """Instructions from a doctor to the nursing team for an admitted patient."""
+
+    PRIORITY_CHOICES = [
+        ("routine", "Routine"),
+        ("urgent", "Urgent"),
+        ("stat", "STAT"),
+    ]
+    ORDER_TYPE_CHOICES = [
+        ("medication", "Medication"),
+        ("investigation", "Investigation"),
+        ("nursing", "Nursing Care"),
+        ("diet", "Diet"),
+        ("activity", "Activity / Mobility"),
+        ("monitoring", "Monitoring"),
+        ("other", "Other"),
+    ]
+    STATUS_CHOICES = [
+        ("active", "Active"),
+        ("carried_out", "Carried Out"),
+        ("cancelled", "Cancelled"),
+    ]
+
+    admission = models.ForeignKey(
+        Admission,
+        on_delete=models.CASCADE,
+        related_name="doctor_orders",
+    )
+    ordered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="doctor_orders_given",
+    )
+    order_type = models.CharField(
+        max_length=20, choices=ORDER_TYPE_CHOICES, default="nursing"
+    )
+    priority = models.CharField(
+        max_length=10, choices=PRIORITY_CHOICES, default="routine"
+    )
+    instruction = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="active")
+    carried_out_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="doctor_orders_executed",
+    )
+    carried_out_at = models.DateTimeField(null=True, blank=True)
+    carried_out_notes = models.TextField(blank=True)
+
+    class Meta(BranchScopedModel.Meta):
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["admission", "status"])]
+
+    def __str__(self):
+        return f"{self.get_order_type_display()} order – {self.instruction[:50]}"
+
+
+class DailyReport(BranchScopedModel):
+    """End-of-shift or daily summary report filed by the nurse for an admitted patient."""
+
+    SHIFT_CHOICES = [
+        ("day", "Day Shift"),
+        ("night", "Night Shift"),
+        ("evening", "Evening Shift"),
+    ]
+
+    admission = models.ForeignKey(
+        Admission,
+        on_delete=models.CASCADE,
+        related_name="daily_reports",
+    )
+    nurse = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="daily_reports_filed",
+    )
+    report_date = models.DateField(default=timezone.localdate)
+    shift = models.CharField(max_length=10, choices=SHIFT_CHOICES, default="day")
+    general_condition = models.TextField(
+        help_text="Patient's overall condition during this shift"
+    )
+    diet_intake = models.CharField(
+        max_length=200, blank=True, help_text="e.g. Good, Poor, NPO"
+    )
+    fluid_intake = models.CharField(
+        max_length=200, blank=True, help_text="IV / oral fluids given"
+    )
+    fluid_output = models.CharField(
+        max_length=200, blank=True, help_text="Urine, drain output, etc."
+    )
+    mobility = models.CharField(
+        max_length=200, blank=True, help_text="e.g. Ambulatory, Bed rest"
+    )
+    pain_level = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="Scale 0–10"
+    )
+    wound_status = models.TextField(
+        blank=True, help_text="Wound/surgical site status if applicable"
+    )
+    concerns = models.TextField(
+        blank=True, help_text="Any concerns or escalation needs"
+    )
+    handover_notes = models.TextField(
+        blank=True, help_text="Notes for the incoming nurse"
+    )
+
+    class Meta(BranchScopedModel.Meta):
+        ordering = ["-report_date", "-created_at"]
+        unique_together = [("admission", "report_date", "shift")]
+
+    def __str__(self):
+        return f"Report: {self.admission.patient} – {self.report_date} ({self.get_shift_display()})"
+
+
+class IntakeOutput(BranchScopedModel):
+    """Fluid balance tracking — intake and output chart."""
+
+    TYPE_CHOICES = [
+        ("intake_oral", "Oral Intake"),
+        ("intake_iv", "IV Fluids"),
+        ("output_urine", "Urine Output"),
+        ("output_drain", "Drain Output"),
+        ("output_vomit", "Vomiting"),
+        ("output_other", "Other Output"),
+    ]
+
+    admission = models.ForeignKey(
+        Admission,
+        on_delete=models.CASCADE,
+        related_name="intake_outputs",
+    )
+    entry_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    amount_ml = models.PositiveIntegerField(help_text="Amount in millilitres")
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="io_entries",
+    )
+    recorded_at = models.DateTimeField(default=timezone.now)
+    notes = models.CharField(max_length=200, blank=True)
+
+    class Meta(BranchScopedModel.Meta):
+        ordering = ["-recorded_at"]
+
+    def __str__(self):
+        return f"{self.get_entry_type_display()} {self.amount_ml}ml – {self.recorded_at:%H:%M}"
+
+
 class AdmissionDailyCharge(BranchScopedModel):
     """One row per day a ward charge is billed to an admitted patient."""
 

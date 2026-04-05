@@ -161,6 +161,69 @@
 </div>
 {% endif %}
 
+<!-- Pending Doctor Orders -->
+{% if pending_orders %}
+<div class="cl-card mb-4 shadow-sm border-start border-4 border-warning">
+  <div class="cl-card-header bg-light d-flex align-items-center">
+    <h2 class="cl-card-title mb-0"><i class="bi bi-clipboard-plus text-warning me-2"></i>Pending Doctor Orders</h2>
+    <span class="badge bg-warning text-dark ms-auto">{{ pending_orders|length }}</span>
+  </div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr><th>Patient</th><th>Type</th><th>Priority</th><th>Instruction</th><th>Ordered By</th><th>Time</th><th class="text-end">Action</th></tr>
+        </thead>
+        <tbody>
+          {% for o in pending_orders %}
+          <tr>
+            <td><strong>{{ o.admission.patient.first_name }} {{ o.admission.patient.last_name }}</strong></td>
+            <td><span class="badge bg-info">{{ o.get_order_type_display }}</span></td>
+            <td><span class="badge {% if o.priority == 'stat' %}bg-danger{% elif o.priority == 'urgent' %}bg-warning text-dark{% else %}bg-light text-dark border{% endif %}">{{ o.get_priority_display }}</span></td>
+            <td>{{ o.instruction|truncatechars:80 }}</td>
+            <td>Dr. {{ o.ordered_by.get_full_name|default:o.ordered_by.username }}</td>
+            <td class="text-muted">{{ o.created_at|date:"d M H:i" }}</td>
+            <td class="text-end"><a href="{% url 'admission:carry_out_order' o.admission.pk o.pk %}" class="btn btn-sm btn-success" title="Carry out"><i class="bi bi-check-lg"></i></a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Upcoming Medications -->
+{% if upcoming_meds %}
+<div class="cl-card mb-4 shadow-sm border-start border-4 border-info">
+  <div class="cl-card-header bg-light d-flex align-items-center">
+    <h2 class="cl-card-title mb-0"><i class="bi bi-capsule text-info me-2"></i>Upcoming Medications</h2>
+    <span class="badge bg-info ms-auto">{{ upcoming_meds|length }}</span>
+  </div>
+  <div class="cl-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr><th>Patient</th><th>Medicine</th><th>Dosage</th><th>Route</th><th>Scheduled</th><th class="text-end">Action</th></tr>
+        </thead>
+        <tbody>
+          {% for m in upcoming_meds %}
+          <tr>
+            <td><strong>{{ m.admission.patient.first_name }} {{ m.admission.patient.last_name }}</strong></td>
+            <td>{{ m.medicine_name }}</td>
+            <td>{{ m.dosage }}</td>
+            <td>{{ m.get_route_display }}</td>
+            <td>{{ m.scheduled_time|date:"d M H:i" }}</td>
+            <td class="text-end"><a href="{% url 'admission:detail' m.admission.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 {% if recent_notes %}
 <div class="cl-card shadow-sm">
   <div class="cl-card-header bg-light d-flex align-items-center">
