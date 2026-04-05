@@ -411,11 +411,21 @@ def record_consumables(request, pk):
         )
         return redirect("laboratory:detail", pk=lab_request.pk)
 
+    from apps.inventory.models import Item
+
+    store_choices = Item.STORE_DEPARTMENT_CHOICES
+    valid_store_keys = {k for k, _ in store_choices}
+    selected_store = (
+        request.GET.get("store") or request.POST.get("store_department") or "laboratory"
+    )
+    if selected_store not in valid_store_keys:
+        selected_store = "laboratory"
+
     if request.method == "POST":
         formset = build_service_consumable_formset(
             request.POST,
             branch=lab_request.branch,
-            store_department="laboratory",
+            store_department=selected_store,
         )
         if formset.is_valid():
             selections = [
@@ -434,7 +444,7 @@ def record_consumables(request, pk):
                     source_id=lab_request.pk,
                     selections=selections,
                     consumed_by=request.user,
-                    store_department="laboratory",
+                    store_department=selected_store,
                     reference=(
                         f"Lab request {lab_request.pk} consumables for "
                         f"{lab_request.patient.first_name} {lab_request.patient.last_name}"
@@ -451,7 +461,7 @@ def record_consumables(request, pk):
     else:
         formset = build_service_consumable_formset(
             branch=lab_request.branch,
-            store_department="laboratory",
+            store_department=selected_store,
         )
 
     return render(
@@ -462,6 +472,8 @@ def record_consumables(request, pk):
             "formset": formset,
             "consumption_rows": consumption_rows,
             "consumption_total_cost": consumption_total_cost,
+            "store_choices": store_choices,
+            "selected_store": selected_store,
         },
     )
 

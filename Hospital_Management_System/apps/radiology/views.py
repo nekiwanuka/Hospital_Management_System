@@ -748,11 +748,24 @@ def record_consumables(request, pk):
         )
         return redirect("radiology:detail", pk=imaging_request.pk)
 
+    from apps.inventory.models import Item
+
+    store_choices = Item.STORE_DEPARTMENT_CHOICES
+    valid_store_keys = {k for k, _ in store_choices}
+    default_store = imaging_request.imaging_type or "radiology"
+    selected_store = (
+        request.GET.get("store")
+        or request.POST.get("store_department")
+        or default_store
+    )
+    if selected_store not in valid_store_keys:
+        selected_store = default_store
+
     if request.method == "POST":
         formset = build_service_consumable_formset(
             request.POST,
             branch=imaging_request.branch,
-            store_department=imaging_request.imaging_type,
+            store_department=selected_store,
         )
         if formset.is_valid():
             selections = [
@@ -771,7 +784,7 @@ def record_consumables(request, pk):
                     source_id=imaging_request.pk,
                     selections=selections,
                     consumed_by=request.user,
-                    store_department=imaging_request.imaging_type,
+                    store_department=selected_store,
                     reference=(
                         f"Radiology request {imaging_request.request_identifier} consumables for "
                         f"{imaging_request.patient.first_name} {imaging_request.patient.last_name}"
@@ -788,7 +801,7 @@ def record_consumables(request, pk):
     else:
         formset = build_service_consumable_formset(
             branch=imaging_request.branch,
-            store_department=imaging_request.imaging_type,
+            store_department=selected_store,
         )
 
     return render(
@@ -800,6 +813,8 @@ def record_consumables(request, pk):
             "consumption_rows": consumption_rows,
             "consumption_total_cost": consumption_total_cost,
             "unit_config": _unit_ui_config(imaging_request.imaging_type),
+            "store_choices": store_choices,
+            "selected_store": selected_store,
         },
     )
 
