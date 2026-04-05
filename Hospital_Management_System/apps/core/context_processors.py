@@ -62,6 +62,18 @@ def system_context(request):
             except Exception:
                 pass
 
+    # Branch list for director / system-admin switcher
+    all_branches = []
+    if user and user.is_authenticated and getattr(user, "can_view_all_branches", False):
+        try:
+            from apps.branches.models import Branch
+
+            all_branches = list(
+                Branch.objects.filter(status="active").order_by("branch_name")
+            )
+        except Exception:
+            pass
+
     return {
         "system_settings": settings_obj,
         "clinic_name": settings_obj.clinic_name if settings_obj else "ClinicMS",
@@ -75,4 +87,5 @@ def system_context(request):
         "can_view_revenue": can_view_revenue,
         "pending_access_requests_count": pending_access_requests_count,
         "active_shift": active_shift,
+        "all_branches": all_branches,
     }

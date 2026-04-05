@@ -74,10 +74,15 @@ class RoleRequiredMixin(UserPassesTestMixin):
         )
 
 
-def branch_queryset_for_user(user, queryset):
+def branch_queryset_for_user(user, queryset, request=None):
     if not user.is_authenticated:
         return queryset.none()
     if user.is_superuser or getattr(user, "can_view_all_branches", False):
+        # If director/admin has switched branch via session, scope to that branch
+        if request is not None:
+            switched_id = request.session.get("switched_branch_id")
+            if switched_id:
+                return queryset.filter(branch_id=switched_id)
         return queryset
     if getattr(user, "branch_id", None):
         return queryset.filter(branch_id=user.branch_id)

@@ -57,7 +57,30 @@
     <div class="cl-header-actions">
       {% if user.is_authenticated %}
       {% if request.branch %}
-      <span class="badge bg-info text-dark me-2" title="Branch: {{ request.branch.branch_name }}"><i class="bi bi-geo-alt"></i> {{ request.branch.branch_code }}</span>
+      {% if all_branches|length > 1 %}
+      <div class="dropdown me-2 d-inline-block">
+        <button class="btn btn-sm btn-info dropdown-toggle text-dark" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Switch branch">
+          <i class="bi bi-geo-alt"></i> {{ request.branch.branch_code }} &mdash; {{ request.branch.branch_name }}
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" style="min-width:220px">
+          <li><h6 class="dropdown-header"><i class="bi bi-building"></i> Switch Branch</h6></li>
+          <li><hr class="dropdown-divider"></li>
+          {% for b in all_branches %}
+          <li>
+            <form method="post" action="{% url 'accounts:switch_branch' %}" class="d-inline w-100">
+              {% csrf_token %}
+              <input type="hidden" name="branch_id" value="{{ b.pk }}">
+              <button type="submit" class="dropdown-item{% if b.pk == request.branch.pk %} active fw-semibold{% endif %}">
+                <i class="bi bi-geo-alt-fill me-1"></i> {{ b.branch_code }} &mdash; {{ b.branch_name }}
+              </button>
+            </form>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% else %}
+      <span class="badge bg-info text-dark me-2" title="Branch: {{ request.branch.branch_name }}"><i class="bi bi-geo-alt"></i> {{ request.branch.branch_code }} &mdash; {{ request.branch.branch_name }}</span>
+      {% endif %}
       {% endif %}
       {% if active_shift %}
       <a href="{% url 'accounts:close_shift' %}" class="btn btn-sm btn-outline-warning me-2" title="Close shift"><i class="bi bi-stop-circle"></i> End Shift</a>

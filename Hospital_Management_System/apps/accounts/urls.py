@@ -11,6 +11,7 @@ from .views import (
     close_shift,
     shift_history,
     manage_secret_codes,
+    switch_branch,
 )
 
 app_name = "accounts"
@@ -27,4 +28,6 @@ urlpatterns = [
     path("shift/close/", close_shift, name="close_shift"),
     path("shift/history/", shift_history, name="shift_history"),
     path("shift/secret-codes/", manage_secret_codes, name="manage_secret_codes"),
+    # Branch switching (director / system admin)
+    path("switch-branch/", switch_branch, name="switch_branch"),
 ]

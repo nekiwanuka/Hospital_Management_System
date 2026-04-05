@@ -10,7 +10,17 @@ class BranchContextMiddleware:
     def __call__(self, request):
         request.branch = None
         if hasattr(request, "user") and request.user.is_authenticated:
-            request.branch = request.user.branch
+            # Directors / system admins may temporarily view another branch
+            switched_id = request.session.get("switched_branch_id")
+            if switched_id and getattr(request.user, "can_view_all_branches", False):
+                from apps.branches.models import Branch
+
+                request.branch = (
+                    Branch.objects.filter(pk=switched_id, status="active").first()
+                    or request.user.branch
+                )
+            else:
+                request.branch = request.user.branch
         response = self.get_response(request)
         return response
 

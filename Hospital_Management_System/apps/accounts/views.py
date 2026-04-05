@@ -250,3 +250,34 @@ def manage_secret_codes(request):
             "form": form,
         },
     )
+
+
+# ── Branch Switching (Director / System Admin) ──────────────────────
+
+
+@login_required
+@require_POST
+def switch_branch(request):
+    """Allow directors / system admins to view a different branch."""
+    if not request.user.can_view_all_branches:
+        messages.error(request, "You do not have permission to switch branches.")
+        return redirect("core:dashboard")
+
+    from apps.branches.models import Branch
+
+    branch_id = request.POST.get("branch_id")
+    branch = Branch.objects.filter(pk=branch_id, status="active").first()
+    if branch:
+        if branch.pk == request.user.branch_id:
+            # Switching back to home branch — clear the override
+            request.session.pop("switched_branch_id", None)
+        else:
+            request.session["switched_branch_id"] = branch.pk
+        messages.success(
+            request,
+            f"Now viewing: {branch.branch_name} ({branch.branch_code})",
+        )
+    else:
+        messages.error(request, "Invalid branch selected.")
+
+    return redirect(request.META.get("HTTP_REFERER", "core:dashboard"))
